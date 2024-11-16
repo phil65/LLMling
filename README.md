@@ -30,3 +30,61 @@
 
 [Read the documentation!](https://phil65.github.io/llmling/)
 
+
+```yaml
+# Root level: Config
+version: "1.0"
+global_settings:  # GlobalSettings
+  timeout: 30
+  max_retries: 3
+  temperature: 0.7
+
+context_processors:  # dict[str, ProcessorConfig]
+  processor1:
+    type: function
+    import_path: "utils.clean_text"
+  processor2:
+    type: template
+    template: "{{ content }}\n---"
+
+llm_providers:  # dict[str, LLMProvider]
+  gpt4:
+    model: openai/gpt-4
+    temperature: 0.7
+
+provider_groups:  # dict[str, list[str]]
+  fast_models:
+    - gpt4
+    - claude2
+
+contexts:  # dict[str, Context(PathContext | TextContext | CLIContext)]
+  guidelines:
+    type: path  # PathContext
+    path: "./guide.md"
+    description: "Guide"
+    processors:  # list[ProcessingStep]
+      - name: processor1
+        keyword_args: {key: "value"}
+
+  prompt:
+    type: text  # TextContext
+    content: "System prompt"
+    description: "Basic prompt"
+
+  git_diff:
+    type: cli  # CLIContext
+    command: "git diff"
+    description: "Changes"
+
+context_groups:  # dict[str, list[str]]
+  review_contexts:
+    - guidelines
+    - prompt
+
+task_templates:  # dict[str, TaskTemplate]
+  code_review:
+    provider: gpt4  # provider or group name
+    context: review_contexts  # context or group name
+    settings:  # TaskSettings
+      temperature: 0.5
+```
