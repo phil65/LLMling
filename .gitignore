@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+# Distribution / packaging
+*.sublime-workspace
+# Unit test / coverage reports
+.coverage
+coverage.xml
+.cache
+.hatch
+.pytest_cache/
+junit.xml
+# Jupyter Notebook
+.ipynb_checkpoints
+# pyenv
+.python-version
+# dotenv
+.env
+# virtualenv
+.venv
+# mkdocs documentation
+/site
+# mypy
+.mypy_cache/
+# .vscode
+.vscode/
+# OS files
+.DS_Store
+# uv
+uv.lock
