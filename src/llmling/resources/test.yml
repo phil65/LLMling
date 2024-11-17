@@ -130,9 +130,19 @@ contexts:
   system_prompt:
     type: text
     content: |
-      You are a helpful AI assistant specialized in code review.
-      Please analyze the code and provide constructive feedback.
-    description: "Default system prompt for code review"
+      You are a test assistant. Your task is to generate exactly 100 words
+      of test content. The content should be a simple story about a dog.
+
+      Requirements:
+      1. Exactly 100 words
+      2. Simple narrative structure
+      3. Consistent tone
+      4. No complex vocabulary
+      5. No dialogue
+
+      Begin your response immediately with the story, without any preamble
+      or meta-commentary.
+    description: "Test prompt for consistent output"
 
   # Dynamic content from CLI
   git_diff:
@@ -163,7 +173,7 @@ task_templates:
   # Simple code review task
   quick_review:
     provider: local-llama # Single provider
-    context: code_review_basic # Context group
+    context: system_prompt # Context group
     settings: # Task-specific settings
       temperature: 0.7
       max_tokens: 2048
