@@ -139,9 +139,7 @@ class ConfigValidator:
 
         return warnings
 
-    @logfire.instrument(
-        "Validating configuration with {len(self.config.task_templates)} templates"
-    )
+    @logfire.instrument("Validating configs")
     def validate_or_raise(self) -> None:
         """Run all validations and raise on warnings.
 

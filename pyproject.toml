@@ -235,6 +235,9 @@ reportImplicitOverride = false
 reportUnusedFunction = false
 reportImplicitStringConcatenation = false
 
+[tool.logfire]
+ignore_no_config = true
+
 [tool.mknodes]
 allowed-commit-types = [
     "fix",

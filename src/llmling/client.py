@@ -3,24 +3,25 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, overload
 
 from llmling.config.manager import ConfigManager
 from llmling.context import default_registry as context_registry
 from llmling.core import exceptions
 from llmling.core.log import get_logger, setup_logging
 from llmling.llm.registry import default_registry as llm_registry
-from llmling.processors.base import ProcessorConfig
 from llmling.processors.registry import ProcessorRegistry
 from llmling.task.concurrent import execute_concurrent
 from llmling.task.executor import TaskExecutor
 from llmling.task.manager import TaskManager
-from llmling.task.models import TaskResult
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
     import os
+
+    from llmling.processors.base import ProcessorConfig
+    from llmling.task.models import TaskResult
 
 
 logger = get_logger(__name__)
@@ -315,7 +316,7 @@ class LLMLingClient:
             msg = f"Failed to stream template {template}"
             raise exceptions.TaskError(msg) from exc
 
-    async def __aenter__(self) -> LLMLingClient:
+    async def __aenter__(self) -> Self:
         """Async context manager entry."""
         await self.startup()
         return self
@@ -324,7 +325,7 @@ class LLMLingClient:
         """Async context manager exit."""
         await self.shutdown()
 
-    def __enter__(self) -> LLMLingClient:
+    def __enter__(self) -> Self:
         """Synchronous context manager entry."""
         asyncio.run(self.startup())
         return self

@@ -190,12 +190,12 @@ class TestTaskExecution:
                 f"Chunk {index}: Content too short ({content_length} chars)"
             )
 
-        except AssertionError as exc:
+        except AssertionError:
             print(f"\nChunk {index} Validation Error:")
             print(f"Content: {chunk.content[:100]}...")
             print(f"Model: {chunk.model}")
             print(f"Metadata: {chunk.completion_metadata}")
-            raise exc
+            raise
 
     async def test_stream_basic(self, client: LLMLingClient) -> None:
         """Simplified streaming test for debugging."""
@@ -226,7 +226,8 @@ class TestTaskExecution:
     def _validate_task_result(result: TaskResult) -> None:
         """Validate task result structure and content."""
         assert isinstance(result, TaskResult)
-        assert result.content and len(result.content) >= MIN_CONTENT_LENGTH
+        assert result.content
+        assert len(result.content) >= MIN_CONTENT_LENGTH
         assert result.model
         assert result.context_metadata
         assert result.completion_metadata

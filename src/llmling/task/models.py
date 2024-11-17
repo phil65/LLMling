@@ -6,8 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from llmling.config import Context, TaskSettings
-from llmling.processors.registry import ProcessingStep
+from llmling.config import Context, TaskSettings  # noqa: TCH001
+from llmling.core.typedefs import ProcessingStep  # noqa: TCH001
 
 
 class TaskContext(BaseModel):

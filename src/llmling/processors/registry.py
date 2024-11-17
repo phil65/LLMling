@@ -10,7 +10,6 @@ import logfire
 from llmling.context.models import ProcessingContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.core.typedefs import ProcessingStep
 from llmling.processors.base import (
     BaseProcessor,
     ProcessorConfig,
@@ -23,6 +22,8 @@ from llmling.processors.implementations.template import TemplateProcessor
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import Any
+
+    from llmling.core.typedefs import ProcessingStep
 
 
 logger = get_logger(__name__)
@@ -124,7 +125,7 @@ class ProcessorRegistry:
             metadata=combined_metadata,
         )
 
-    @logfire.instrument("Processing content through {len(steps)} steps")
+    @logfire.instrument("Processing content")
     async def process(
         self,
         content: str,
@@ -368,7 +369,6 @@ class ProcessorRegistry:
         context: ProcessingContext,
     ) -> ProcessorResult:
         """Process steps in parallel."""
-        tasks = []
         results = []
 
         for step in steps:

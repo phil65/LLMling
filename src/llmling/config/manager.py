@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING, Any
 from upath import UPath
 import yamling
 
-from llmling.config.models import Config
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
     import os
+
+    from llmling.config.models import Config
 
 
 logger = get_logger(__name__)

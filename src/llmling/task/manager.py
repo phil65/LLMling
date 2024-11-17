@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 import logfire
@@ -13,6 +12,8 @@ from llmling.task.models import TaskContext, TaskProvider, TaskResult
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.config import Config, Context, LLMProviderConfig, TaskTemplate
     from llmling.task.executor import TaskExecutor
 

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 import importlib
 import inspect
 from pathlib import Path
 import pkgutil
-from types import ModuleType
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from types import ModuleType
 
 
 def get_module_source(

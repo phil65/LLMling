@@ -6,12 +6,11 @@ from typing import TYPE_CHECKING
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.llm.base import LLMConfig
 from llmling.llm.providers.litellm import LiteLLMProvider
 
 
 if TYPE_CHECKING:
-    from llmling.llm.base import LLMProvider
+    from llmling.llm.base import LLMConfig, LLMProvider
 
 
 logger = get_logger(__name__)

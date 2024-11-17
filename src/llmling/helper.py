@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Self, overload
 
 from llmling.config.loading import load_config
 from llmling.context import default_registry as context_registry
@@ -83,7 +83,7 @@ class LLMLing:
         """Clean up resources."""
         await self.processor_registry.shutdown()
 
-    async def __aenter__(self) -> LLMLing:
+    async def __aenter__(self) -> Self:
         """Enter async context manager."""
         await self.startup()
         return self

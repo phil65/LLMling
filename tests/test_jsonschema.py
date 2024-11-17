@@ -56,7 +56,7 @@ def sample_pydantic_model() -> type[BaseModel]:
 
 # Basic Type Tests
 @pytest.mark.parametrize(
-    "py_type,expected_schema",
+    ("py_type", "expected_schema"),
     BASIC_TYPES_MAPPING.items(),
     ids=lambda x: str(x),
 )
@@ -67,7 +67,7 @@ def test_basic_types(py_type: type, expected_schema: dict[str, Any]) -> None:
 
 # Format Type Tests
 @pytest.mark.parametrize(
-    "py_type,expected_schema",
+    ("py_type", "expected_schema"),
     FORMAT_TYPES_MAPPING.items(),
     ids=lambda x: str(x),
 )

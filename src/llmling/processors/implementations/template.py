@@ -44,7 +44,7 @@ class TemplateProcessor(ChainableProcessor):
             msg = f"Failed to compile template: {exc}"
             raise exceptions.ProcessorError(msg) from exc
 
-    @logfire.instrument("Rendering template with {len(context.kwargs)} variables")
+    @logfire.instrument("Rendering template")
     async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:
         """Apply template to content."""
         if not self.template:

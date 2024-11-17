@@ -15,7 +15,7 @@ from llmling.task.manager import TaskManager
 async def register_providers(config_manager: ConfigManager) -> None:
     """Register all providers from config including groups."""
     # First register all direct providers
-    for provider_key, provider_config in config_manager.config.llm_providers.items():
+    for provider_key in config_manager.config.llm_providers:
         # Register with the provider key (e.g., 'local-llama'), not the display name
         llm_registry.register_provider(provider_key, "litellm")
         print(f"Registered provider {provider_key} with implementation litellm")

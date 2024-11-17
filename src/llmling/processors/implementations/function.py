@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 
 import logfire
 
-from llmling.context.models import ProcessingContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.processors.base import ChainableProcessor, ProcessorConfig, ProcessorResult
@@ -17,6 +16,8 @@ from llmling.processors.base import ChainableProcessor, ProcessorConfig, Process
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from llmling.context.models import ProcessingContext
 
 
 logger = get_logger(__name__)
@@ -58,7 +59,7 @@ class FunctionProcessor(ChainableProcessor):
             msg = f"Unexpected error loading {self.config.import_path}"
             raise exceptions.ProcessorError(msg) from exc
 
-    @logfire.instrument("Executing function processor {self.config.import_path}")
+    @logfire.instrument("Executing function processor")
     async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:
         """Execute function with content."""
         if not self.func:

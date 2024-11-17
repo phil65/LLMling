@@ -1,11 +1,14 @@
 # llmling/core/utils.py
 from __future__ import annotations
 
-from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
-from llmling.core.exceptions import LLMLingError
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from llmling.core.exceptions import LLMLingError
 
 
 T = TypeVar("T")
