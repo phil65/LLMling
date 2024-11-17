@@ -15,6 +15,15 @@ if TYPE_CHECKING:
     import os
 
 
+MODEL_FORMAT_ERROR = "Model {model} must be in format 'provider/model'"
+IMPORT_PATH_ERROR = "Invalid import path: {path}"
+PROCESSOR_ERROR = "Processor {name} not found"
+PROVIDER_REF_ERROR = "Provider {name} referenced in group {group} not found"
+CONTEXT_REF_ERROR = "Context {name} referenced in group {group} not found"
+TASK_PROVIDER_ERROR = "Provider {name} in task {task} not found"
+TASK_CONTEXT_ERROR = "Context {name} in task {task} not found"
+
+
 class GlobalSettings(BaseModel):
     """Global settings that apply to all LLMs unless overridden."""
 
@@ -27,18 +36,19 @@ class ProcessorConfig(BaseModel):
     """Configuration for a text processor."""
 
     type: Literal["function", "template"]
-    import_path: str | None = None  # Required for function type
-    template: str | None = None  # Required for template type
+    import_path: str | None = None
+    template: str | None = None
 
     @pydantic.model_validator(mode="after")
     def validate_config(self) -> ProcessorConfig:
         """Validate processor configuration based on type."""
-        if self.type == "function" and not self.import_path:
-            msg = "import_path is required for function processors"
-            raise ValueError(msg)
-        if self.type == "template" and not self.template:
-            msg = "template is required for template processors"
-            raise ValueError(msg)
+        match self.type:
+            case "function" if not self.import_path:
+                msg = "import_path is required for function processors"
+                raise ValueError(msg)
+            case "template" if not self.template:
+                msg = "template is required for template processors"
+                raise ValueError(msg)
         return self
 
 
@@ -54,79 +64,75 @@ class LLMProvider(BaseModel):
     def validate_model_format(self) -> LLMProvider:
         """Validate that model follows provider/name format."""
         if "/" not in self.model:
-            msg = f"Model {self.model} must be in format 'provider/model'"
+            msg = MODEL_FORMAT_ERROR.format(model=self.model)
             raise ValueError(msg)
         return self
 
 
-class PathContext(BaseModel):
+class BaseContext(BaseModel):
+    """Base class for all context types."""
+
+    description: str
+    processors: list[ProcessingStep] = []
+
+
+class PathContext(BaseContext):
     """Context loaded from a file or URL."""
 
     type: Literal["path"]
     path: Annotated[str, pydantic.HttpUrl | pydantic.FilePath]
-    description: str
-    processors: list[ProcessingStep] = []
 
 
-class TextContext(BaseModel):
+class TextContext(BaseContext):
     """Raw text context."""
 
     type: Literal["text"]
     content: str
-    description: str
-    processors: list[ProcessingStep] = []
 
 
-class CLIContext(BaseModel):
+class CLIContext(BaseContext):
     """Context from CLI command execution."""
 
     type: Literal["cli"]
     command: str | list[str]
-    description: str
     shell: bool = False
     cwd: str | None = None
     timeout: int | None = None
-    processors: list[ProcessingStep] = []
 
 
-class SourceContext(BaseModel):
+class SourceContext(BaseContext):
     """Context from Python source code."""
 
     type: Literal["source"]
     import_path: str
-    description: str
     recursive: bool = False
     include_tests: bool = False
-    processors: list[ProcessingStep] = []
 
     @pydantic.model_validator(mode="after")
     def validate_import_path(self) -> SourceContext:
         """Validate that the import path is properly formatted."""
         if not all(part.isidentifier() for part in self.import_path.split(".")):
-            msg = f"Invalid import path: {self.import_path}"
+            msg = IMPORT_PATH_ERROR.format(path=self.import_path)
             raise ValueError(msg)
         return self
 
 
-class CallableContext(BaseModel):
+class CallableContext(BaseContext):
     """Context from executing a Python callable."""
 
     type: Literal["callable"]
     import_path: str
-    description: str
     keyword_args: dict[str, Any] = {}
-    processors: list[ProcessingStep] = []
 
     @pydantic.model_validator(mode="after")
     def validate_import_path(self) -> CallableContext:
         """Validate that the import path is properly formatted."""
         if not all(part.isidentifier() for part in self.import_path.split(".")):
-            msg = f"Invalid import path: {self.import_path}"
+            msg = IMPORT_PATH_ERROR.format(path=self.import_path)
             raise ValueError(msg)
         return self
 
 
-# Update the Context type to include CallableContext
 Context = PathContext | TextContext | CLIContext | SourceContext | CallableContext
 
 
@@ -161,47 +167,53 @@ class Config(BaseModel):
     @pydantic.model_validator(mode="after")
     def validate_references(self) -> Config:
         """Validate all references between components."""
-        # Validate provider references in groups
+        self._validate_provider_groups()
+        self._validate_context_groups()
+        self._validate_processor_references()
+        self._validate_task_templates()
+        return self
+
+    def _validate_provider_groups(self) -> None:
+        """Validate provider references in groups."""
         for group, providers in self.provider_groups.items():
             for provider in providers:
                 if provider not in self.llm_providers:
-                    msg = f"Provider {provider} referenced in group {group} not found"
+                    msg = PROVIDER_REF_ERROR.format(name=provider, group=group)
                     raise ValueError(msg)
 
-        # Validate context references in groups
+    def _validate_context_groups(self) -> None:
+        """Validate context references in groups."""
         for group, contexts in self.context_groups.items():
             for context in contexts:
                 if context not in self.contexts:
-                    msg = f"Context {context} referenced in group {group} not found"
+                    msg = CONTEXT_REF_ERROR.format(name=context, group=group)
                     raise ValueError(msg)
 
-        # Validate processor references in contexts
-        all_processors = set(self.context_processors.keys())
-        for ctx in self.contexts.values():
-            for step in ctx.processors:
+    def _validate_processor_references(self) -> None:
+        """Validate processor references in contexts."""
+        all_processors = set(self.context_processors)
+        for context in self.contexts.values():
+            for step in context.processors:
                 if step.name not in all_processors:
-                    msg = f"Processor {step.name} not found"
+                    msg = PROCESSOR_ERROR.format(name=step.name)
                     raise ValueError(msg)
 
-        # Validate task template references
+    def _validate_task_templates(self) -> None:
+        """Validate task template references."""
         for name, task in self.task_templates.items():
-            # Check provider reference
             if (
                 task.provider not in self.llm_providers
                 and task.provider not in self.provider_groups
             ):
-                msg = f"Provider {task.provider} in task {name} not found"
+                msg = TASK_PROVIDER_ERROR.format(name=task.provider, task=name)
                 raise ValueError(msg)
 
-            # Check context reference
             if (
                 task.context not in self.contexts
                 and task.context not in self.context_groups
             ):
-                msg = f"Context {task.context} in task {name} not found"
+                msg = TASK_CONTEXT_ERROR.format(name=task.context, task=name)
                 raise ValueError(msg)
-
-        return self
 
 
 def load_config(path: str | os.PathLike[str]) -> Config:
@@ -210,22 +222,15 @@ def load_config(path: str | os.PathLike[str]) -> Config:
     return Config.model_validate(content)
 
 
-# Usage example:
 if __name__ == "__main__":
-    # Load configuration
     config = load_config("src/llmling/resources/test.yml")
-
-    # Access configuration
     print(f"Version: {config.version}")
     print(f"Number of providers: {len(config.llm_providers)}")
     print(f"Number of contexts: {len(config.contexts)}")
 
-    # Validate specific provider
-    gpt4_config = config.llm_providers.get("gpt4-turbo")
-    if gpt4_config:
+    if gpt4_config := config.llm_providers.get("gpt4-turbo"):
         print(f"GPT-4 model: {gpt4_config.model}")
 
-    # Get all contexts of a specific type
     source_contexts = [
         ctx for ctx in config.contexts.values() if isinstance(ctx, SourceContext)
     ]
