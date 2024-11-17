@@ -321,7 +321,7 @@ class LLMLingClient:
         await self.startup()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit."""
         await self.shutdown()
 
@@ -330,7 +330,7 @@ class LLMLingClient:
         asyncio.run(self.startup())
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Synchronous context manager exit."""
         asyncio.run(self.shutdown())
 

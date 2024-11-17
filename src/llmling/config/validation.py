@@ -47,15 +47,12 @@ class ConfigValidator:
         Returns:
             List of validation warnings
         """
-        warnings = []
-
-        # Check provider groups
-        for group, providers in self.config.provider_groups.items():
-            for provider in providers:
-                if provider not in self.config.llm_providers:
-                    warnings.append(
-                        f"Provider {provider} in group {group} not found",
-                    )
+        warnings = [
+            f"Provider {provider} in group {group} not found"
+            for group, providers in self.config.provider_groups.items()
+            for provider in providers
+            if provider not in self.config.llm_providers
+        ]
 
         # Check provider models
         for name, provider in self.config.llm_providers.items():

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+
 @contextmanager
 def error_handler(
     error_class: type[LLMLingError],

@@ -109,23 +109,20 @@ class ConfigManager:
         Returns:
             List of validation warnings
         """
-        warnings = []
-
-        # Check provider references
-        for group, providers in self.config.provider_groups.items():
-            for provider in providers:
-                if provider not in self.config.llm_providers:
-                    warnings.append(
-                        f"Provider {provider} in group {group} not found",
-                    )
+        warnings = [
+            f"Provider {provider} in group {group} not found"
+            for group, providers in self.config.provider_groups.items()
+            for provider in providers
+            if provider not in self.config.llm_providers
+        ]
 
         # Check context references
-        for group, contexts in self.config.context_groups.items():
-            for context in contexts:
-                if context not in self.config.contexts:
-                    warnings.append(
-                        f"Context {context} in group {group} not found",
-                    )
+        warnings.extend(
+            f"Context {context} in group {group} not found"
+            for group, contexts in self.config.context_groups.items()
+            for context in contexts
+            if context not in self.config.contexts
+        )
 
         # Check template references
         for name, template in self.config.task_templates.items():
