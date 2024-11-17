@@ -104,11 +104,15 @@ class CLIContext(BaseContext):
         if not self.command:
             msg = "Command cannot be empty"
             raise ValueError(msg)
-        if isinstance(self.command, list | tuple) and not self.shell:
-            for part in self.command:
-                if not isinstance(part, str):
-                    msg = "Command parts must be strings"
-                    raise ValueError(msg)
+        # When shell=False, command sequence must contain only strings
+        # When shell=True, the command can be any string or sequence of strings
+        if (
+            isinstance(self.command, list | tuple)
+            and not self.shell
+            and not all(isinstance(part, str) for part in self.command)
+        ):
+            msg = "When shell=False, all command parts must be strings"
+            raise ValueError(msg)
         return self
 
 

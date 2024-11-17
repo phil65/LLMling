@@ -39,12 +39,14 @@ def load_config(path: str | os.PathLike[str], *, validate: bool = True) -> Confi
 
     try:
         content = yamling.load_yaml_file(path)
-
-        # Validate basic structure
-        if not isinstance(content, dict):
-            msg = "Configuration must be a dictionary"
-            raise exceptions.ConfigError(msg)
-
+    except Exception as exc:
+        msg = f"Failed to load YAML from {path!r}"
+        raise exceptions.ConfigError(msg) from exc
+    # Validate basic structure
+    if not isinstance(content, dict):
+        msg = "Configuration must be a dictionary"
+        raise exceptions.ConfigError(msg)
+    try:
         # Convert to model
         config = Config.model_validate(content)
 
@@ -53,17 +55,16 @@ def load_config(path: str | os.PathLike[str], *, validate: bool = True) -> Confi
             logger.debug("Validating configuration")  # Use debug level
             validator = ConfigValidator(config)
             validator.validate_or_raise()
-
+    except Exception as exc:
+        msg = f"Failed to load configuration from {path}"
+        raise exceptions.ConfigError(msg) from exc
+    else:
         logger.info(
             "Loaded configuration: version=%s, providers=%d, contexts=%d",
             config.version,
             len(config.llm_providers),
             len(config.contexts),
         )
-    except Exception as exc:
-        msg = f"Failed to load configuration from {path}"
-        raise exceptions.ConfigError(msg) from exc
-    else:
         return config
 
 

@@ -66,7 +66,7 @@ def run(
         raise t.Exit(1) from exc
     except KeyboardInterrupt:
         t.secho("\nOperation cancelled by user", fg=t.colors.YELLOW)
-        raise t.Exit(130)
+        raise t.Exit(130) from None
 
 
 async def _execute_task(
