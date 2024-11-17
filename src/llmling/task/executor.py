@@ -92,7 +92,6 @@ class TaskExecutor:
             msg = "Task execution failed"
             raise exceptions.TaskError(msg) from exc
 
-    @logfire.instrument("Streaming task execution with provider {task_provider.name}")
     async def execute_stream(
         self,
         task_context: TaskContext,

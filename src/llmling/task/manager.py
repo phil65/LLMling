@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import logfire
-
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
@@ -33,14 +31,12 @@ class TaskManager:
         self.config = config
         self.executor = executor
 
-    @logfire.instrument("Executing template {template_name}")
-    async def execute_template(
+    def _prepare_task(
         self,
         template_name: str,
         system_prompt: str | None = None,
-        **kwargs: Any,
-    ) -> TaskResult:
-        """Execute a task template."""
+    ) -> tuple[TaskContext, TaskProvider]:
+        """Prepare task context and provider."""
         template = self._get_template(template_name)
         context = self._resolve_context(template)
         provider_name, provider_config = self._resolve_provider(template)
@@ -58,6 +54,16 @@ class TaskManager:
             settings=template.settings,
         )
 
+        return task_context, task_provider
+
+    async def execute_template(
+        self,
+        template_name: str,
+        system_prompt: str | None = None,
+        **kwargs: Any,
+    ) -> TaskResult:
+        """Execute a task template."""
+        task_context, task_provider = self._prepare_task(template_name, system_prompt)
         return await self.executor.execute(
             task_context,
             task_provider,
@@ -72,23 +78,7 @@ class TaskManager:
         **kwargs: Any,
     ) -> AsyncIterator[TaskResult]:
         """Execute a task template with streaming results."""
-        template = self._get_template(template_name)
-        context = self._resolve_context(template)
-        provider_name, provider_config = self._resolve_provider(template)
-
-        task_context = TaskContext(
-            context=context,
-            processors=context.processors,
-            inherit_tools=template.inherit_tools,
-        )
-
-        task_provider = TaskProvider(
-            name=provider_name,
-            model=provider_config.model,
-            display_name=provider_config.name,
-            settings=template.settings,
-        )
-
+        task_context, task_provider = self._prepare_task(template_name, system_prompt)
         async for result in self.executor.execute_stream(
             task_context,
             task_provider,

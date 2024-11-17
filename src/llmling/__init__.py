@@ -20,10 +20,6 @@ from llmling.task.executor import TaskExecutor
 from llmling.task.manager import TaskManager
 
 
-def upper(text):
-    return text.upper()
-
-
 __version__ = "0.0.1"
 
 __all__ = [

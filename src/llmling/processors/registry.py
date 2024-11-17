@@ -93,38 +93,6 @@ class ProcessorRegistry:
             # so we'll initialize in get_processor instead
             self._processors[name] = processor
 
-    async def process_parallel_steps(
-        self,
-        steps: list[ProcessingStep],
-        context: ProcessingContext,
-    ) -> ProcessorResult:
-        """Process steps in parallel."""
-        tasks = []
-        for step in steps:
-            processor = await self.get_processor(step.name)
-            # Create new context for each parallel step
-            step_context = ProcessingContext(
-                original_content=context.original_content,
-                current_content=context.current_content,
-                metadata=context.metadata,
-                kwargs=step.kwargs or {},
-            )
-            tasks.append(processor.process(step_context))
-
-        results = await asyncio.gather(*tasks)
-
-        # Combine results
-        combined_content = "\n".join(r.content for r in results)
-        combined_metadata = {}
-        for result in results:
-            combined_metadata.update(result.metadata)
-
-        return ProcessorResult(
-            content=combined_content,
-            original_content=context.original_content,
-            metadata=combined_metadata,
-        )
-
     @logfire.instrument("Processing content")
     async def process(
         self,
