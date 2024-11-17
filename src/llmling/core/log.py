@@ -6,6 +6,8 @@ import logging
 import sys
 from typing import TYPE_CHECKING
 
+import logfire
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -24,13 +26,13 @@ def setup_logging(
         handlers: Optional sequence of handlers to add
         format_string: Optional custom format string
     """
+    # Configure logfire first
+    logfire.configure()
     logger = logging.getLogger("llmling")
     logger.setLevel(level)
 
     if not format_string:
-        format_string = (
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     formatter = logging.Formatter(format_string)
 

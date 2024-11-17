@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import logfire
+
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 
@@ -137,6 +139,9 @@ class ConfigValidator:
 
         return warnings
 
+    @logfire.instrument(
+        "Validating configuration with {len(self.config.task_templates)} templates"
+    )
     def validate_or_raise(self) -> None:
         """Run all validations and raise on warnings.
 

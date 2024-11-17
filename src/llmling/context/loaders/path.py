@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import logfire
 from upath import UPath
 
 from llmling.config.models import PathContext
@@ -22,6 +23,7 @@ logger = get_logger(__name__)
 class PathContextLoader(ContextLoader):
     """Loads context from files or URLs."""
 
+    @logfire.instrument("Loading context from path {context.path}")
     async def load(
         self,
         context: Context,

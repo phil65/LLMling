@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+import logfire
+
 from llmling.config.models import CLIContext
 from llmling.context.base import ContextLoader
 from llmling.context.models import LoadedContext
@@ -21,6 +23,7 @@ logger = get_logger(__name__)
 class CLIContextLoader(ContextLoader):
     """Loads context from CLI command execution."""
 
+    @logfire.instrument("Executing CLI command {context.command}")
     async def load(
         self,
         context: Context,

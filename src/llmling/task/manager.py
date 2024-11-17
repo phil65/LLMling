@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
+import logfire
+
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
@@ -30,6 +32,7 @@ class TaskManager:
         self.config = config
         self.executor = executor
 
+    @logfire.instrument("Executing template {template_name}")
     async def execute_template(
         self,
         template_name: str,

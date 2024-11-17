@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import logfire
+
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.llm.base import LLMConfig, Message
@@ -48,6 +50,9 @@ class TaskExecutor:
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
 
+    @logfire.instrument(
+        "Executing task with provider {task_provider.name}, model {task_provider.model}"
+    )
     async def execute(
         self,
         task_context: TaskContext,
@@ -87,6 +92,7 @@ class TaskExecutor:
             msg = "Task execution failed"
             raise exceptions.TaskError(msg) from exc
 
+    @logfire.instrument("Streaming task execution with provider {task_provider.name}")
     async def execute_stream(
         self,
         task_context: TaskContext,

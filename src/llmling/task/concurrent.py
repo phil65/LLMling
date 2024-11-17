@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
+import logfire
+
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.task.models import TaskResult
@@ -19,6 +21,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+@logfire.instrument("Executing concurrent tasks: {', '.join(templates)}")
 async def execute_concurrent(
     manager: TaskManager,
     templates: Sequence[str],

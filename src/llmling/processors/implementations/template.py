@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import jinja2
+import logfire
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -43,6 +44,7 @@ class TemplateProcessor(ChainableProcessor):
             msg = f"Failed to compile template: {exc}"
             raise exceptions.ProcessorError(msg) from exc
 
+    @logfire.instrument("Rendering template with {len(context.kwargs)} variables")
     async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:
         """Apply template to content."""
         if not self.template:

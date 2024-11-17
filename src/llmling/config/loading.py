@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import logfire
 from upath import UPath
 import yamling
 
@@ -20,11 +21,8 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-def load_config(
-    path: str | os.PathLike[str],
-    *,
-    validate: bool = True,
-) -> Config:
+@logfire.instrument("Loading configuration from {path}")
+def load_config(path: str | os.PathLike[str], *, validate: bool = True) -> Config:
     """Load and validate configuration from YAML file.
 
     Args:
@@ -37,7 +35,7 @@ def load_config(
     Raises:
         ConfigError: If loading or validation fails
     """
-    logger.debug("Loading configuration from %s", path)
+    logger.debug("Loading configuration from %s", path)  # Use debug level
 
     try:
         content = yamling.load_yaml_file(path)
@@ -52,7 +50,7 @@ def load_config(
 
         # Validate references if requested
         if validate:
-            logger.debug("Validating configuration")
+            logger.debug("Validating configuration")  # Use debug level
             validator = ConfigValidator(config)
             validator.validate_or_raise()
 

@@ -6,6 +6,8 @@ from importlib import import_module
 import inspect
 from typing import TYPE_CHECKING, Any
 
+import logfire
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -16,6 +18,7 @@ class ToolError(Exception):
     """Base exception for tool-related errors."""
 
 
+@logfire.instrument("Loading tool from {import_path}")
 def load_tool(import_path: str) -> Callable[..., Any]:
     """Load a tool function or class from import path."""
     try:

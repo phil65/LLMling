@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+import logfire
+
 from llmling.context.models import ProcessingContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -122,6 +124,7 @@ class ProcessorRegistry:
             metadata=combined_metadata,
         )
 
+    @logfire.instrument("Processing content through {len(steps)} steps")
     async def process(
         self,
         content: str,

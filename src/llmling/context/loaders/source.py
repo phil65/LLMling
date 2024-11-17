@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import logfire
+
 from llmling.config.models import SourceContext
 from llmling.context.base import ContextLoader
 from llmling.context.models import LoadedContext
@@ -21,6 +23,7 @@ logger = get_logger(__name__)
 class SourceContextLoader(ContextLoader):
     """Loads context from Python source code."""
 
+    @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(
         self,
         context: Context,
