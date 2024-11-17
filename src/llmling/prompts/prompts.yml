@@ -1,0 +1,121 @@
+# prompts/example_collection.yml
+
+name: "Example Collection"
+description: "A collection of example API calls demonstrating various features"
+calls:
+  - name: "Basic Greeting"
+    description: "A simple greeting interaction"
+    prompts:
+      - type: "system"
+        text: "You are a friendly and professional assistant."
+        order: 0
+      - type: "user"
+        text: "Greet the user and introduce yourself."
+        order: 1
+    parameters:
+      model: "openai/gpt-3.5-turbo"
+      temperature: 0.7
+      max_tokens: 150
+
+  - name: "Code Review"
+    description: "Review Python code with best practices"
+    prompts:
+      - type: "system"
+        text: "You are a senior Python developer performing code reviews. Focus on PEP standards, SOLID principles, and security best practices."
+        order: 0
+      - type: "user"
+        text: "Please review the code in the provided file."
+        order: 1
+    parameters:
+      model: "openai/gpt-4"
+      temperature: 0.2
+      max_tokens: 500
+    context_sources:
+      - source_type: "file"
+        name: "Python Source"
+        description: "Source code to review"
+        file_path: "./code/sample.py"
+
+  - name: "Database Query Assistant"
+    description: "Help with SQL query optimization"
+    prompts:
+      - type: "system"
+        text: "You are a SQL optimization expert. Analyze queries and suggest improvements."
+        order: 0
+      - type: "user"
+        text: "Review this query and suggest optimizations."
+        order: 1
+    parameters:
+      model: "openai/gpt-4"
+      temperature: 0.3
+      max_tokens: 300
+    context_sources:
+      - source_type: "database"
+        name: "Query Source"
+        description: "Current query for optimization"
+        connection_string: "postgresql://readonly:pass@localhost:5432/example"
+        query: "SELECT * FROM users WHERE created_at > NOW() - INTERVAL '1 day'"
+
+  - name: "API Documentation Helper"
+    description: "Generate API documentation from OpenAPI specs"
+    prompts:
+      - type: "system"
+        text: "You are a technical writer specializing in API documentation."
+        order: 0
+      - type: "user"
+        text: "Generate user-friendly documentation for this API endpoint."
+        order: 1
+    parameters:
+      model: "ollama/llama3.2:1b"
+      temperature: 0.5
+      max_tokens: 1000
+    context_sources:
+      - source_type: "api"
+        name: "OpenAPI Spec"
+        description: "Current API specification"
+        url: "https://api.example.com/openapi.json"
+        method: "GET"
+        headers:
+          Authorization: "Bearer {{api_key}}"
+  - name: "example_call"
+    context_sources:
+      - source_type: "bundle"
+        name: "Bundle Reference"
+        bundle_name: "common_docs"
+      - source_type: "file"
+        name: "Additional File"
+        file_path: "extra.txt"
+    prompts:
+      - type: "system"
+        text: "You are a technical writer specializing in API documentation."
+        order: 0
+      - type: "user"
+        text: "Generate user-friendly documentation for this API endpoint."
+        order: 1
+    parameters:
+      model: "ollama/llama3.2:1b"
+      temperature: 0.5
+      max_tokens: 1000
+context_bundles:
+  - name: "common_docs"
+    sources:
+      - source_type: "file"
+        name: "API Docs"
+        file_path: "api_docs.md"
+      - source_type: "file"
+        name: "Usage Guide"
+        file_path: "guide.md"
+tool_definitions:
+  - name: get_current_weather
+    description: Get current weather for a location
+    parameters:
+      location:
+        type: string
+        description: City and state or country
+      unit:
+        type: string
+        description: Temperature unit
+        enum: [celsius, fahrenheit]
+        optional: true
+        default: celsius
+    implementation: myapp.tools.weather.WeatherTool
