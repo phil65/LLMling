@@ -22,15 +22,13 @@ def get_module_source(
     """Get source code from a module or package."""
     try:
         module = importlib.import_module(import_path)
-        sources = []
-
-        for source in _get_sources(
-            module,
-            recursive=recursive,
-            include_tests=include_tests,
-        ):
-            sources.append(source)
-
+        sources = list(
+            _get_sources(
+                module,
+                recursive=recursive,
+                include_tests=include_tests,
+            )
+        )
         return "\n\n# " + "-" * 40 + "\n\n".join(sources)
 
     except ImportError as exc:

@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 
 # Constants for test data
 SAMPLE_TEXT = "Hello, World!"
-REVERSED_TEXT = "!dlroW ,olleH"
 TIMEOUT_SECONDS = 1
 LARGE_TEXT = "A" * 1000
 INVALID_MODULE = "does_not_exist.module"

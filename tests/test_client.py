@@ -94,8 +94,8 @@ class TestClientCreation:
     @pytest.mark.asyncio
     async def test_client_invalid_config(self) -> None:
         """Test client initialization with invalid configuration."""
+        client = LLMLingClient(NONEXISTENT_CONFIG_PATH)
         with pytest.raises(exceptions.LLMLingError):
-            client = LLMLingClient(NONEXISTENT_CONFIG_PATH)
             await client.startup()
 
 

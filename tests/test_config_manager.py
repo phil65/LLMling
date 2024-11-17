@@ -14,16 +14,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
-def config_content() -> str:
-    """Create test configuration content."""
-    return """
-version: "1.0"
+VERSION = "1.0"
+DEFAULT_TIMEOUT = 30
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_TEMPERATURE = 0.7
+TEMPLATE_TEMPERATURE = 0.8
+EXPECTED_WARNING_COUNT = 2
+
+CONFIG_YAML = f"""
+version: "{VERSION}"
 global_settings:
-    timeout: 30
-    max_retries: 3
-    temperature: 0.7
-context_processors: {}
+    timeout: {DEFAULT_TIMEOUT}
+    max_retries: {DEFAULT_MAX_RETRIES}
+    temperature: {DEFAULT_TEMPERATURE}
+context_processors: {{}}
 llm_providers:
     test-provider:
         model: test/model
@@ -38,35 +42,41 @@ task_templates:
         provider: test-provider
         context: test-context
         settings:
-            temperature: 0.8
-provider_groups: {}
-context_groups: {}
+            temperature: {TEMPLATE_TEMPERATURE}
+provider_groups: {{}}
+context_groups: {{}}
 """
+
+
+@pytest.fixture
+def config_content() -> str:
+    """Create test configuration content."""
+    return CONFIG_YAML
 
 
 @pytest.fixture
 def config_file(tmp_path: Path, config_content: str) -> Path:
     """Create a test configuration file."""
     config_file = tmp_path / "config.yml"
-    config_file.write_text(config_content)
+    _ = config_file.write_text(config_content)
     return config_file
 
 
 def test_load_config(config_file: Path) -> None:
     """Test loading configuration from file."""
     manager = ConfigManager.load(config_file)
-    assert manager.config.version == "1.0"
-    assert manager.config.global_settings.timeout == 30
+    assert manager.config.version == VERSION
+    assert manager.config.global_settings.timeout == DEFAULT_TIMEOUT
     assert "test-template" in manager.config.task_templates
 
 
 def test_load_invalid_config(tmp_path: Path) -> None:
     """Test loading invalid configuration."""
     invalid_file = tmp_path / "invalid.yml"
-    invalid_file.write_text("invalid: yaml: content")
+    _ = invalid_file.write_text("invalid: yaml: content")
 
     with pytest.raises(exceptions.ConfigError):
-        ConfigManager.load(invalid_file)
+        _ = ConfigManager.load(invalid_file)
 
 
 def test_save_config(tmp_path: Path, config_file: Path) -> None:
@@ -86,9 +96,9 @@ def test_get_effective_settings(config_file: Path) -> None:
     manager = ConfigManager.load(config_file)
     settings = manager.get_effective_settings("test-template")
 
-    assert settings["temperature"] == 0.8  # From template
-    assert settings["timeout"] == 30  # From global
-    assert settings["max_retries"] == 3  # From global
+    assert settings["temperature"] == TEMPLATE_TEMPERATURE  # From template
+    assert settings["timeout"] == DEFAULT_TIMEOUT  # From global
+    assert settings["max_retries"] == DEFAULT_MAX_RETRIES  # From global
 
 
 def test_validate_references(config_file: Path) -> None:
@@ -106,8 +116,10 @@ def test_validate_references(config_file: Path) -> None:
     )
 
     warnings = manager.validate_references()
-    assert len(warnings) == 2  # Should have provider and context warnings
+    assert (
+        len(warnings) == EXPECTED_WARNING_COUNT
+    )  # Should have provider and context warnings
 
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__])
+    _ = pytest.main(["-v", __file__])

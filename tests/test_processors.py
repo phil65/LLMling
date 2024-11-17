@@ -389,11 +389,7 @@ async def test_registry_streaming(registry: ProcessorRegistry) -> None:
     )
 
     steps = [ProcessingStep(name="reverse")]
-
-    results = []
-    async for result in registry.process_stream(SAMPLE_TEXT, steps):
-        results.append(result)
-
+    results = [result async for result in registry.process_stream(SAMPLE_TEXT, steps)]
     assert len(results) == 1
     assert results[0].content == REVERSED_TEXT
 
