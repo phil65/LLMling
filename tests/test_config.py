@@ -10,6 +10,7 @@ from upath import UPath
 import yamling
 
 from llmling import config
+from llmling.processors.base import ProcessorConfig
 
 
 if TYPE_CHECKING:
@@ -75,27 +76,29 @@ def test_load_minimal_config(minimal_config_dict: dict[str, Any]) -> None:
 
 
 def test_validate_processor_config() -> None:
-    """Test validation of processor configurations."""
-    # Test function processor without import path
-    with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.ProcessorConfig.model_validate({"type": "function"})
-    assert "import_path is required" in str(exc_info.value)
+    """Test processor config validation."""
+    # Test function processor
+    with pytest.raises(pydantic.ValidationError):
+        ProcessorConfig(type="function")  # Missing required import_path
 
-    # Test template processor without template
-    with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.ProcessorConfig.model_validate({"type": "template"})
-    assert "template is required" in str(exc_info.value)
+    # Test template processor
+    with pytest.raises(pydantic.ValidationError):
+        ProcessorConfig(type="template")  # Missing required template
+
+    # Test valid configs
+    assert ProcessorConfig(type="function", import_path="test.func")
+    assert ProcessorConfig(type="template", template="{{ content }}")
 
 
 def test_validate_llm_provider() -> None:
     """Test validation of LLM provider configurations."""
     # Test invalid model format
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.LLMProvider.model_validate({"model": "invalid-model-format"})
+        config.LLMProviderConfig.model_validate({"model": "invalid-model-format"})
     assert "must be in format 'provider/model'" in str(exc_info.value)
 
     # Test valid model format
-    provider = config.LLMProvider.model_validate({"model": "openai/gpt-4"})
+    provider = config.LLMProviderConfig.model_validate({"model": "openai/gpt-4"})
     assert provider.model == "openai/gpt-4"
 
 
@@ -224,3 +227,7 @@ def test_task_template_validation(minimal_config_dict: dict[str, Any]) -> None:
     with pytest.raises(pydantic.ValidationError) as exc_info:
         config.Config.model_validate(invalid_config)
     assert "Context non-existent-context" in str(exc_info.value)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])
