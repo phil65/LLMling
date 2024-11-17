@@ -43,13 +43,10 @@ class ConfigManager:
         Raises:
             ConfigError: If loading fails
         """
-        try:
-            content = yamling.load_yaml_file(path)
-            config = Config.model_validate(content)
-            return cls(config)
-        except Exception as exc:
-            msg = f"Failed to load configuration from {path}"
-            raise exceptions.ConfigError(msg) from exc
+        from llmling.config.loading import load_config
+
+        config = load_config(path)
+        return cls(config)
 
     def save(self, path: str | os.PathLike[str]) -> None:
         """Save configuration to file.
@@ -67,7 +64,6 @@ class ConfigManager:
 
         except Exception as exc:
             msg = f"Failed to save configuration to {path}"
-            print(exc)
             raise exceptions.ConfigError(msg) from exc
 
     def get_effective_settings(
