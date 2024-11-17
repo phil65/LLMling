@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from llmling.config.manager import ConfigManager
 from llmling.context import default_registry as context_registry
@@ -163,7 +163,7 @@ class LLMLingClient:
         template: str,
         *,
         system_prompt: str | None = None,
-        stream: bool = False,
+        stream: Literal[False] = False,
         **kwargs: Any,
     ) -> TaskResult: ...
 
@@ -173,7 +173,7 @@ class LLMLingClient:
         template: str,
         *,
         system_prompt: str | None = None,
-        stream: bool = True,
+        stream: Literal[True],
         **kwargs: Any,
     ) -> AsyncIterator[TaskResult]: ...
 
@@ -185,19 +185,24 @@ class LLMLingClient:
         stream: bool = False,
         **kwargs: Any,
     ) -> TaskResult | AsyncIterator[TaskResult]:
-        """Execute a task template."""
+        """Execute a task template.
+
+        Args:
+            template: Name of template to execute
+            system_prompt: Optional system prompt
+            stream: Whether to stream results
+            **kwargs: Additional parameters for LLM
+
+        Returns:
+            Task result or async iterator of results if streaming
+        """
         self._ensure_initialized()
         try:
             if stream:
-                # Return the async iterator directly
-                return await anext(
-                    aiter(
-                        self.manager.execute_template_stream(
-                            template,
-                            system_prompt=system_prompt,
-                            **kwargs,
-                        )
-                    )
+                return self.manager.execute_template_stream(
+                    template,
+                    system_prompt=system_prompt,
+                    **kwargs,
                 )
             return await self.manager.execute_template(
                 template,
@@ -378,8 +383,16 @@ def sync_example() -> None:
 
 
 if __name__ == "__main__":
-    # Run async example
+    """Run both async and sync examples."""
+    # Reset the registry before running examples
+    llm_registry.reset()
+
+    print("\nRunning async example...")
+    print("=" * 50)
     asyncio.run(async_example())
 
-    # Run sync example
+    print("\nRunning sync example...")
+    print("=" * 50)
+    # Reset registry between examples
+    llm_registry.reset()
     sync_example()
