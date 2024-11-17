@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncGenerator
 import enum
+from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
@@ -17,6 +17,10 @@ from llmling.llm.registry import default_registry as llm_registry
 from llmling.processors.registry import ProcessorRegistry
 from llmling.task.executor import TaskExecutor
 from llmling.task.manager import TaskManager
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 
 class ExitCode(enum.IntEnum):

@@ -38,6 +38,7 @@ def minimal_config_dict() -> dict[str, Any]:
         "llm_providers": {
             "test-provider": {
                 "model": "openai/test-model",
+                "name": "Test provider",
             }
         },
         "provider_groups": {},
@@ -94,11 +95,17 @@ def test_validate_llm_provider() -> None:
     """Test validation of LLM provider configurations."""
     # Test invalid model format
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.LLMProviderConfig.model_validate({"model": "invalid-model-format"})
+        config.LLMProviderConfig.model_validate({
+            "model": "invalid-model-format",
+            "name": "test",
+        })
     assert "must be in format 'provider/model'" in str(exc_info.value)
 
     # Test valid model format
-    provider = config.LLMProviderConfig.model_validate({"model": "openai/gpt-4"})
+    provider = config.LLMProviderConfig.model_validate({
+        "model": "openai/gpt-4",
+        "name": "test",
+    })
     assert provider.model == "openai/gpt-4"
 
 
@@ -177,6 +184,7 @@ global_settings:
 context_processors: {}
 llm_providers:
     test-provider:
+        name: Test provider
         model: openai/test-model
 provider_groups: {}
 contexts:
@@ -217,7 +225,10 @@ def test_task_template_validation(minimal_config_dict: dict[str, Any]) -> None:
     # Test invalid context reference
     invalid_config = minimal_config_dict.copy()
     # First add a valid provider
-    invalid_config["llm_providers"]["test-provider"] = {"model": "openai/test-model"}
+    invalid_config["llm_providers"]["test-provider"] = {
+        "model": "openai/test-model",
+        "name": "test",
+    }
     invalid_config["task_templates"]["invalid-task"] = {
         "provider": "test-provider",
         "context": "non-existent-context",

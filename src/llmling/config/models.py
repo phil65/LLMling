@@ -23,7 +23,7 @@ class GlobalSettings(BaseModel):
 class LLMProviderConfig(BaseModel):
     """LLM provider configuration."""
 
-    name: str = ""  # Add this field
+    name: str
     model: str
     temperature: float | None = None
     max_tokens: int | None = None

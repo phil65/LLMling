@@ -55,20 +55,7 @@ class TaskExecutor:
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> TaskResult:
-        """Execute a task.
-
-        Args:
-            task_context: Context configuration
-            task_provider: Provider configuration
-            system_prompt: Optional system prompt
-            **kwargs: Additional parameters for LLM
-
-        Returns:
-            Task execution result
-
-        Raises:
-            TaskError: If execution fails
-        """
+        """Execute a task."""
         try:
             # Load and process context
             context_result = await self._load_context(task_context)
@@ -82,7 +69,7 @@ class TaskExecutor:
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider)
             provider = self.provider_registry.create_provider(
-                task_provider.name,
+                task_provider.name,  # This is the lookup key
                 llm_config,
             )
 
@@ -208,31 +195,21 @@ class TaskExecutor:
         *,
         streaming: bool = False,
     ) -> LLMConfig:
-        """Create LLM configuration from provider settings.
-
-        Args:
-            provider: Task provider configuration
-            streaming: Whether to enable streaming
-
-        Returns:
-            LLM configuration instance
-        """
-        # First convert TaskSettings to a dict if it exists, otherwise use empty dict
+        """Create LLM configuration from provider settings."""
         provider_settings = (
             provider.settings.model_dump(exclude_none=True)
             if provider.settings is not None
             else {}
         )
 
-        # Create base settings with required fields
         config_dict = {
             "model": provider.model,
+            "provider_name": provider.name,  # Key for lookup
+            "display_name": provider.display_name,  # Human readable name
             "timeout": self.default_timeout,
             "max_retries": self.default_max_retries,
             "streaming": streaming,
         }
 
-        # Update with any provider-specific settings
         config_dict.update(provider_settings)
-
         return LLMConfig(**config_dict)

@@ -23,7 +23,8 @@ class TaskContext(BaseModel):
 class TaskProvider(BaseModel):
     """Provider configuration for a task."""
 
-    name: str
+    name: str  # Provider lookup key
+    display_name: str = ""  # Human readable name
     model: str
     settings: TaskSettings | None = None
 

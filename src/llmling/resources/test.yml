@@ -44,6 +44,7 @@ context_processors:
 llm_providers:
   # GPT-4 Turbo configuration
   gpt4-turbo:
+    name: "GPT-4 Turbo"
     model: openai/gpt-4-1106-preview
     temperature: 0.8
     max_tokens: 4096
@@ -52,12 +53,14 @@ llm_providers:
 
   # Anthropic Claude configuration
   claude2:
+    name: "Claude 2"
     model: anthropic/claude-2
     temperature: 0.7
     max_tokens: 8192
 
   # Local model configuration
   local-llama:
+    name: "Local Llama"
     model: ollama/smollm2:360m
     temperature: 0.7
     max_tokens: 2048

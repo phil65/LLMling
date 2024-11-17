@@ -22,14 +22,14 @@ class LLMConfig(BaseModel):
     """Configuration for LLM providers."""
 
     model: str
+    provider_name: str  # Key used for provider lookup
+    display_name: str = ""  # Human-readable name
     temperature: float = 0.7
     max_tokens: int | None = None
     top_p: float | None = None
     timeout: int = 30
     max_retries: int = 3
     streaming: bool = False
-
-    model_config = ConfigDict(frozen=True)
 
 
 MessageRole = Literal["system", "user", "assistant"]

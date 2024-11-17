@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.llm.base import LLMConfig  # noqa: TCH001
+from llmling.llm.base import LLMConfig
 from llmling.llm.providers.litellm import LiteLLMProvider
 
 
@@ -22,30 +22,58 @@ class ProviderRegistry:
 
     def __init__(self) -> None:
         """Initialize an empty registry."""
-        self._providers: dict[str, type[LLMProvider]] = {
+        # Map of provider implementations (like 'litellm' -> LiteLLMProvider)
+        self._implementations: dict[str, type[LLMProvider]] = {
             "litellm": LiteLLMProvider,
         }
+        # Map of configured providers to their implementations
+        self._providers: dict[str, str] = {}
 
     def register_provider(
         self,
         name: str,
-        provider_class: type[LLMProvider],
+        implementation: str,
     ) -> None:
-        """Register a new provider.
+        """Register a provider configuration with an implementation.
 
         Args:
-            name: Provider name
-            provider_class: Provider class to register
+            name: Name of the provider configuration (e.g., 'gpt4-turbo')
+            implementation: Name of the implementation to use (e.g., 'litellm')
 
         Raises:
-            LLMError: If provider already registered
+            LLMError: If provider already registered or implementation not found
         """
         if name in self._providers:
             msg = f"Provider {name} already registered"
             raise exceptions.LLMError(msg)
 
-        logger.info("Registering LLM provider: %s", name)
-        self._providers[name] = provider_class
+        if implementation not in self._implementations:
+            msg = f"Implementation {implementation} not found"
+            raise exceptions.LLMError(msg)
+
+        logger.info("Registering LLM provider %s using %s", name, implementation)
+        self._providers[name] = implementation
+
+    def register_implementation(
+        self,
+        name: str,
+        provider_class: type[LLMProvider],
+    ) -> None:
+        """Register a new provider implementation.
+
+        Args:
+            name: Implementation name (e.g., 'litellm')
+            provider_class: Provider implementation class
+
+        Raises:
+            LLMError: If implementation already registered
+        """
+        if name in self._implementations:
+            msg = f"Implementation {name} already registered"
+            raise exceptions.LLMError(msg)
+
+        logger.info("Registering LLM implementation: %s", name)
+        self._implementations[name] = provider_class
 
     def create_provider(
         self,
@@ -55,7 +83,7 @@ class ProviderRegistry:
         """Create a provider instance.
 
         Args:
-            name: Provider name
+            name: Provider name from configuration
             config: Provider configuration
 
         Returns:
@@ -65,28 +93,38 @@ class ProviderRegistry:
             LLMError: If provider not found
         """
         try:
-            provider_class = self._providers[name]
+            # Get the implementation for this provider
+            implementation = self._providers.get(name)
+            if not implementation:
+                msg = f"Provider not found: {name}"
+                raise exceptions.LLMError(msg)
+
+            # Get the implementation class
+            provider_class = self._implementations[implementation]
+
+            # Create and return provider instance
             return provider_class(config)
+
         except KeyError as exc:
-            msg = f"Provider not found: {name}"
+            msg = f"Provider or implementation not found: {name}"
             raise exceptions.LLMError(msg) from exc
 
-    def get_provider_class(self, name: str) -> type[LLMProvider]:
-        """Get a provider class by name.
+    def get_implementation(self, name: str) -> type[LLMProvider]:
+        """Get a provider implementation by name.
 
         Args:
-            name: Provider name
+            name: Implementation name
 
         Returns:
-            Provider class
+            Provider implementation class
 
         Raises:
-            LLMError: If provider not found
+            LLMError: If implementation not found
         """
         try:
-            return self._providers[name]
+            return self._implementations[name]
         except KeyError as exc:
-            msg = f"Provider not found: {name}"
+            msg = f"Implementation not found: {name}"
             raise exceptions.LLMError(msg) from exc
 
 

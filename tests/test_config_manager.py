@@ -27,6 +27,7 @@ context_processors: {}
 llm_providers:
     test-provider:
         model: test/model
+        name: Test
 contexts:
     test-context:
         type: text

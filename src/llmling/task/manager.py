@@ -26,12 +26,7 @@ class TaskManager:
         config: Config,
         executor: TaskExecutor,
     ) -> None:
-        """Initialize task manager.
-
-        Args:
-            config: Application configuration
-            executor: Task executor
-        """
+        """Initialize task manager."""
         self.config = config
         self.executor = executor
 
@@ -41,22 +36,10 @@ class TaskManager:
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> TaskResult:
-        """Execute a task template.
-
-        Args:
-            template_name: Name of template to execute
-            system_prompt: Optional system prompt
-            **kwargs: Additional parameters for LLM
-
-        Returns:
-            Task execution result
-
-        Raises:
-            TaskError: If execution fails
-        """
+        """Execute a task template."""
         template = self._get_template(template_name)
         context = self._resolve_context(template)
-        provider = self._resolve_provider(template)
+        provider_name, provider_config = self._resolve_provider(template)
 
         task_context = TaskContext(
             context=context,
@@ -65,8 +48,9 @@ class TaskManager:
         )
 
         task_provider = TaskProvider(
-            name=provider.name,
-            model=provider.model,
+            name=provider_name,
+            model=provider_config.model,
+            display_name=provider_config.name,
             settings=template.settings,
         )
 
@@ -83,22 +67,10 @@ class TaskManager:
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[TaskResult]:
-        """Execute a task template with streaming results.
-
-        Args:
-            template_name: Name of template to execute
-            system_prompt: Optional system prompt
-            **kwargs: Additional parameters for LLM
-
-        Yields:
-            Streaming task results
-
-        Raises:
-            TaskError: If execution fails
-        """
+        """Execute a task template with streaming results."""
         template = self._get_template(template_name)
         context = self._resolve_context(template)
-        provider = self._resolve_provider(template)
+        provider_name, provider_config = self._resolve_provider(template)
 
         task_context = TaskContext(
             context=context,
@@ -107,8 +79,9 @@ class TaskManager:
         )
 
         task_provider = TaskProvider(
-            name=provider.name,
-            model=provider.model,
+            name=provider_name,
+            model=provider_config.model,
+            display_name=provider_config.name,
             settings=template.settings,
         )
 
@@ -121,17 +94,7 @@ class TaskManager:
             yield result
 
     def _get_template(self, name: str) -> TaskTemplate:
-        """Get a task template by name.
-
-        Args:
-            name: Template name
-
-        Returns:
-            Task template
-
-        Raises:
-            TaskError: If template not found
-        """
+        """Get a task template by name."""
         try:
             return self.config.task_templates[name]
         except KeyError as exc:
@@ -139,17 +102,7 @@ class TaskManager:
             raise exceptions.TaskError(msg) from exc
 
     def _resolve_context(self, template: TaskTemplate) -> Context:
-        """Resolve context from template.
-
-        Args:
-            template: Task template
-
-        Returns:
-            Resolved context
-
-        Raises:
-            TaskError: If context resolution fails
-        """
+        """Resolve context from template."""
         try:
             # Check direct context first
             if template.context in self.config.contexts:
@@ -170,28 +123,21 @@ class TaskManager:
             msg = f"Failed to resolve context {template.context}"
             raise exceptions.TaskError(msg) from exc
 
-    def _resolve_provider(self, template: TaskTemplate) -> LLMProviderConfig:
+    def _resolve_provider(self, template: TaskTemplate) -> tuple[str, LLMProviderConfig]:
         """Resolve provider from template.
 
-        Args:
-            template: Task template
-
         Returns:
-            Resolved provider configuration
-
-        Raises:
-            TaskError: If provider resolution fails
+            Tuple of (provider_name, provider_config)
         """
         try:
             # Check direct provider first
             if template.provider in self.config.llm_providers:
-                return self.config.llm_providers[template.provider]
+                return template.provider, self.config.llm_providers[template.provider]
 
             # Check provider groups
             if template.provider in self.config.provider_groups:
-                # For now, just take the first provider in the group
                 provider_name = self.config.provider_groups[template.provider][0]
-                return self.config.llm_providers[provider_name]
+                return provider_name, self.config.llm_providers[provider_name]
 
             msg = (
                 f"Provider {template.provider} not found in providers or provider groups"
@@ -202,8 +148,4 @@ class TaskManager:
             raise
         except Exception as exc:
             msg = f"Failed to resolve provider {template.provider}"
-            raise exceptions.TaskError(msg) from exc
-
-        except Exception as exc:
-            msg = "Provider resolution failed"
             raise exceptions.TaskError(msg) from exc

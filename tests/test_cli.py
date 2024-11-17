@@ -45,6 +45,7 @@ context_processors: {}
 
 llm_providers:
   test-provider:
+    name: Test Provider
     model: test/model
     temperature: 0.7
 
