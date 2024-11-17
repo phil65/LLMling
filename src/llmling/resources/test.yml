@@ -14,14 +14,14 @@ context_processors:
   # Clean and standardize Python code
   python_cleaner:
     type: function
-    import_path: code_utils.clean_python_code
+    import_path: llmling.testing.processors.uppercase_text
     # Function must take str input and return str output
     # Additional parameters can be passed via kwargs in context definitions
 
   # Remove sensitive information
   sanitize:
     type: function
-    import_path: security_utils.remove_sensitive_data
+    import_path: llmling.testing.processors.multiply
     # Will be called with content as first argument
     # kwargs can include patterns to remove, replacement text, etc.
 
@@ -58,7 +58,7 @@ llm_providers:
 
   # Local model configuration
   local-llama:
-    model: ollama/llama2
+    model: ollama/smollm2:360m
     temperature: 0.7
     max_tokens: 2048
     # Local models can use the same configuration format
