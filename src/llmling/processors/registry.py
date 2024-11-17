@@ -71,12 +71,11 @@ class ProcessorRegistry:
                     return FunctionProcessor(config)
                 case "template":
                     return TemplateProcessor(config)
-                case _:
-                    msg = f"Unknown processor type: {config.type}"
-                    raise exceptions.ProcessorError(msg)
         except Exception as exc:
             msg = f"Failed to create processor for config {config}"
             raise exceptions.ProcessorError(msg) from exc
+        msg = f"Unknown processor type: {config.type}"
+        raise exceptions.ProcessorError(msg)
 
     def register(self, name: str, config: ProcessorConfig) -> None:
         """Register a new processor configuration."""
@@ -213,14 +212,15 @@ class ProcessorRegistry:
 
         try:
             processor = self._processors[name]
+        except KeyError as exc:
+            msg = f"Processor not found: {name}"
+            raise exceptions.ProcessorError(msg) from exc
+        else:
             # Initialize if not already initialized
             if not getattr(processor, "_initialized", False):
                 await processor.startup()
                 processor._initialized = True
             return processor
-        except KeyError as exc:
-            msg = f"Processor not found: {name}"
-            raise exceptions.ProcessorError(msg) from exc
 
     async def process_stream(
         self,

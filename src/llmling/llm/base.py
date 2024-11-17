@@ -136,14 +136,15 @@ class RetryableProvider(LLMProvider):
             try:
                 result = await self._complete_impl(messages, **kwargs)
                 await self.validate_response(result)
-                return result
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 last_error = exc
                 retries += 1
                 if retries <= self.config.max_retries:
                     await self._handle_retry(exc, retries)
                     continue
                 break
+            else:
+                return result
 
         msg = f"Failed after {retries} retries"
         raise exceptions.LLMError(msg) from last_error

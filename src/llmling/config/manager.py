@@ -61,7 +61,7 @@ class ConfigManager:
         try:
             content = self.config.model_dump(exclude_none=True)
             string = yamling.dump_yaml(content)
-            UPath(path).write_text(string)
+            _ = UPath(path).write_text(string)
 
         except Exception as exc:
             msg = f"Failed to save configuration to {path}"
@@ -84,24 +84,22 @@ class ConfigManager:
         """
         try:
             template = self.config.task_templates[template_name]
-
-            # Start with global settings
-            settings = self.config.global_settings.model_dump()
-
-            # Add provider settings if direct provider
-            if template.provider in self.config.llm_providers:
-                provider = self.config.llm_providers[template.provider]
-                settings.update(provider.model_dump(exclude_none=True))
-
-            # Add template settings
-            if template.settings:
-                settings.update(template.settings.model_dump(exclude_none=True))
-
-            return settings
-
         except KeyError as exc:
             msg = f"Template not found: {template_name}"
             raise exceptions.ConfigError(msg) from exc
+        # Start with global settings
+        settings = self.config.global_settings.model_dump()
+
+        # Add provider settings if direct provider
+        if template.provider in self.config.llm_providers:
+            provider = self.config.llm_providers[template.provider]
+            settings.update(provider.model_dump(exclude_none=True))
+
+        # Add template settings
+        if template.settings:
+            dct = template.settings.model_dump(exclude_none=True)
+            settings.update(dct)
+        return settings
 
     def validate_references(self) -> list[str]:
         """Validate all references in configuration.

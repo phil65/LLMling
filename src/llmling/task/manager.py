@@ -107,15 +107,13 @@ class TaskManager:
                 # For now, just take the first context in the group
                 context_name = self.config.context_groups[template.context][0]
                 return self.config.contexts[context_name]
-
-            msg = f"Context {template.context} not found in contexts or context groups"
-            raise exceptions.TaskError(msg)
-
         except exceptions.TaskError:
             raise
         except Exception as exc:
             msg = f"Failed to resolve context {template.context}"
             raise exceptions.TaskError(msg) from exc
+        msg = f"Context {template.context} not found in contexts or context groups"
+        raise exceptions.TaskError(msg)
 
     def _resolve_provider(self, template: TaskTemplate) -> tuple[str, LLMProviderConfig]:
         """Resolve provider from template.
@@ -132,14 +130,10 @@ class TaskManager:
             if template.provider in self.config.provider_groups:
                 provider_name = self.config.provider_groups[template.provider][0]
                 return provider_name, self.config.llm_providers[provider_name]
-
-            msg = (
-                f"Provider {template.provider} not found in providers or provider groups"
-            )
-            raise exceptions.TaskError(msg)
-
         except exceptions.TaskError:
             raise
         except Exception as exc:
             msg = f"Failed to resolve provider {template.provider}"
             raise exceptions.TaskError(msg) from exc
+        msg = f"Provider {template.provider} not found in providers or provider groups"
+        raise exceptions.TaskError(msg)

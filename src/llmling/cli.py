@@ -7,6 +7,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import typer as t
+import upath
 from upath import UPath
 
 from llmling.client import LLMLingClient
@@ -106,7 +107,9 @@ async def _handle_streaming(
     """Handle streaming execution."""
     # Prepare output file if specified
     output_stream = (
-        open(output_file, "w", encoding="utf-8") if output_file else sys.stdout
+        upath.UPath(output_file).open("w", encoding="utf-8")
+        if output_file
+        else sys.stdout
     )
 
     try:

@@ -30,7 +30,7 @@ class ContextLoader(ABC):
         """Load and process context content.
 
         Args:
-            config: The configuration for this context
+            context: The loading-context
             processor_registry: Registry of available processors
 
         Returns:

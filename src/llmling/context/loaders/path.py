@@ -68,5 +68,5 @@ class PathContextLoader(ContextLoader):
             )
         except Exception as exc:
             msg = f"Failed to load content from {context.path}"
-            logger.exception(exc)
+            logger.exception(msg)
             raise exceptions.LoaderError(msg) from exc

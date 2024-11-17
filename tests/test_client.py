@@ -146,7 +146,7 @@ class TestTaskExecution:
 
         except TimeoutError:
             error = AssertionError(f"Streaming timed out after {STREAM_TIMEOUT}s")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             error = exc
             print(f"Error during streaming: {exc}")
 

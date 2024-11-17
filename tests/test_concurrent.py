@@ -91,7 +91,7 @@ async def test_concurrent_execution_concurrency_limit(
 
     # With 3 tasks, max_concurrent=2, and 0.1s delay,
     # should take at least 0.2s (two batches)
-    assert elapsed >= 0.2
+    assert elapsed >= 0.2  # noqa: PLR2004
     assert len(results) == len(TEMPLATE_NAMES)
 
 

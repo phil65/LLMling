@@ -112,15 +112,11 @@ class BaseProcessor:
             msg = "Processor returned empty content"
             raise exceptions.ProcessorError(msg)
 
-        if self.config.validate_schema:
-            try:
-                # Schema validation would go here
-                if not isinstance(result.content, str):
-                    msg = f"Expected string output, got {type(result.content)}"
-                    raise exceptions.ProcessorError(msg)
-            except Exception as exc:
-                msg = "Output validation failed"
-                raise exceptions.ProcessorError(msg) from exc
+        if self.config.validate_schema:  # noqa: SIM102
+            # Schema validation would go here
+            if not isinstance(result.content, str):
+                msg = f"Expected string output, got {type(result.content)}"
+                raise exceptions.ProcessorError(msg)
 
 
 class AsyncProcessor(BaseProcessor):
@@ -157,10 +153,11 @@ class ChainableProcessor(AsyncProcessor):
             result = await self._process_impl(prepared_context)
             final_result = await self.post_process(prepared_context, result)
             await self.validate_result(final_result)
-            return final_result
         except Exception as exc:
             msg = f"Processing failed: {exc}"
             raise exceptions.ProcessorError(msg) from exc
+        else:
+            return final_result
 
     @abstractmethod
     async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:

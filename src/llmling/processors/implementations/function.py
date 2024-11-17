@@ -39,12 +39,13 @@ class FunctionProcessor(ChainableProcessor):
 
         try:
             self.func = self._load_function()
-            if not callable(self.func):
-                msg = f"Loaded object {self.config.import_path} is not callable"
-                raise exceptions.ProcessorError(msg)
         except Exception as exc:
             msg = f"Failed to load function: {exc}"
             raise exceptions.ProcessorError(msg) from exc
+        else:
+            if not callable(self.func):
+                msg = f"Loaded object {self.config.import_path} is not callable"
+                raise exceptions.ProcessorError(msg)
 
     def _load_function(self) -> Callable[..., Any]:
         """Load function from import path."""

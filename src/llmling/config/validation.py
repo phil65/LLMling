@@ -150,15 +150,13 @@ class ConfigValidator:
 
     def validate_references(self) -> list[str]:
         """Validate all references in configuration."""
-        warnings = []
-
         # Validate provider references
-        for group_name, providers in self.config.provider_groups.items():
-            for provider_name in providers:
-                if provider_name not in self.config.llm_providers:
-                    warnings.append(
-                        f"Provider {provider_name} in group {group_name} not found"
-                    )
+        warnings = [
+            f"Provider {provider_name} in group {group_name} not found"
+            for group_name, providers in self.config.provider_groups.items()
+            for provider_name in providers
+            if provider_name not in self.config.llm_providers
+        ]
 
         # Validate context references
         for template_name, template in self.config.task_templates.items():

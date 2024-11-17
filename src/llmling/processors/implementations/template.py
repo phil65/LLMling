@@ -9,11 +9,11 @@ import logfire
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.processors.base import ChainableProcessor, ProcessorResult
+from llmling.processors.base import ChainableProcessor, ProcessorConfig, ProcessorResult
 
 
 if TYPE_CHECKING:
-    from llmling.processors.base import ProcessingContext
+    from llmling.context.models import ProcessingContext
 
 
 logger = get_logger(__name__)
@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 class TemplateProcessor(ChainableProcessor):
     """Processor that applies a Jinja2 template."""
 
-    def __init__(self, config: Any) -> None:
+    def __init__(self, config: ProcessorConfig) -> None:
         """Initialize the processor.
 
         Args:
