@@ -11,7 +11,7 @@ from llmling.llm.base import CompletionResult, RetryableProvider
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
     from llmling.llm.base import Message
 
@@ -54,7 +54,7 @@ class LiteLLMProvider(RetryableProvider):
         self,
         messages: list[Message],
         **kwargs: Any,
-    ) -> AsyncIterator[CompletionResult]:
+    ) -> AsyncGenerator[CompletionResult, None]:
         """Implement streaming completion using LiteLLM."""
         try:
             response_stream = await litellm.acompletion(
@@ -76,9 +76,9 @@ class LiteLLMProvider(RetryableProvider):
                     content=chunk.choices[0].delta.content,
                     model=chunk.model,
                     finish_reason=chunk.choices[0].finish_reason,
+                    is_stream_chunk=True,
                     metadata={
                         "provider": "litellm",
-                        "chunk": True,
                     },
                 )
 

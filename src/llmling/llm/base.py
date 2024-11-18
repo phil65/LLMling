@@ -12,11 +12,11 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
-
 logger = get_logger(__name__)
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 
 class LLMConfig(BaseModel):
@@ -52,6 +52,7 @@ class CompletionResult(BaseModel):
     content: str
     model: str
     finish_reason: str | None = None
+    is_stream_chunk: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
@@ -92,7 +93,7 @@ class LLMProvider(ABC):
         self,
         messages: list[Message],
         **kwargs: Any,
-    ) -> AsyncIterator[CompletionResult]:
+    ) -> AsyncGenerator[CompletionResult, None]:
         """Generate a streaming completion for the messages.
 
         Args:
@@ -105,6 +106,7 @@ class LLMProvider(ABC):
         Raises:
             LLMError: If completion fails
         """
+        yield NotImplemented  # pragma: no cover
 
     async def validate_response(self, result: CompletionResult) -> None:
         """Validate completion result.
@@ -153,8 +155,19 @@ class RetryableProvider(LLMProvider):
         self,
         messages: list[Message],
         **kwargs: Any,
-    ) -> AsyncIterator[CompletionResult]:
-        """Generate a streaming completion with retry support."""
+    ) -> AsyncGenerator[CompletionResult, None]:
+        """Generate a streaming completion for the messages.
+
+        Args:
+            messages: List of messages for chat completion
+            **kwargs: Additional provider-specific parameters
+
+        Yields:
+            Streamed completion results
+
+        Raises:
+            LLMError: If completion fails
+        """
         retries = 0
         last_error = None
 
@@ -163,15 +176,15 @@ class RetryableProvider(LLMProvider):
                 async for result in self._complete_stream_impl(messages, **kwargs):
                     await self.validate_response(result)
                     yield result
-                return
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 last_error = exc
                 retries += 1
                 if retries <= self.config.max_retries:
                     await self._handle_retry(exc, retries)
                     continue
                 break
-
+            else:
+                return
         msg = f"Failed after {retries} retries"
         raise exceptions.LLMError(msg) from last_error
 
@@ -188,8 +201,9 @@ class RetryableProvider(LLMProvider):
         self,
         messages: list[Message],
         **kwargs: Any,
-    ) -> AsyncIterator[CompletionResult]:
+    ) -> AsyncGenerator[CompletionResult, None]:
         """Implement actual streaming completion logic."""
+        yield NotImplemented  # pragma: no cover
 
     async def _handle_retry(self, error: Exception, attempt: int) -> None:
         """Handle retry after error.
@@ -203,5 +217,4 @@ class RetryableProvider(LLMProvider):
             attempt,
             error,
         )
-        # Implement exponential backoff
         await asyncio.sleep(2**attempt)
