@@ -86,7 +86,7 @@ class CLIContextLoader(ContextLoader):
                     f"Command failed with code {proc.returncode}: "
                     f"{stderr.decode().strip()}"
                 )
-                raise exceptions.LoaderError(msg)
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
 
             content = stdout.decode()
 
