@@ -368,6 +368,7 @@ class TestCustomization:
         finally:
             await client.shutdown()
 
+    @pytest.mark.slow
     def test_sync_execution(self, config_path: Path) -> None:
         """Test synchronous execution methods."""
         with LLMLingClient.create(config_path) as client:
