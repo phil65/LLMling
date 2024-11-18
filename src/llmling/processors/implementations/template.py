@@ -23,12 +23,9 @@ class TemplateProcessor(ChainableProcessor):
     """Processor that applies a Jinja2 template."""
 
     def __init__(self, config: ProcessorConfig) -> None:
-        """Initialize the processor.
-
-        Args:
-            config: Processor configuration including the template
-        """
+        """Initialize the processor."""
         super().__init__(config)
+        self.template_config = config.get_template_config()
         self.template: jinja2.Template | None = None
 
     async def startup(self) -> None:

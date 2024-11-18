@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -20,19 +20,33 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+class FunctionProcessorConfig(TypedDict, total=False):
+    """Configuration specific to function processors."""
+
+    import_path: str
+    async_execution: bool
+
+
+class TemplateProcessorConfig(TypedDict, total=False):
+    """Configuration specific to template processors."""
+
+    template: str
+    template_engine: Literal["jinja2"]
+
+
 class ProcessorConfig(BaseModel):
     """Configuration for text processors."""
 
     type: Literal["function", "template"]
-    name: str | None = None  # Make it optional initially
+    name: str | None = None
     description: str | None = None
 
     # Function processor fields
-    import_path: str | None = None
+    import_path: str = ""  # Required for function type
     async_execution: bool = False
 
     # Template processor fields
-    template: str | None = None
+    template: str = ""  # Required for template type
     template_engine: Literal["jinja2"] = "jinja2"
 
     # Validation settings
@@ -44,9 +58,11 @@ class ProcessorConfig(BaseModel):
     cache_results: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    model_config = ConfigDict(extra="forbid")
+
     @model_validator(mode="after")
     def validate_config(self) -> ProcessorConfig:
-        """Validate processor configuration."""
+        """Validate processor configuration based on type."""
         match self.type:
             case "function":
                 if not self.import_path:
@@ -62,6 +78,26 @@ class ProcessorConfig(BaseModel):
                 msg = f"Invalid processor type: {self.type}"
                 raise ValueError(msg)
         return self
+
+    def get_function_config(self) -> FunctionProcessorConfig:
+        """Get function processor specific configuration."""
+        if self.type != "function":
+            msg = "Not a function processor configuration"
+            raise ValueError(msg)
+        return {
+            "import_path": self.import_path,
+            "async_execution": self.async_execution,
+        }
+
+    def get_template_config(self) -> TemplateProcessorConfig:
+        """Get template processor specific configuration."""
+        if self.type != "template":
+            msg = "Not a template processor configuration"
+            raise ValueError(msg)
+        return {
+            "template": self.template,
+            "template_engine": self.template_engine,
+        }
 
 
 class ProcessorResult(BaseModel):

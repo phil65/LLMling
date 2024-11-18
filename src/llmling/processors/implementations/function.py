@@ -29,6 +29,7 @@ class FunctionProcessor(ChainableProcessor):
     def __init__(self, config: ProcessorConfig) -> None:
         """Initialize processor."""
         super().__init__(config)
+        self.func_config = config.get_function_config()
         self.func: Callable[..., Any] | None = None
 
     async def startup(self) -> None:
