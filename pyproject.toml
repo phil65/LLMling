@@ -87,6 +87,10 @@ log_date_format = "%Y-%m-%d %H:%M:%S"
 asyncio_mode = "auto"
 addopts = "-m 'not slow'"
 markers = ["asyncio: mark test as async", "slow: marks tests as slow"]
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*:",
+    "ignore::DeprecationWarning:litellm.*:",
+]
 
 [tool.coverage.report]
 exclude_lines = [
