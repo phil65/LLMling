@@ -16,7 +16,7 @@ class BaseContext(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ProcessingContext(BaseModel):
+class ProcessingContext(BaseModel):  # type: ignore[no-redef]
     """Context for processor execution."""
 
     original_content: str

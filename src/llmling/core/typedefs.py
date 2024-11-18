@@ -14,7 +14,7 @@ class SupportsStr(Protocol):
     def __str__(self) -> str: ...
 
 
-class ProcessingStep(BaseModel):
+class ProcessingStep(BaseModel):  # type: ignore[no-redef]
     """Configuration for a processing step."""
 
     name: str

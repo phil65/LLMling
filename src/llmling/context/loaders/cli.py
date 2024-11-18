@@ -1,3 +1,5 @@
+"""CLI command context loader."""
+
 from __future__ import annotations
 
 import asyncio
@@ -52,13 +54,27 @@ class CLIContextLoader(ContextLoader):
                 else " ".join(context.command)
             )
 
-            proc = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                shell=context.shell,
-                cwd=context.cwd,
-            )
+            if context.shell:
+                # Use create_subprocess_shell when shell=True
+                proc = await asyncio.create_subprocess_shell(
+                    cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=context.cwd,
+                )
+            else:
+                # Use create_subprocess_exec when shell=False
+                if isinstance(context.command, str):
+                    cmd_parts = cmd.split()
+                else:
+                    cmd_parts = list(context.command)
+
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd_parts,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=context.cwd,
+                )
 
             stdout, stderr = await asyncio.wait_for(
                 proc.communicate(),
@@ -70,7 +86,7 @@ class CLIContextLoader(ContextLoader):
                     f"Command failed with code {proc.returncode}: "
                     f"{stderr.decode().strip()}"
                 )
-                raise exceptions.LoaderError(msg)  # noqa: TRY301
+                raise exceptions.LoaderError(msg)
 
             content = stdout.decode()
 
