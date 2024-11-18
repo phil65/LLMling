@@ -136,7 +136,7 @@ class ProcessorRegistry:
                     original_content=current_context.original_content,
                     current_content=current_context.current_content,
                     metadata=current_context.metadata,
-                    kwargs=step.parameters or {},
+                    kwargs=step.kwargs or {},
                 )
 
                 processor = await self.get_processor(step.name)
@@ -247,7 +247,7 @@ class ProcessorRegistry:
                 original_content=current_context.original_content,
                 current_content=current_context.current_content,
                 metadata=current_context.metadata,
-                kwargs=step.parameters or {},
+                kwargs=step.kwargs or {},
             )
 
             try:
@@ -315,7 +315,7 @@ class ProcessorRegistry:
         """
         try:
             processor = await self.get_processor(step.name)
-            context.parameters = step.parameters
+            context.kwargs = step.kwargs
             result = await processor.process(context)
 
             return ProcessingContext(
@@ -344,7 +344,7 @@ class ProcessorRegistry:
                 original_content=context.original_content,
                 current_content=context.current_content,
                 metadata=context.metadata,
-                kwargs=step.parameters or {},
+                kwargs=step.kwargs or {},
             )
 
             processor = await self.get_processor(step.name)

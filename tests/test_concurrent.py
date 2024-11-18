@@ -110,7 +110,7 @@ async def test_concurrent_execution_with_system_prompt(
     )
 
     for call in mock_manager.execute_template.call_args_list:
-        assert call.parameters["system_prompt"] == system_prompt
+        assert call.kwargs["system_prompt"] == system_prompt
 
 
 @pytest.mark.asyncio
@@ -128,7 +128,7 @@ async def test_concurrent_execution_with_kwargs(
     )
 
     for call in mock_manager.execute_template.call_args_list:
-        assert all(call.parameters[k] == v for k, v in test_kwargs.items())
+        assert all(call.kwargs[k] == v for k, v in test_kwargs.items())
 
 
 @pytest.mark.asyncio
