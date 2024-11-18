@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 def setup_logging(
     *,
-    level: int = logging.INFO,
+    level: int | str = logging.INFO,
     handlers: Sequence[logging.Handler] | None = None,
     format_string: str | None = None,
 ) -> None:
@@ -41,10 +41,10 @@ def setup_logging(
         handler.setFormatter(formatter)
         handlers = [handler]
 
-    for handler in handlers:
-        if not handler.formatter:
-            handler.setFormatter(formatter)
-        logger.addHandler(handler)
+    for str_handler in handlers:
+        if not str_handler.formatter:
+            str_handler.setFormatter(formatter)
+        logger.addHandler(str_handler)
 
 
 def get_logger(name: str) -> logging.Logger:

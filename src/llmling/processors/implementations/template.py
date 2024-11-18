@@ -39,7 +39,7 @@ class TemplateProcessor(ChainableProcessor):
                 autoescape=True,
                 enable_async=True,
             )
-            self.template = env.from_string(self.config.template)
+            self.template = env.from_string(self.config.template or "")
         except Exception as exc:
             msg = f"Failed to compile template: {exc}"
             raise exceptions.ProcessorError(msg) from exc
