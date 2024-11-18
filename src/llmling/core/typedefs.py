@@ -14,13 +14,13 @@ class SupportsStr(Protocol):
     def __str__(self) -> str: ...
 
 
-class ProcessingStep(BaseModel):
+class ProcessingStep(BaseModel):  # type: ignore[no-redef]
     """Configuration for a processing step."""
 
     name: str
     parallel: bool = False
     required: bool = True
-    kwargs: dict[str, Any] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict, alias="kwargs")
 
     model_config = ConfigDict(frozen=True)
 

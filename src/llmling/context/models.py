@@ -16,13 +16,13 @@ class BaseContext(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ProcessingContext(BaseModel):
+class ProcessingContext(BaseModel):  # type: ignore[no-redef]
     """Context for processor execution."""
 
     original_content: str
     current_content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
-    kwargs: dict[str, Any] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict, alias="kwargs")
 
     model_config = ConfigDict(frozen=True)
 

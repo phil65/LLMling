@@ -54,7 +54,7 @@ class TemplateProcessor(ChainableProcessor):
         try:
             render_context = {
                 "content": context.current_content,
-                **context.kwargs,
+                **context.parameters,
             }
 
             result = await self.template.render_async(**render_context)

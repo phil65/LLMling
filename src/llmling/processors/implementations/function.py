@@ -69,7 +69,7 @@ class FunctionProcessor(ChainableProcessor):
 
         try:
             # Execute function
-            result = self.func(context.current_content, **context.kwargs)
+            result = self.func(context.current_content, **context.parameters)
 
             # Handle async functions
             if inspect.iscoroutine(result):
