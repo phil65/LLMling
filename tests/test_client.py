@@ -14,6 +14,9 @@ from llmling.processors.base import ProcessorConfig
 from llmling.task.models import TaskResult
 
 
+pytestmark = pytest.mark.slow
+
+
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
