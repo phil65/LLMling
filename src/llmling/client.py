@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Literal, Self, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, cast, overload
 
 from llmling.config.manager import ConfigManager
 from llmling.context import default_registry as context_registry
@@ -23,17 +23,18 @@ if TYPE_CHECKING:
     from llmling.processors.base import ProcessorConfig
     from llmling.task.models import TaskResult
 
-
 logger = get_logger(__name__)
 
 
 class LLMLingClient:
+    """High-level client interface for interacting with LLMling."""
+
     def __init__(
         self,
         config_path: str | os.PathLike[str],
         *,
         log_level: int | None = None,
-        validate_config: bool = True,  # We'll use this with load_config instead
+        validate_config: bool = True,
         processors: dict[str, ProcessorConfig] | None = None,
     ) -> None:
         """Initialize the client.
@@ -51,12 +52,20 @@ class LLMLingClient:
         self.validate_config = validate_config
         self.custom_processors = processors or {}
 
-        # Components will be initialized in startup
+        # Initialize components as None
         self.config_manager: ConfigManager | None = None
         self.processor_registry: ProcessorRegistry | None = None
         self.executor: TaskExecutor | None = None
-        self.manager: TaskManager | None = None
+        self._manager: TaskManager | None = None
         self._initialized = False
+
+    @property
+    def manager(self) -> TaskManager:
+        """Get the task manager, raising if not initialized."""
+        if self._manager is None:
+            msg = "Task manager not initialized"
+            raise exceptions.LLMLingError(msg)
+        return self._manager
 
     @classmethod
     def create(
@@ -65,8 +74,6 @@ class LLMLingClient:
         **kwargs: Any,
     ) -> LLMLingClient:
         """Create and initialize a client synchronously.
-
-        This is a convenience method for synchronous usage.
 
         Args:
             config_path: Path to configuration file
@@ -90,7 +97,6 @@ class LLMLingClient:
 
             # Load configuration
             logger.info("Loading configuration from %s", self.config_path)
-            # Use load_config instead of ConfigManager.load
             from llmling.config.loading import load_config
 
             config = load_config(
@@ -103,21 +109,26 @@ class LLMLingClient:
             await self._register_providers()
 
             # Register custom processors
-            for name, config in self.custom_processors.items():
-                self.processor_registry.register(name, config)
+            processor_registry = cast(ProcessorRegistry, self.processor_registry)
+            for name, proc_config in self.custom_processors.items():
+                processor_registry.register(name, proc_config)
                 logger.debug("Registered processor: %s", name)
 
             # Start processor registry
-            await self.processor_registry.startup()
+            await processor_registry.startup()
 
             # Create executor and manager
             self.executor = TaskExecutor(
                 context_registry=context_registry,
-                processor_registry=self.processor_registry,
+                processor_registry=processor_registry,
                 provider_registry=llm_registry,
             )
-            self.manager = TaskManager(self.config_manager.config, self.executor)
 
+            if self.config_manager is None:
+                msg = "Configuration manager not initialized"
+                raise exceptions.LLMLingError(msg)
+
+            self._manager = TaskManager(self.config_manager.config, self.executor)
             self._initialized = True
             logger.info("Client initialized successfully")
 
@@ -137,7 +148,7 @@ class LLMLingClient:
 
     def _ensure_initialized(self) -> None:
         """Ensure client is initialized."""
-        if not self._initialized or not self.manager:
+        if not self._initialized:
             msg = "Client not initialized"
             raise exceptions.LLMLingError(msg)
 
@@ -321,7 +332,7 @@ class LLMLingClient:
         await self.startup()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.shutdown()
 
@@ -330,7 +341,7 @@ class LLMLingClient:
         asyncio.run(self.startup())
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Synchronous context manager exit."""
         asyncio.run(self.shutdown())
 
