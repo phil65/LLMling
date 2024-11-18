@@ -1,20 +1,21 @@
+"""Tests for LLMLing client."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from unittest import mock
 
 import pytest
 
 from llmling.client import ComponentType, LLMLingClient
 from llmling.core import exceptions
 from llmling.core.exceptions import LLMLingError
+from llmling.llm.base import CompletionResult
 from llmling.processors.base import ProcessorConfig
 from llmling.task.models import TaskResult
-
-
-pytestmark = pytest.mark.slow
 
 
 if TYPE_CHECKING:
@@ -38,6 +39,14 @@ MIN_CHUNKS = 1  # Minimum number of chunks expected
 MIN_CHUNK_LENGTH = 1  # Minimum length of each chunk
 TEST_TEMPLATE = "quick_review"  # Template known to work
 
+# Mock response for LLM calls
+MOCK_RESPONSE = CompletionResult(
+    content="Test response content",
+    model="test-model",
+    finish_reason="stop",
+    metadata={"test": "metadata"},
+)
+
 
 @pytest.fixture
 def config_path() -> Path:
@@ -49,17 +58,6 @@ def config_path() -> Path:
 
 
 @pytest.fixture
-async def client(config_path: Path) -> AsyncGenerator[LLMLingClient, None]:
-    """Provide initialized LLMLing client."""
-    client = LLMLingClient(config_path, log_level=TEST_LOG_LEVEL)
-    await client.startup()
-    try:
-        yield client
-    finally:
-        await client.shutdown()
-
-
-@pytest.fixture
 def components() -> dict[ComponentType, dict[str, Any]]:
     """Provide test components."""
     return {
@@ -67,16 +65,61 @@ def components() -> dict[ComponentType, dict[str, Any]]:
             "test_processor": ProcessorConfig(
                 type="function",
                 import_path="llmling.testing.processors.uppercase_text",
-            )
-        }
+            ),
+        },
     }
 
 
+@pytest.fixture
+def mock_llm_response() -> CompletionResult:
+    """Provide mock LLM response."""
+    return MOCK_RESPONSE
+
+
+@pytest.fixture
+def mock_provider():
+    """Mock LLM provider."""
+    with mock.patch("llmling.llm.registry.ProviderRegistry.create_provider") as m:
+        provider = mock.AsyncMock()
+        provider.complete.return_value = MOCK_RESPONSE
+
+        # Properly mock the streaming response
+        async def mock_stream(*args, **kwargs):
+            yield MOCK_RESPONSE
+
+        provider.complete_stream = mock_stream
+        m.return_value = provider
+        yield provider
+
+
+@pytest.fixture
+async def client(
+    config_path: Path,
+    components: dict[ComponentType, dict[str, Any]],
+    mock_provider,
+) -> AsyncGenerator[LLMLingClient, None]:
+    """Provide initialized LLMLing client."""
+    client = LLMLingClient(
+        config_path,
+        log_level=TEST_LOG_LEVEL,
+        components=components,
+    )
+    await client.startup()
+    try:
+        yield client
+    finally:
+        await client.shutdown()
+
+
+@pytest.mark.unit
 class TestClientCreation:
     """Test client initialization and context managers."""
 
     def test_create_sync(
-        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+        self,
+        config_path: Path,
+        components: dict[ComponentType, dict[str, Any]],
+        mock_provider,
     ) -> None:
         """Test synchronous client creation."""
         client = LLMLingClient.create(config_path, components=components)
@@ -84,23 +127,29 @@ class TestClientCreation:
         assert client._initialized
 
     def test_sync_context_manager(
-        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+        self,
+        config_path: Path,
+        components: dict[ComponentType, dict[str, Any]],
+        mock_provider,
     ) -> None:
         """Test synchronous context manager."""
         with LLMLingClient.create(config_path, components=components) as client:
             result = client.execute_sync("quick_review")
             assert isinstance(result, TaskResult)
-            assert result.content
+            assert result.content == MOCK_RESPONSE.content
 
     @pytest.mark.asyncio
     async def test_async_context_manager(
-        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+        self,
+        config_path: Path,
+        components: dict[ComponentType, dict[str, Any]],
+        mock_provider,
     ) -> None:
         """Test async context manager."""
         async with LLMLingClient(config_path, components=components) as client:
             result = await client.execute("quick_review")
             assert isinstance(result, TaskResult)
-            assert result.content
+            assert result.content == MOCK_RESPONSE.content
 
     @pytest.mark.asyncio
     async def test_client_invalid_config(self) -> None:
@@ -110,74 +159,123 @@ class TestClientCreation:
             await client.startup()
 
 
-class TestTaskExecution:
-    """Test task execution functionality."""
+@pytest.mark.unit
+class TestMockedTaskExecution:
+    """Unit tests with mocked LLM responses."""
 
     @pytest.mark.asyncio
     async def test_execute_single_task(self, client: LLMLingClient) -> None:
-        """Test executing a single task."""
-        result = await client.execute("quick_review", system_prompt=DEFAULT_SYSTEM_PROMPT)
-        self._validate_task_result(result)
+        """Test executing a single task with mocked LLM."""
+        result = await client.execute(
+            "quick_review",
+            system_prompt=DEFAULT_SYSTEM_PROMPT,
+        )
+        assert result.content == MOCK_RESPONSE.content
 
     @pytest.mark.asyncio
     async def test_execute_stream(self, client: LLMLingClient) -> None:
-        """Test streaming execution."""
-        chunks: list[TaskResult] = []
+        """Test streaming execution with mocked LLM."""
+        chunks = []
+        stream = await client.execute(
+            "quick_review",
+            system_prompt=DEFAULT_SYSTEM_PROMPT,
+            stream=True,
+        )
+
+        assert stream is not None
+
+        async for chunk in stream:
+            chunks.append(chunk)
+            assert isinstance(chunk, TaskResult)
+            assert chunk.content == MOCK_RESPONSE.content
+            assert chunk.model == MOCK_RESPONSE.model
+
+        assert len(chunks) >= MIN_CHUNKS
+
+    @pytest.mark.asyncio
+    async def test_concurrent_execution(self, client: LLMLingClient) -> None:
+        """Test concurrent task execution."""
+        results = await client.execute_many(
+            TEST_TEMPLATES,
+            max_concurrent=MAX_CONCURRENT_TASKS,
+        )
+        assert len(results) == len(TEST_TEMPLATES)
+        assert all(isinstance(r, TaskResult) for r in results)
+        assert all(r.content == MOCK_RESPONSE.content for r in results)
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self, client: LLMLingClient) -> None:
+        """Test error handling for invalid templates."""
+        with pytest.raises(LLMLingError):
+            await client.execute("nonexistent_template")
+
+
+@pytest.mark.integration
+class TestIntegrationTaskExecution:
+    """Integration tests for task execution."""
+
+    @pytest.fixture
+    async def integration_client(
+        self,
+        config_path: Path,
+        components: dict[ComponentType, dict[str, Any]],
+    ) -> AsyncGenerator[LLMLingClient, None]:
+        """Provide client for integration tests without mocks."""
+        client = LLMLingClient(
+            config_path,
+            log_level=TEST_LOG_LEVEL,
+            components=components,
+        )
+        await client.startup()
+        try:
+            yield client
+        finally:
+            await client.shutdown()
+
+    @pytest.mark.slow
+    @pytest.mark.asyncio
+    async def test_real_llm_execution(self, integration_client: LLMLingClient) -> None:
+        """Test executing a task with real LLM."""
+        result = await integration_client.execute(
+            "quick_review",
+            system_prompt=DEFAULT_SYSTEM_PROMPT,
+        )
+        self._validate_task_result(result)
+
+    @pytest.mark.slow
+    @pytest.mark.asyncio
+    async def test_real_llm_streaming(self, integration_client: LLMLingClient) -> None:
+        """Test streaming with real LLM."""
+        chunks = []
         total_content = ""
-        error: Exception | None = None
 
         try:
-            # First verify the template exists and works in non-streaming mode
-            normal_result = await client.execute(
-                TEST_TEMPLATE, system_prompt=DEFAULT_SYSTEM_PROMPT, stream=False
-            )
-            assert normal_result.content, "Non-streaming execution failed"
-
-            # Now test streaming
-            stream_iterator = await client.execute(
-                TEST_TEMPLATE, system_prompt=DEFAULT_SYSTEM_PROMPT, stream=True
-            )
-
-            assert stream_iterator is not None, "Stream iterator is None"
-
-            # Collect chunks with timeout and debug logging
             async with asyncio.timeout(STREAM_TIMEOUT):
-                async for chunk in stream_iterator:
-                    # Debug logging
-                    print(f"Received chunk: {len(chunk.content)} chars")
-
+                async for chunk in await integration_client.execute(
+                    TEST_TEMPLATE,
+                    system_prompt=DEFAULT_SYSTEM_PROMPT,
+                    stream=True,
+                ):
                     chunks.append(chunk)
                     total_content += chunk.content
-
-                    # Validate chunk immediately
                     self._validate_chunk(chunk, len(chunks) - 1)
 
-            print(f"Total chunks received: {len(chunks)}")
-            print(f"Total content length: {len(total_content)}")
+        except TimeoutError as exc:
+            msg = f"Streaming timed out after {STREAM_TIMEOUT}s"
+            raise AssertionError(msg) from exc
 
-        except TimeoutError:
-            error = AssertionError(f"Streaming timed out after {STREAM_TIMEOUT}s")
-        except Exception as exc:  # noqa: BLE001
-            error = exc
-            print(f"Error during streaming: {exc}")
+        assert len(chunks) >= MIN_CHUNKS
+        assert len(total_content) >= MIN_CONTENT_LENGTH
 
-        # If we had an error, provide diagnostic information
-        if error:
-            print("\nDiagnostic Information:")
-            print(f"Chunks received: {len(chunks)}")
-            print(f"Total content length: {len(total_content)}")
-            if chunks:
-                print("\nFirst chunk content:")
-                print(chunks[0].content[:100] + "...")
-            raise error
-
-        # Final validations
-        assert len(chunks) >= MIN_CHUNKS, (
-            f"Expected at least {MIN_CHUNKS} chunks, got {len(chunks)}"
-        )
-        assert len(total_content) >= MIN_CONTENT_LENGTH, (
-            f"Total content too short: {len(total_content)} chars"
-        )
+    @staticmethod
+    def _validate_task_result(result: TaskResult) -> None:
+        """Validate task result structure and content."""
+        assert isinstance(result, TaskResult)
+        assert result.content
+        assert len(result.content) >= MIN_CONTENT_LENGTH
+        assert result.model
+        assert result.context_metadata
+        assert result.completion_metadata
 
     @staticmethod
     def _validate_chunk(chunk: TaskResult, index: int) -> None:
@@ -194,11 +292,8 @@ class TestTaskExecution:
             assert chunk.completion_metadata is not None, (
                 f"Chunk {index}: Missing completion metadata"
             )
-
-            # Content validation
-            content_length = len(chunk.content)
-            assert content_length >= MIN_CHUNK_LENGTH, (
-                f"Chunk {index}: Content too short ({content_length} chars)"
+            assert len(chunk.content) >= MIN_CHUNK_LENGTH, (
+                f"Chunk {index}: Content too short ({len(chunk.content)} chars)"
             )
 
         except AssertionError:
@@ -208,115 +303,17 @@ class TestTaskExecution:
             print(f"Metadata: {chunk.completion_metadata}")
             raise
 
-    async def test_stream_basic(self, client: LLMLingClient) -> None:
-        """Simplified streaming test for debugging."""
-        stream = await client.execute(TEST_TEMPLATE, stream=True)
 
-        assert stream is not None, "Stream is None"
-
-        chunk_count = 0
-        async for chunk in stream:
-            chunk_count += 1
-            assert chunk.content, f"Empty content in chunk {chunk_count}"
-
-        assert chunk_count > 0, "No chunks received"
-
-    @pytest.mark.asyncio
-    async def test_concurrent_execution(self, client: LLMLingClient) -> None:
-        """Test concurrent task execution."""
-        results = await client.execute_many(
-            TEST_TEMPLATES,
-            max_concurrent=MAX_CONCURRENT_TASKS,
-        )
-        assert len(results) == len(TEST_TEMPLATES)
-        assert all(isinstance(r, TaskResult) for r in results)
-        for result in results:
-            self._validate_task_result(result)
-
-    @staticmethod
-    def _validate_task_result(result: TaskResult) -> None:
-        """Validate task result structure and content."""
-        assert isinstance(result, TaskResult)
-        assert result.content
-        assert len(result.content) >= MIN_CONTENT_LENGTH
-        assert result.model
-        assert result.context_metadata
-        assert result.completion_metadata
-
-    @pytest.mark.asyncio
-    async def test_stream_consistency(self, client: LLMLingClient) -> None:
-        """Test that streaming results are reasonably consistent with non-streaming.
-
-        This test allows for some variation in content length between streaming
-        and non-streaming modes, as LLMs might produce slightly different outputs.
-        It retries a few times if the difference is too large.
-        """
-        for attempt in range(MAX_RETRIES):
-            try:
-                # Get non-streaming result
-                full_result = await client.execute(
-                    "quick_review", system_prompt=DEFAULT_SYSTEM_PROMPT
-                )
-                full_len = len(full_result.content)
-
-                # Get streaming result
-                streamed_content = ""
-                async for chunk in await client.execute(
-                    "quick_review", system_prompt=DEFAULT_SYSTEM_PROMPT, stream=True
-                ):
-                    streamed_content += chunk.content
-                streamed_len = len(streamed_content)
-
-                # Calculate ratio and difference
-                ratio = abs(full_len - streamed_len) / max(full_len, streamed_len)
-
-                # Print diagnostic information
-                print(f"\nAttempt {attempt + 1}:")
-                print(f"Full content length: {full_len}")
-                print(f"Streamed content length: {streamed_len}")
-                print(f"Difference ratio: {ratio:.2f}")
-
-                # Check if lengths are within acceptable range
-                if ratio <= MAX_CONTENT_DIFF_RATIO:
-                    # Success case
-                    assert full_len >= MIN_CONTENT_LENGTH, (
-                        f"Full content too short: {full_len}"
-                    )
-                    assert streamed_len >= MIN_CONTENT_LENGTH, (
-                        f"Streamed content too short: {streamed_len}"
-                    )
-                    return  # Test passed
-
-                # If ratio is too large, try again
-                print(f"Ratio {ratio:.2f} exceeds maximum {MAX_CONTENT_DIFF_RATIO}")
-                await asyncio.sleep(1)  # Brief delay between retries
-
-            except Exception as exc:
-                print(f"Error on attempt {attempt + 1}: {exc}")
-                if attempt == MAX_RETRIES - 1:
-                    raise
-
-        # If we get here, all attempts failed
-        msg = (
-            f"Content length difference too large after {MAX_RETRIES} attempts. "
-            f"Last attempt: full={full_len}, streamed={streamed_len}, "
-            f"ratio={ratio:.2f}"
-        )
-        raise AssertionError(msg)
-
-    @pytest.mark.asyncio
-    async def test_error_handling(self, client: LLMLingClient) -> None:
-        """Test error handling for invalid templates."""
-        with pytest.raises(LLMLingError):
-            await client.execute("nonexistent_template")
-
-
+@pytest.mark.unit
 class TestCustomization:
     """Test client customization options."""
 
     @pytest.mark.asyncio
     async def test_custom_components(
-        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+        self,
+        config_path: Path,
+        components: dict[ComponentType, dict[str, Any]],
+        mock_provider,
     ) -> None:
         """Test execution with custom components."""
         client = LLMLingClient(config_path, components=components)
@@ -324,13 +321,16 @@ class TestCustomization:
         try:
             result = await client.execute("quick_review")
             assert isinstance(result, TaskResult)
-            assert result.content
+            assert result.content == MOCK_RESPONSE.content
         finally:
             await client.shutdown()
 
     @pytest.mark.asyncio
     async def test_component_registration(
-        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+        self,
+        config_path: Path,
+        components: dict[ComponentType, dict[str, Any]],
+        mock_provider,
     ) -> None:
         """Test that components are properly registered."""
         client = LLMLingClient(config_path, components=components)

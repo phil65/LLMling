@@ -214,9 +214,9 @@ class LLMLingClient:
         template: str,
         *,
         system_prompt: str | None = None,
-        stream: Literal[False] = False,
+        stream: Literal[True],
         **kwargs: Any,
-    ) -> TaskResult: ...
+    ) -> AsyncIterator[TaskResult]: ...
 
     @overload
     async def execute(
@@ -224,9 +224,9 @@ class LLMLingClient:
         template: str,
         *,
         system_prompt: str | None = None,
-        stream: Literal[True],
+        stream: Literal[False] = False,
         **kwargs: Any,
-    ) -> AsyncIterator[TaskResult]: ...
+    ) -> TaskResult: ...
 
     async def execute(
         self,
