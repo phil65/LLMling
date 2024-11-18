@@ -243,6 +243,7 @@ class TestLiteLLMProvider:
             assert all(c.model == "test/model" for c in chunks)
             assert all(c.metadata["provider"] == "litellm" for c in chunks)
 
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_error_handling(self) -> None:
         """Test error handling."""
