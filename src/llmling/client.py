@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Literal, Self, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, TypeVar, cast, overload
 
 from llmling.config.manager import ConfigManager
 from llmling.context import default_registry as context_registry
@@ -20,10 +20,21 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
     import os
 
-    from llmling.processors.base import ProcessorConfig
     from llmling.task.models import TaskResult
 
 logger = get_logger(__name__)
+
+
+T = TypeVar("T")
+
+
+class Registerable(Protocol):
+    """Protocol for objects that can be registered."""
+
+    def register(self, name: str, item: Any) -> None: ...
+
+
+ComponentType = Literal["processor", "context", "provider"]
 
 
 class LLMLingClient:
@@ -35,7 +46,7 @@ class LLMLingClient:
         *,
         log_level: int | None = None,
         validate_config: bool = True,
-        processors: dict[str, ProcessorConfig] | None = None,
+        components: dict[ComponentType, dict[str, Any]] | None = None,
     ) -> None:
         """Initialize the client.
 
@@ -43,14 +54,20 @@ class LLMLingClient:
             config_path: Path to YAML configuration file
             log_level: Optional logging level
             validate_config: Whether to validate configuration on load
-            processors: Optional dictionary of processor configurations to register
+            components: Optional components to register, organized by type
+                Example:
+                {
+                    "processor": {"name": ProcessorConfig(...)},
+                    "context": {"name": ContextLoader(...)},
+                    "provider": {"name": LLMProvider(...)},
+                }
         """
         if log_level is not None:
             setup_logging(level=log_level)
 
         self.config_path = config_path
         self.validate_config = validate_config
-        self.custom_processors = processors or {}
+        self.components = components or {}
 
         # Initialize components as None
         self.config_manager: ConfigManager | None = None
@@ -108,25 +125,22 @@ class LLMLingClient:
             # Register providers
             await self._register_providers()
 
-            # Register custom processors
-            processor_registry = cast(ProcessorRegistry, self.processor_registry)
-            for name, proc_config in self.custom_processors.items():
-                processor_registry.register(name, proc_config)
-                logger.debug("Registered processor: %s", name)
+            # Register components
+            await self._register_components()
 
             # Start processor registry
-            await processor_registry.startup()
+            await self.processor_registry.startup()
 
             # Create executor and manager
             self.executor = TaskExecutor(
                 context_registry=context_registry,
-                processor_registry=processor_registry,
+                processor_registry=self.processor_registry,
                 provider_registry=llm_registry,
             )
 
             if self.config_manager is None:
                 msg = "Configuration manager not initialized"
-                raise exceptions.LLMLingError(msg)
+                raise exceptions.LLMLingError(msg)  # noqa: TRY301
 
             self._manager = TaskManager(self.config_manager.config, self.executor)
             self._initialized = True
@@ -135,6 +149,31 @@ class LLMLingClient:
         except Exception as exc:
             msg = "Failed to initialize client"
             raise exceptions.LLMLingError(msg) from exc
+
+    async def _register_components(self) -> None:
+        """Register all configured components."""
+        registries: dict[ComponentType, Registerable] = {
+            "processor": cast(Registerable, self.processor_registry),
+            "context": cast(Registerable, context_registry),
+            "provider": cast(Registerable, llm_registry),
+        }
+
+        for component_type, items in self.components.items():
+            registry = registries.get(component_type)
+            if registry is None:
+                logger.warning("Unknown component type: %s", component_type)
+                continue
+
+            for name, item in items.items():
+                try:
+                    registry.register(name, item)
+                    logger.debug(
+                        "Registered %s: %s",
+                        component_type,
+                        name,
+                    )
+                except Exception:
+                    logger.exception("Failed to register %s %s", component_type, name)
 
     async def shutdown(self) -> None:
         """Clean up resources."""
@@ -332,7 +371,7 @@ class LLMLingClient:
         await self.startup()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit."""
         await self.shutdown()
 
@@ -341,7 +380,7 @@ class LLMLingClient:
         asyncio.run(self.startup())
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Synchronous context manager exit."""
         asyncio.run(self.shutdown())
 

@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from llmling.client import LLMLingClient
+from llmling.client import ComponentType, LLMLingClient
 from llmling.core import exceptions
 from llmling.core.exceptions import LLMLingError
 from llmling.processors.base import ProcessorConfig
@@ -60,36 +60,44 @@ async def client(config_path: Path) -> AsyncGenerator[LLMLingClient, None]:
 
 
 @pytest.fixture
-def custom_processors() -> dict[str, ProcessorConfig]:
-    """Provide test processor configurations."""
+def components() -> dict[ComponentType, dict[str, Any]]:
+    """Provide test components."""
     return {
-        "test_processor": ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.uppercase_text",
-        )
+        "processor": {
+            "test_processor": ProcessorConfig(
+                type="function",
+                import_path="llmling.testing.processors.uppercase_text",
+            )
+        }
     }
 
 
 class TestClientCreation:
     """Test client initialization and context managers."""
 
-    def test_create_sync(self, config_path: Path) -> None:
+    def test_create_sync(
+        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+    ) -> None:
         """Test synchronous client creation."""
-        client = LLMLingClient.create(config_path)
+        client = LLMLingClient.create(config_path, components=components)
         assert isinstance(client, LLMLingClient)
         assert client._initialized
 
-    def test_sync_context_manager(self, config_path: Path) -> None:
+    def test_sync_context_manager(
+        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+    ) -> None:
         """Test synchronous context manager."""
-        with LLMLingClient.create(config_path) as client:
+        with LLMLingClient.create(config_path, components=components) as client:
             result = client.execute_sync("quick_review")
             assert isinstance(result, TaskResult)
             assert result.content
 
     @pytest.mark.asyncio
-    async def test_async_context_manager(self, config_path: Path) -> None:
+    async def test_async_context_manager(
+        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+    ) -> None:
         """Test async context manager."""
-        async with LLMLingClient(config_path) as client:
+        async with LLMLingClient(config_path, components=components) as client:
             result = await client.execute("quick_review")
             assert isinstance(result, TaskResult)
             assert result.content
@@ -307,16 +315,56 @@ class TestCustomization:
     """Test client customization options."""
 
     @pytest.mark.asyncio
-    async def test_custom_processors(
-        self, config_path: Path, custom_processors: dict[str, ProcessorConfig]
+    async def test_custom_components(
+        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
     ) -> None:
-        """Test execution with custom processors."""
-        client = LLMLingClient(config_path, processors=custom_processors)
+        """Test execution with custom components."""
+        client = LLMLingClient(config_path, components=components)
         await client.startup()
         try:
             result = await client.execute("quick_review")
             assert isinstance(result, TaskResult)
             assert result.content
+        finally:
+            await client.shutdown()
+
+    @pytest.mark.asyncio
+    async def test_component_registration(
+        self, config_path: Path, components: dict[ComponentType, dict[str, Any]]
+    ) -> None:
+        """Test that components are properly registered."""
+        client = LLMLingClient(config_path, components=components)
+        await client.startup()
+
+        try:
+            # Verify processor registration
+            if "processor" in components:
+                for name in components["processor"]:
+                    assert client.processor_registry
+                    assert name in client.processor_registry._processors
+
+            # Verify successful task execution with custom components
+            result = await client.execute("quick_review")
+            assert isinstance(result, TaskResult)
+            assert result.content
+
+        finally:
+            await client.shutdown()
+
+    @pytest.mark.asyncio
+    async def test_invalid_component_type(self, config_path: Path) -> None:
+        """Test handling of invalid component types."""
+        invalid_components = {
+            "invalid_type": {"test": "value"}  # type: ignore
+        }
+
+        client = LLMLingClient(config_path, components=invalid_components)  # type: ignore
+        await client.startup()
+
+        try:
+            # Should still work even with invalid component type
+            result = await client.execute("quick_review")
+            assert isinstance(result, TaskResult)
         finally:
             await client.shutdown()
 
