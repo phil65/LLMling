@@ -28,7 +28,7 @@ class LLMProviderConfig(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     top_p: float | None = None
-    tools: dict[str, dict[str, Any]] | list[str] | None = None  # Allow both formats
+    tools: dict[str, dict[str, Any]] | list[str] | None = None  # Optional tools
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     model_config = ConfigDict(frozen=True)
@@ -56,7 +56,7 @@ class TaskSettings(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     top_p: float | None = None
-    tools: list[str] | None = None  # Add tools field
+    tools: list[str] | None = None  # Optional tools
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     model_config = ConfigDict(frozen=True)
@@ -66,8 +66,10 @@ class BaseContext(BaseModel):
     """Base class for all context types."""
 
     type: str
-    description: str
-    processors: list[ProcessingStep] = Field(default_factory=list)
+    description: str = ""  # Made optional with empty default
+    processors: list[ProcessingStep] = Field(
+        default_factory=list
+    )  # Optional with empty default
     model_config = ConfigDict(frozen=True)
 
 
@@ -116,8 +118,6 @@ class CLIContext(BaseContext):
         if not self.command:
             msg = "Command cannot be empty"
             raise ValueError(msg)
-        # When shell=False, command sequence must contain only strings
-        # When shell=True, the command can be any string or sequence of strings
         if (
             isinstance(self.command, list | tuple)
             and not self.shell
@@ -167,12 +167,11 @@ Context = PathContext | TextContext | CLIContext | SourceContext | CallableConte
 class TaskTemplate(BaseModel):
     """Template for a specific task."""
 
-    provider: str  # provider name or group name
-    context: str  # context name or group name
-    settings: TaskSettings | None = None
-    # Make tool-related fields optional with None defaults
-    inherit_tools: bool | None = None
-    tools: list[str] | None = None
+    provider: str  # Required: provider name or group name
+    context: str  # Required: context name or group name
+    settings: TaskSettings | None = None  # Optional
+    inherit_tools: bool | None = None  # Optional
+    tools: list[str] | None = None  # Optional
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     model_config = ConfigDict(frozen=True)
@@ -191,15 +190,25 @@ class ToolConfig(BaseModel):
 class Config(BaseModel):
     """Root configuration model."""
 
-    version: str
-    global_settings: GlobalSettings
-    context_processors: dict[str, ProcessorConfig]
-    llm_providers: dict[str, LLMProviderConfig]
-    provider_groups: dict[str, list[str]] = Field(default_factory=dict)
-    contexts: dict[str, Context]
-    context_groups: dict[str, list[str]] = Field(default_factory=dict)
-    task_templates: dict[str, TaskTemplate]
-    tools: dict[str, ToolConfig] = Field(default_factory=dict)
+    version: str  # Required: configuration schema version
+    global_settings: GlobalSettings = Field(
+        default_factory=GlobalSettings
+    )  # Optional with defaults
+    context_processors: dict[str, ProcessorConfig] = Field(
+        default_factory=dict
+    )  # Optional with empty default
+    llm_providers: dict[str, LLMProviderConfig]  # Required: at least one provider needed
+    provider_groups: dict[str, list[str]] = Field(
+        default_factory=dict
+    )  # Optional with empty default
+    contexts: dict[str, Context]  # Required: at least one context needed
+    context_groups: dict[str, list[str]] = Field(
+        default_factory=dict
+    )  # Optional with empty default
+    task_templates: dict[str, TaskTemplate]  # Required: at least one template needed
+    tools: dict[str, ToolConfig] = Field(
+        default_factory=dict
+    )  # Optional with empty default
 
     model_config = ConfigDict(
         frozen=True,
@@ -209,9 +218,13 @@ class Config(BaseModel):
     @model_validator(mode="after")
     def validate_references(self) -> Config:
         """Validate all references between components."""
-        self._validate_provider_groups()
-        self._validate_context_groups()
-        self._validate_processor_references()
+        # Only validate if the optional components are present
+        if self.provider_groups:
+            self._validate_provider_groups()
+        if self.context_groups:
+            self._validate_context_groups()
+        if self.context_processors:
+            self._validate_processor_references()
         self._validate_task_templates()
         return self
 
