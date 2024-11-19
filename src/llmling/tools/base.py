@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import logging
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import py2openai
@@ -9,6 +10,8 @@ from pydantic import BaseModel, ConfigDict
 from llmling.tools.exceptions import ToolError
 from llmling.utils import calling
 
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -34,12 +37,13 @@ class BaseTool(ABC):
     @classmethod
     def get_schema(cls) -> ToolSchema:
         """Get the tool's schema for LLM function calling."""
+        schema = py2openai.create_schema(cls.execute).model_dump_openai()
         return ToolSchema(
             type="function",
             function={
                 "name": cls.name,
                 "description": cls.description,
-                "parameters": cls.parameters_schema,
+                **schema,
             },
         )
 
@@ -62,6 +66,7 @@ class DynamicTool:
         self._func: Callable[..., Any] | None = None
         self._name = name
         self._description = description
+        self._instance: BaseTool | None = None
 
     @property
     def name(self) -> str:
@@ -91,7 +96,8 @@ class DynamicTool:
         func_schema = py2openai.create_schema(self.func)
         schema_dict = func_schema.model_dump_openai()
 
-        # Override description if custom one is provided
+        # Override name and description
+        schema_dict["name"] = self.name  # Use the tool's name, not the class name
         if self._description:
             schema_dict["description"] = self._description
 
@@ -102,7 +108,20 @@ class DynamicTool:
 
     async def execute(self, **params: Any) -> Any:
         """Execute the function."""
-        return await calling.execute_callable(self.import_path, **params)
+        if self._instance is None:
+            # Import the class and create an instance
+            cls = calling.import_callable(self.import_path)
+            if isinstance(cls, type) and issubclass(cls, BaseTool):
+                self._instance = cls()
+                # Initialize the tool if needed
+                if hasattr(self._instance, "startup"):
+                    await self._instance.startup()
+            else:
+                # For regular functions, keep the old behavior
+                return await calling.execute_callable(self.import_path, **params)
+
+        # Execute using the tool instance
+        return await self._instance.execute(**params)
 
 
 class ToolRegistry:
@@ -164,5 +183,6 @@ class ToolRegistry:
 
     async def execute(self, name: str, **params: Any) -> Any:
         """Execute a tool by name."""
+        logger.debug("Attempting to execute tool: %s", name)  # Add this
         tool = self.get_tool(name)
         return await tool.execute(**params)
