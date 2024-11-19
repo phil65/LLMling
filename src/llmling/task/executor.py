@@ -81,6 +81,9 @@ class TaskExecutor:
             and task_provider.settings
             and task_provider.settings.tools
         ):
+            logger.debug(
+                "Inheriting tools from provider: %s", task_provider.settings.tools
+            )
             available_tools.extend(task_provider.settings.tools)
 
         # Add task-specific tools
@@ -97,7 +100,7 @@ class TaskExecutor:
             self.tool_registry.get_schema(tool_name).function
             for tool_name in available_tools
         ]
-
+        logger.debug("Prepared tool schemas: %s", tool_schemas)
         return {
             "tools": tool_schemas,
             "tool_choice": (
