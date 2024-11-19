@@ -81,7 +81,7 @@ class TestToolRegistry:
     def test_get_nonexistent(self, registry: ToolRegistry) -> None:
         """Test getting non-existent tool."""
         with pytest.raises(ToolError):
-            registry["nonexistent"]
+            registry.get_tool("nonexistent")
 
     def test_list_tools(self, registry: ToolRegistry) -> None:
         """Test listing registered tools."""

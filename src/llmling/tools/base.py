@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import py2openai
@@ -106,46 +105,28 @@ class DynamicTool:
         return await calling.execute_callable(self.import_path, **params)
 
 
-class ToolRegistry(MutableMapping[str, BaseTool | DynamicTool]):
+class ToolRegistry:
     """Registry for available tools."""
 
-    def __init__(
-        self,
-        *args: Mapping[str, BaseTool | DynamicTool],
-        **kwargs: BaseTool | DynamicTool,
-    ) -> None:
-        """Initialize registry with optional initial tools.
-
-        Supports dict-like initialization:
-        - ToolRegistry({'name': tool})
-        - ToolRegistry(name=tool)
-        - ToolRegistry([('name', tool)])
-        """
+    def __init__(self) -> None:
+        """Initialize an empty registry."""
         self._tools: dict[str, BaseTool | DynamicTool] = {}
-        self.update(*args, **kwargs)
+
+    def has_tool(self, name: str) -> bool:
+        """Check if a tool is registered."""
+        return name in self._tools
 
     def is_empty(self) -> bool:
         """Check if registry has any tools."""
         return not bool(self._tools)
 
-    def register(self, tool: type[BaseTool] | BaseTool | DynamicTool) -> None:
-        """Register a tool.
-
-        Args:
-            tool: Can be:
-                - A BaseTool class (will be instantiated)
-                - A BaseTool instance
-                - A DynamicTool instance
-        """
-        match tool:
-            case type() as tool_cls if issubclass(tool_cls, BaseTool):
-                instance = tool_cls()
-                self._tools[tool_cls.name] = instance
-            case BaseTool() | DynamicTool() as instance:
-                self._tools[instance.name] = instance
-            case _:
-                msg = f"Unsupported tool type: {type(tool)}"
-                raise ToolError(msg)
+    def register(self, tool: type[BaseTool] | BaseTool) -> None:
+        """Register a tool class or instance."""
+        if isinstance(tool, type):
+            instance = tool()
+            self._tools[tool.name] = instance
+        else:
+            self._tools[tool.name] = tool
 
     def register_path(
         self,
@@ -164,9 +145,17 @@ class ToolRegistry(MutableMapping[str, BaseTool | DynamicTool]):
             raise ToolError(msg)
         self._tools[tool.name] = tool
 
+    def get_tool(self, name: str) -> DynamicTool | BaseTool:
+        """Get a tool by name."""
+        try:
+            return self._tools[name]
+        except KeyError as exc:
+            msg = f"Tool not found: {name}"
+            raise ToolError(msg) from exc
+
     def get_schema(self, name: str) -> ToolSchema:
         """Get schema for a tool."""
-        tool = self[name]
+        tool = self.get_tool(name)
         return tool.get_schema()
 
     def list_tools(self) -> list[str]:
@@ -175,31 +164,5 @@ class ToolRegistry(MutableMapping[str, BaseTool | DynamicTool]):
 
     async def execute(self, name: str, **params: Any) -> Any:
         """Execute a tool by name."""
-        tool = self[name]
+        tool = self.get_tool(name)
         return await tool.execute(**params)
-
-    # Required abstract methods from MutableMapping
-    def __getitem__(self, name: str) -> DynamicTool | BaseTool:
-        try:
-            return self._tools[name]
-        except KeyError as exc:
-            msg = f"Tool not found: {name}"
-            raise ToolError(msg) from exc
-
-    def __setitem__(
-        self, key: str, value: type[BaseTool] | BaseTool | DynamicTool
-    ) -> None:
-        """Set a tool in the registry using dict-style assignment."""
-        self.register(value)
-        # If we need to override the name with the key:
-        # if key != self._tools[value.name].name:
-        #     self._tools[key] = self._tools.pop(value.name)
-
-    def __delitem__(self, key: str) -> None:
-        del self._tools[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._tools)
-
-    def __len__(self) -> int:
-        return len(self._tools)
