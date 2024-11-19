@@ -156,13 +156,17 @@ class RetryableProvider(LLMProvider):
             try:
                 result = await self._complete_impl(messages, **kwargs)
                 await self.validate_response(result)
-            except Exception as exc:  # noqa: BLE001
+            except exceptions.LLMError as exc:
+                # Only retry LLM-specific errors
                 last_error = exc
                 retries += 1
                 if retries <= self.config.max_retries:
                     await self._handle_retry(exc, retries)
                     continue
                 break
+            except Exception as exc:
+                # Don't retry other errors
+                raise exc  # noqa: TRY201
             else:
                 return result
 
@@ -234,5 +238,6 @@ class RetryableProvider(LLMProvider):
             "Attempt %d failed, retrying: %s",
             attempt,
             error,
+            exc_info=error,  # This will log the full traceback
         )
         await asyncio.sleep(2**attempt)

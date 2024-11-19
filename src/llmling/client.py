@@ -151,7 +151,7 @@ class LLMLingClient:
                 context_registry=context_registry,
                 processor_registry=self._processor_registry,
                 provider_registry=llm_registry,
-                tool_registry=self.tool_registry,
+                tool_registry=ToolRegistry(),  # Empty registry, TaskManager will populate
                 config_manager=self.config_manager,
             )
 
