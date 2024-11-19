@@ -62,11 +62,7 @@ async def test_concurrent_execution_basic(mock_manager: mock.MagicMock) -> None:
     """Test basic concurrent execution."""
     mock_manager.execute_template.side_effect = SAMPLE_RESULTS
 
-    results = await execute_concurrent(
-        mock_manager,
-        TEMPLATE_NAMES,
-        max_concurrent=2,
-    )
+    results = await execute_concurrent(mock_manager, TEMPLATE_NAMES, max_concurrent=2)
 
     assert len(results) == len(TEMPLATE_NAMES)
     assert all(isinstance(r, TaskResult) for r in results)
@@ -179,11 +175,7 @@ async def test_concurrent_execution_partial_failure(
     mock_manager.execute_template.side_effect = side_effect
 
     with pytest.raises(exceptions.TaskError):
-        await execute_concurrent(
-            mock_manager,
-            TEMPLATE_NAMES,
-            max_concurrent=2,
-        )
+        await execute_concurrent(mock_manager, TEMPLATE_NAMES, max_concurrent=2)
 
 
 @pytest.mark.asyncio
@@ -193,11 +185,7 @@ async def test_concurrent_execution_cancellation(
     """Test cancellation of concurrent execution."""
     # Create a task that we'll cancel
     task = asyncio.create_task(
-        execute_concurrent(
-            slow_manager,
-            TEMPLATE_NAMES,
-            max_concurrent=2,
-        ),
+        execute_concurrent(slow_manager, TEMPLATE_NAMES, max_concurrent=2),
     )
 
     # Let it start

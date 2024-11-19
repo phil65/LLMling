@@ -89,11 +89,7 @@ def tmp_file(tmp_path: Path) -> Path:
 @pytest.mark.asyncio
 async def test_text_loader_basic() -> None:
     """Test basic text loading functionality."""
-    context = TextContext(
-        type="text",
-        content=SAMPLE_TEXT,
-        description="Test text",
-    )
+    context = TextContext(type="text", content=SAMPLE_TEXT, description="Test text")
     loader = TextContextLoader()
     result = await loader.load(context, ProcessorRegistry())
 
@@ -107,13 +103,10 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
     """Test text loading with processors."""
     await processor_registry.startup()
     try:
-        processor_registry.register(
-            "reverse",
-            ProcessorConfig(
-                type="function",
-                import_path="llmling.testing.processors.reverse_text",
-            ),
+        cfg = ProcessorConfig(
+            type="function", import_path="llmling.testing.processors.reverse_text"
         )
+        processor_registry.register("reverse", cfg)
 
         context = TextContext(
             type="text",
@@ -133,11 +126,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
 @pytest.mark.asyncio
 async def test_path_loader_file(tmp_file: Path) -> None:
     """Test loading from a file."""
-    context = PathContext(
-        type="path",
-        path=str(tmp_file),
-        description="Test file",
-    )
+    context = PathContext(type="path", path=str(tmp_file), description="Test file")
     loader = PathContextLoader()
     result = await loader.load(context, ProcessorRegistry())
 
@@ -157,11 +146,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
     path = upath.UPath(test_file)
     file_url = str(path.as_uri())  # This will create the correct file:// URL format
 
-    context = PathContext(
-        type="path",
-        path=file_url,
-        description="Test file URL",
-    )
+    context = PathContext(type="path", path=file_url, description="Test file URL")
 
     loader = PathContextLoader()
     result = await loader.load(context, ProcessorRegistry())
@@ -176,9 +161,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
 async def test_path_loader_error() -> None:
     """Test loading from a non-existent path."""
     context = PathContext(
-        type="path",
-        path="/nonexistent/file.txt",
-        description="Test missing file",
+        type="path", path="/nonexistent/file.txt", description="Test missing file"
     )
     loader = PathContextLoader()
 
@@ -207,10 +190,7 @@ async def test_cli_loader_basic() -> None:
 async def test_cli_loader_timeout() -> None:
     """Test CLI command timeout."""
     context = CLIContext(
-        type="cli",
-        command=SLEEP_COMMAND,
-        timeout=0.1,
-        description="test",
+        type="cli", command=SLEEP_COMMAND, timeout=0.1, description="test"
     )
     loader = CLIContextLoader()
 
@@ -238,9 +218,7 @@ async def test_source_loader_basic() -> None:
 async def test_source_loader_invalid_module() -> None:
     """Test loading from non-existent module."""
     context = SourceContext(
-        type="source",
-        import_path=INVALID_MODULE,
-        description="Test invalid module",
+        type="source", import_path=INVALID_MODULE, description="Test invalid module"
     )
     loader = SourceContextLoader()
 
@@ -288,19 +266,11 @@ async def test_all_loaders_with_processors(
     tmp_file: Path,
 ) -> None:
     """Test all loaders with processor chain."""
-    processor_registry.register(
-        "upper",
-        ProcessorConfig(type="function", import_path="reprlib.repr"),
-    )
-    processor_registry.register(
-        "reverse",
-        ProcessorConfig(type="function", import_path=f"{__name__}.reverse_text"),
-    )
-
-    processors = [
-        ProcessingStep(name="upper"),
-        ProcessingStep(name="reverse"),
-    ]
+    cfg = ProcessorConfig(type="function", import_path="reprlib.repr")
+    processor_registry.register("upper", cfg)
+    cfg = ProcessorConfig(type="function", import_path=f"{__name__}.reverse_text")
+    processor_registry.register("reverse", cfg)
+    processors = [ProcessingStep(name="upper"), ProcessingStep(name="reverse")]
 
     contexts = [
         TextContext(
