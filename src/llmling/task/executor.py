@@ -53,7 +53,12 @@ class TaskExecutor:
         self.tool_registry = tool_registry or ToolRegistry()
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
+        logger.debug(
+            "Initialized with tool registry containing: %s",
+            self.tool_registry.list_tools(),
+        )
 
+    @logfire.instrument("Preparing tool configuration for {task_provider.name}")
     def _prepare_tool_config(
         self,
         task_context: TaskContext,
@@ -61,6 +66,7 @@ class TaskExecutor:
     ) -> dict[str, Any] | None:
         """Prepare tool configuration if tools are enabled."""
         if not self.tool_registry:
+            logger.debug("No tool registry available")
             return None
 
         available_tools = []
@@ -75,9 +81,11 @@ class TaskExecutor:
 
         # Add task-specific tools
         if task_context.tools:
+            logger.debug("Adding task-specific tools: %s", task_context.tools)
             available_tools.extend(task_context.tools)
 
         if not available_tools:
+            logger.debug("No tools available")
             return None
 
         # Get schemas for all available tools
@@ -124,6 +132,9 @@ class TaskExecutor:
                 task_provider.name,
                 llm_config,
             )
+            logger.debug(
+                "Sending request to LLM with tools config: %s", kwargs.get("tools")
+            )
 
             # Get completion with potential tool calls
             while True:
@@ -133,10 +144,16 @@ class TaskExecutor:
                 if completion.tool_calls:
                     tool_results = []
                     for tool_call in completion.tool_calls:
+                        logger.debug(
+                            "Executing tool call: %s with params: %s",
+                            tool_call.name,
+                            tool_call.parameters,
+                        )  # Add this
                         result = await self.tool_registry.execute(
                             tool_call.name,
                             **tool_call.parameters,
                         )
+                        logger.debug("Tool execution result: %s", result)
                         tool_results.append(result)
 
                     # Add tool results to messages

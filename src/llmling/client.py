@@ -121,11 +121,7 @@ class LLMLingClient:
             raise exceptions.LLMLingError(msg) from exc
 
     async def startup(self) -> None:
-        """Initialize all components.
-
-        Raises:
-            LLMLingError: If initialization fails
-        """
+        """Initialize all components."""
         if self._initialized:
             return
 

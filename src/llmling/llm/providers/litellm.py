@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import litellm
@@ -9,6 +10,8 @@ import litellm
 from llmling.core import exceptions
 from llmling.llm.base import CompletionResult, Message, RetryableProvider, ToolCall
 
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -37,7 +40,13 @@ class LiteLLMProvider(RetryableProvider):
                     msg_dict["tool_calls"] = [tc.model_dump() for tc in msg.tool_calls]
                 messages_dict.append(msg_dict)
 
-            # Tools are now already in the correct format from TaskExecutor
+            # Log the full configuration before the call
+            logger.debug("=== LiteLLM Request Configuration ===")
+            logger.debug("Model: %s", self.config.model)
+            logger.debug("Messages: %s", messages_dict)
+            logger.debug("Temperature: %s", self.config.temperature)
+            logger.debug("Max tokens: %s", self.config.max_tokens)
+            logger.debug("Raw kwargs: %s", kwargs)
             response = await litellm.acompletion(
                 model=self.config.model,
                 messages=messages_dict,
@@ -47,11 +56,13 @@ class LiteLLMProvider(RetryableProvider):
                 timeout=self.config.timeout,
                 **kwargs,
             )
-
+            logger.debug("=== LiteLLM Response ===")
+            logger.debug("Response object: %s", response)
             # Handle tool calls if present
             tool_calls = None
             if hasattr(response.choices[0].message, "tool_calls"):
                 tc = response.choices[0].message.tool_calls
+                logger.debug("Received tool calls from LLM: %s", tc)
                 if tc:
                     tool_calls = [
                         ToolCall(
@@ -74,6 +85,7 @@ class LiteLLMProvider(RetryableProvider):
             )
 
         except Exception as exc:
+            logger.exception("LiteLLM completion failed with error:")
             error_msg = f"LiteLLM completion failed: {exc}"
             raise exceptions.LLMError(error_msg) from exc
 
