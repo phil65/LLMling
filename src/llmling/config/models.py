@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence as TypingSequence  # noqa: TCH003
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from llmling.core.typedefs import ProcessingStep  # noqa: TCH001
 from llmling.processors.base import ProcessorConfig  # noqa: TCH001
@@ -28,8 +28,18 @@ class LLMProviderConfig(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     top_p: float | None = None
+    tools: dict[str, dict[str, Any]] | list[str] | None = None  # Allow both formats
+    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     model_config = ConfigDict(frozen=True)
+
+    @field_validator("tools", mode="before")
+    @classmethod
+    def convert_tools(cls, v: Any) -> dict[str, dict[str, Any]] | None:
+        """Convert tool references to dictionary format."""
+        if isinstance(v, list):
+            return {tool: {} for tool in v}
+        return v
 
     @model_validator(mode="after")
     def validate_model_format(self) -> LLMProviderConfig:
@@ -41,11 +51,13 @@ class LLMProviderConfig(BaseModel):
 
 
 class TaskSettings(BaseModel):
-    """Settings for a specific task."""
+    """Settings for a task."""
 
     temperature: float | None = None
     max_tokens: int | None = None
     top_p: float | None = None
+    tools: list[str] | None = None  # Add tools field
+    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     model_config = ConfigDict(frozen=True)
 
@@ -158,7 +170,20 @@ class TaskTemplate(BaseModel):
     provider: str  # provider name or group name
     context: str  # context name or group name
     settings: TaskSettings | None = None
-    inherit_tools: bool = True
+    # Make tool-related fields optional with None defaults
+    inherit_tools: bool | None = None
+    tools: list[str] | None = None
+    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ToolConfig(BaseModel):
+    """Configuration for a tool."""
+
+    import_path: str
+    name: str | None = None
+    description: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -174,6 +199,7 @@ class Config(BaseModel):
     contexts: dict[str, Context]
     context_groups: dict[str, list[str]] = Field(default_factory=dict)
     task_templates: dict[str, TaskTemplate]
+    tools: dict[str, ToolConfig] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,

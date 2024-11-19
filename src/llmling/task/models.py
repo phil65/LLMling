@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,7 +15,9 @@ class TaskContext(BaseModel):
 
     context: Context
     processors: list[ProcessingStep]
-    inherit_tools: bool = True
+    inherit_tools: bool = False  # Set default value to False
+    tools: list[str] | None = None
+    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     model_config = ConfigDict(frozen=True)
 

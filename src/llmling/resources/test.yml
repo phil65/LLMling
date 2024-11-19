@@ -1,31 +1,21 @@
 # Version of the configuration schema
-# Used for compatibility checking and migrations
 version: "1.0"
 
-# Global settings that apply to all components unless overridden
+# Global settings that apply to all components
 global_settings:
-  timeout: 30 # Global timeout in seconds
-  max_retries: 3 # Default retry count
-  temperature: 0.7 # Default temperature for all LLMs
+  timeout: 30
+  max_retries: 3
+  temperature: 0.7
 
-# Reusable text processors that can be referenced in context definitions
-# Each processor either references a Python function or defines a Jinja template
+# Context processors definitions
 context_processors:
-  # Clean and standardize Python code
   python_cleaner:
     type: function
     import_path: llmling.testing.processors.uppercase_text
-    # Function must take str input and return str output
-    # Additional parameters can be passed via kwargs in context definitions
-
-  # Remove sensitive information
   sanitize:
     type: function
     import_path: llmling.testing.processors.multiply
-    # Will be called with content as first argument
-    # kwargs can include patterns to remove, replacement text, etc.
 
-  # Add metadata header to any content
   add_metadata:
     type: template
     template: |
@@ -34,74 +24,83 @@ context_processors:
       # Version: {{ version }}
 
       {{ content }}
-    # Templates always have access to:
-    # - content: the text being processed
-    # - now(): current datetime
-    # - env: environment variables
-    # Plus any kwargs passed in the context definition
 
-# LLM provider configurations using litellm format
+# Global tools definitions
+tools:
+  analyze_code:
+    import_path: "llmling.tools.code.analyze_complexity"
+    description: "Analyze Python code complexity metrics"
+  analyze_ast:
+    import_path: "llmling.testing.tools.analyze_ast"
+    description: "Analyze Python code structure"
+  format_code:
+    import_path: "llmling.tools.code.format_code"
+    name: "format_python"
+
+# LLM provider configurations
 llm_providers:
-  # GPT-4 Turbo configuration
   gpt4-turbo:
     name: "GPT-4 Turbo"
     model: openai/gpt-4-1106-preview
     temperature: 0.8
     max_tokens: 4096
     top_p: 0.95
-    # Can include any parameter supported by the provider
+    # Can now use either format:
+    tools:
+      - analyze_code # Simple string reference
+      - analyze_ast
+      - format_code
+    # Or with settings:
+    # tools:
+    #   analyze_code: {}
+    #   analyze_ast: {max_lines: 1000}
+    #   format_code: {style: "black"}
 
-  # Anthropic Claude configuration
   claude2:
     name: "Claude 2"
     model: anthropic/claude-2
     temperature: 0.7
     max_tokens: 8192
 
-  # Local model configuration
   local-llama:
     name: "Local Llama"
     model: ollama/smollm2:360m
     temperature: 0.7
     max_tokens: 2048
-    # Local models can use the same configuration format
 
-# Groups of providers for different use cases or fallback chains
+# Provider groups
 provider_groups:
-  # High-quality responses for code review
   code_review:
     - gpt4-turbo
-    - claude2 # Fallback if first model fails
+    - claude2
 
-  # Cost-effective group for draft content
   draft_content:
     - local-llama
 
-  # Fallback chain from best to most reliable
   fallback_chain:
-    - gpt4-turbo # First choice
-    - claude2 # Second choice
-    - local-llama # Last resort
+    - gpt4-turbo
+    - claude2
+    - local-llama
 
-# Context definitions - sources of text content
+# Context definitions
 contexts:
-  # Loading from a URL
   python_guidelines:
-    type: path # Can be URL or file path
+    type: path
     path: "https://example.com/python-guidelines.md"
     description: "Python coding standards and best practices"
-    processors: # Chain of processors to apply
+    processors:
       - name: sanitize
         keyword_args: { remove_emails: true }
       - name: add_metadata
         keyword_args:
           source: "company guidelines"
           version: "1.2.3"
+
   my_utils:
     type: source
     import_path: "my_project.utils"
     description: "Utility module source code"
-    recursive: true # Include all submodules
+    recursive: true
     processors:
       - name: python_cleaner
 
@@ -109,8 +108,9 @@ contexts:
     type: source
     import_path: "my_project.models.user"
     description: "User model implementation"
-    recursive: false # Default, only this module
-    include_tests: false # Don't include test files
+    recursive: false
+    include_tests: false
+
   system_info:
     type: callable
     import_path: "my_project.utils.system_diagnostics.get_info"
@@ -118,7 +118,7 @@ contexts:
     keyword_args:
       include_memory: true
       include_disk: true
-  # Local file template
+
   code_review_template:
     type: path
     path: "./templates/code_review.txt"
@@ -126,7 +126,6 @@ contexts:
     processors:
       - name: python_cleaner
 
-  # Raw text content
   system_prompt:
     type: text
     content: |
@@ -144,53 +143,49 @@ contexts:
       or meta-commentary.
     description: "Test prompt for consistent output"
 
-  # Dynamic content from CLI
   git_diff:
     type: cli
     command: "git diff HEAD~1"
     description: "Current git changes"
-    shell: true # Execute in shell
+    shell: true
     processors:
       - name: python_cleaner
-      # Process the git diff output before use
 
-# Groups of related contexts
+# Context groups
 context_groups:
-  # Basic code review contexts
   code_review_basic:
     - system_prompt
     - code_review_template
 
-  # Advanced code review with additional contexts
   code_review_advanced:
     - system_prompt
     - code_review_template
     - python_guidelines
     - git_diff
 
-# Task templates combining providers and contexts
+# Task templates
 task_templates:
-  # Simple code review task
   quick_review:
-    provider: local-llama # Single provider
-    context: system_prompt # Context group
-    settings: # Task-specific settings
+    provider: local-llama
+    context: system_prompt
+    inherit_tools: false # Explicitly set
+    tools: [] # Empty list for testing
+    settings:
       temperature: 0.7
       max_tokens: 2048
+      tools: [] # Empty list for testing
+      tool_choice: "auto"
 
-  # Comprehensive code review
   detailed_review:
-    provider: code_review # Provider group
-    context: code_review_advanced # Context group
+    provider: code_review
+    context: code_review_advanced
     settings:
       temperature: 0.5
       max_tokens: 4096
-      # These settings override both global and provider settings
 
-  # Draft generation task
   generate_draft:
-    provider: draft_content # Provider group
-    context: system_prompt # Single context
+    provider: draft_content
+    context: system_prompt
     settings:
       temperature: 0.9
       max_tokens: 2048

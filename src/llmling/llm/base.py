@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, AsyncIterator
 
 
 class LLMConfig(BaseModel):
@@ -31,17 +31,35 @@ class LLMConfig(BaseModel):
     timeout: int = 30
     max_retries: int = 3
     streaming: bool = False
+    # New fields for tool support
+    tools: list[dict[str, Any]] | None = None
+    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+
+    model_config = ConfigDict(frozen=True)
 
 
 MessageRole = Literal["system", "user", "assistant"]
 """Valid message roles for chat completion."""
 
 
+class ToolCall(BaseModel):
+    """A tool call request from the LLM."""
+
+    id: str  # Required by OpenAI
+    name: str
+    parameters: dict[str, Any]
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Message(BaseModel):
     """A chat message."""
 
-    role: MessageRole
+    role: Literal["system", "user", "assistant", "tool"]
     content: str
+    name: str | None = None  # For tool messages
+    tool_calls: list[ToolCall] | None = None  # For assistant messages
+    tool_call_id: str | None = None  # For tool response messages
 
     model_config = ConfigDict(frozen=True)
 
@@ -52,7 +70,7 @@ class CompletionResult(BaseModel):
     content: str
     model: str
     finish_reason: str | None = None
-    is_stream_chunk: bool = False
+    tool_calls: list[ToolCall] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
@@ -201,7 +219,7 @@ class RetryableProvider(LLMProvider):
         self,
         messages: list[Message],
         **kwargs: Any,
-    ) -> AsyncGenerator[CompletionResult, None]:
+    ) -> AsyncIterator[CompletionResult]:
         """Implement actual streaming completion logic."""
         yield NotImplemented  # pragma: no cover
 

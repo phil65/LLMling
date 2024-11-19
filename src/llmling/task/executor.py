@@ -10,6 +10,7 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.llm.base import LLMConfig, Message
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
+from llmling.tools.base import ToolRegistry
 
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class TaskExecutor:
         context_registry: ContextLoaderRegistry,
         processor_registry: ProcessorRegistry,
         provider_registry: ProviderRegistry,
+        tool_registry: ToolRegistry | None = None,
         *,
         default_timeout: int = 30,
         default_max_retries: int = 3,
@@ -41,14 +43,55 @@ class TaskExecutor:
             context_registry: Registry of context loaders
             processor_registry: Registry of processors
             provider_registry: Registry of LLM providers
+            tool_registry: Registry of LLM model tools
             default_timeout: Default timeout for LLM calls
             default_max_retries: Default retry count for LLM calls
         """
         self.context_registry = context_registry
         self.processor_registry = processor_registry
         self.provider_registry = provider_registry
+        self.tool_registry = tool_registry or ToolRegistry()
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
+
+    def _prepare_tool_config(
+        self,
+        task_context: TaskContext,
+        task_provider: TaskProvider,
+    ) -> dict[str, Any] | None:
+        """Prepare tool configuration if tools are enabled."""
+        if not self.tool_registry:
+            return None
+
+        available_tools = []
+
+        # Add inherited tools from provider if enabled
+        if (
+            task_context.inherit_tools
+            and task_provider.settings
+            and task_provider.settings.tools
+        ):
+            available_tools.extend(task_provider.settings.tools)
+
+        # Add task-specific tools
+        if task_context.tools:
+            available_tools.extend(
+                self.tool_registry.get_schema(tool) for tool in task_context.tools
+            )
+
+        if not available_tools:
+            return None
+
+        return {
+            "tools": available_tools,
+            "tool_choice": (
+                task_context.tool_choice
+                or (
+                    task_provider.settings.tool_choice if task_provider.settings else None
+                )
+                or "auto"
+            ),
+        }
 
     @logfire.instrument(
         "Executing task with provider {task_provider.name}, model {task_provider.model}"
@@ -62,31 +105,53 @@ class TaskExecutor:
     ) -> TaskResult:
         """Execute a task."""
         try:
+            # Add tool configuration if available
+            if tool_config := self._prepare_tool_config(task_context, task_provider):
+                kwargs.update(tool_config)
             # Load and process context
             context_result = await self._load_context(task_context)
 
             # Prepare messages
-            messages = self._prepare_messages(
-                context_result.content,
-                system_prompt,
-            )
+            messages = self._prepare_messages(context_result.content, system_prompt)
 
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider)
             provider = self.provider_registry.create_provider(
-                task_provider.name,  # This is the lookup key
+                task_provider.name,
                 llm_config,
             )
 
-            # Get completion
-            completion = await provider.complete(messages, **kwargs)
+            # Get completion with potential tool calls
+            while True:
+                completion = await provider.complete(messages, **kwargs)
 
-            return TaskResult(
-                content=completion.content,
-                model=completion.model,
-                context_metadata=context_result.metadata,
-                completion_metadata=completion.metadata,
-            )
+                # Handle tool calls if present
+                if completion.tool_calls:
+                    tool_results = []
+                    for tool_call in completion.tool_calls:
+                        result = await self.tool_registry.execute(
+                            tool_call.name,
+                            **tool_call.parameters,
+                        )
+                        tool_results.append(result)
+
+                    # Add tool results to messages
+                    messages.append(
+                        Message(
+                            role="tool",
+                            content=str(tool_results),
+                            name="tool_results",
+                        )
+                    )
+                    continue  # Get next completion
+
+                # No tool calls, return final result
+                return TaskResult(
+                    content=completion.content,
+                    model=completion.model,
+                    context_metadata=context_result.metadata,
+                    completion_metadata=completion.metadata,
+                )
 
         except Exception as exc:
             msg = "Task execution failed"

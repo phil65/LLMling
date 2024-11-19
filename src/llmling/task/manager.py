@@ -31,6 +31,22 @@ class TaskManager:
         self.config = config
         self.executor = executor
 
+        # Register tools only if they exist in config
+        if self.config.tools:
+            self._register_tools()
+
+    def _register_tools(self) -> None:
+        """Register tools from configuration."""
+        if not self.config.tools:
+            return
+
+        for tool_id, tool_config in self.config.tools.items():
+            self.executor.tool_registry.register_path(
+                import_path=tool_config.import_path,
+                name=tool_config.name or tool_id,
+                description=tool_config.description,
+            )
+
     def _prepare_task(
         self,
         template_name: str,
@@ -41,12 +57,16 @@ class TaskManager:
         context = self._resolve_context(template)
         provider_name, provider_config = self._resolve_provider(template)
 
+        # Create task context with proper tool configuration
         task_context = TaskContext(
             context=context,
             processors=context.processors,
-            inherit_tools=template.inherit_tools,
+            inherit_tools=template.inherit_tools or False,
+            tools=template.tools,
+            tool_choice=template.tool_choice,
         )
 
+        # Create task provider with settings
         task_provider = TaskProvider(
             name=provider_name,
             model=provider_config.model,
@@ -63,13 +83,18 @@ class TaskManager:
         **kwargs: Any,
     ) -> TaskResult:
         """Execute a task template."""
-        task_context, task_provider = self._prepare_task(template_name, system_prompt)
-        return await self.executor.execute(
-            task_context,
-            task_provider,
-            system_prompt=system_prompt,
-            **kwargs,
-        )
+        try:
+            task_context, task_provider = self._prepare_task(template_name, system_prompt)
+            return await self.executor.execute(
+                task_context,
+                task_provider,
+                system_prompt=system_prompt,
+                **kwargs,
+            )
+        except Exception as exc:
+            logger.exception("Task execution failed")
+            msg = f"Task execution failed for template {template_name}: {exc}"
+            raise exceptions.TaskError(msg) from exc
 
     async def execute_template_stream(
         self,
@@ -78,14 +103,19 @@ class TaskManager:
         **kwargs: Any,
     ) -> AsyncIterator[TaskResult]:
         """Execute a task template with streaming results."""
-        task_context, task_provider = self._prepare_task(template_name, system_prompt)
-        async for result in self.executor.execute_stream(
-            task_context,
-            task_provider,
-            system_prompt=system_prompt,
-            **kwargs,
-        ):
-            yield result
+        try:
+            task_context, task_provider = self._prepare_task(template_name, system_prompt)
+            async for result in self.executor.execute_stream(
+                task_context,
+                task_provider,
+                system_prompt=system_prompt,
+                **kwargs,
+            ):
+                yield result
+        except Exception as exc:
+            logger.exception("Task streaming failed")
+            msg = f"Task streaming failed: {exc}"
+            raise exceptions.TaskError(msg) from exc
 
     def _get_template(self, name: str) -> TaskTemplate:
         """Get a task template by name."""

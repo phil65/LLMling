@@ -170,3 +170,23 @@ class ConfigValidator:
                 )
 
         return warnings
+
+    def validate_tools(self) -> list[str]:
+        """Validate tool configuration."""
+        warnings: list[str] = []
+
+        # Skip tool validation if tools aren't configured
+        if not self.config.tools:
+            return warnings
+
+        # Validate tool references in tasks
+        for name, template in self.config.task_templates.items():
+            if not template.tools:
+                continue
+            warnings.extend(
+                f"Tool {tool} referenced in task {name} not found"
+                for tool in template.tools
+                if tool not in self.config.tools
+            )
+
+        return warnings
