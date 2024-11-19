@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import litellm
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from llmling.core import exceptions
 from llmling.llm.base import CompletionResult, Message, RetryableProvider, ToolCall
@@ -15,6 +16,61 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+
+class LiteLLMFunction(BaseModel):
+    """Function definition for LiteLLM tool calls."""
+
+    name: str
+    description: str
+    parameters: dict[str, Any]
+
+    model_config = ConfigDict(frozen=True)
+
+
+class LiteLLMTool(BaseModel):
+    """Tool definition for LiteLLM."""
+
+    type: Literal["function"] = "function"
+    function: LiteLLMFunction
+
+    model_config = ConfigDict(frozen=True)
+
+
+class LiteLLMMessage(BaseModel):
+    """Message format for LiteLLM."""
+
+    role: Literal["system", "user", "assistant", "tool"]
+    content: str
+    name: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class LiteLLMRequest(BaseModel):
+    """Complete request format for LiteLLM."""
+
+    model: str
+    messages: list[LiteLLMMessage]
+    temperature: float = 0.7
+    max_tokens: int | None = None
+    top_p: float | None = None
+    timeout: int = 30
+    stream: bool = False
+    tools: list[LiteLLMTool] | None = None
+    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def validate_tools_and_choice(self) -> LiteLLMRequest:
+        """Validate tool configuration."""
+        if self.tool_choice and not self.tools:
+            msg = "tool_choice provided but no tools defined"
+            raise ValueError(msg)
+        return self
 
 
 class LiteLLMProvider(RetryableProvider):

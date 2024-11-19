@@ -54,13 +54,12 @@ class TaskExecutor:
         self.processor_registry = processor_registry
         self.provider_registry = provider_registry
         self.tool_registry = tool_registry or ToolRegistry()
+        logger.debug(
+            "TaskExecutor initialized with tools: %s", self.tool_registry.list_tools()
+        )
         self.config_manager = config_manager
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
-        logger.debug(
-            "Initialized with tool registry containing: %s",
-            self.tool_registry.list_tools(),
-        )
 
     @logfire.instrument("Preparing tool configuration for {task_provider.name}")
     def _prepare_tool_config(
@@ -96,11 +95,11 @@ class TaskExecutor:
             return None
 
         # Get schemas for all available tools
-        tool_schemas = [
-            self.tool_registry.get_schema(tool_name).function
-            for tool_name in available_tools
-        ]
-        logger.debug("Prepared tool schemas: %s", tool_schemas)
+        tool_schemas: list[dict[str, Any]] = []
+        for tool_name in available_tools:
+            schema = self.tool_registry.get_schema(tool_name)
+            logger.debug("Tool schema for %s: %s", tool_name, schema)
+            tool_schemas.append(schema.function)
         return {
             "tools": tool_schemas,
             "tool_choice": (
