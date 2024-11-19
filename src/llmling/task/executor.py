@@ -75,15 +75,19 @@ class TaskExecutor:
 
         # Add task-specific tools
         if task_context.tools:
-            available_tools.extend(
-                self.tool_registry.get_schema(tool) for tool in task_context.tools
-            )
+            available_tools.extend(task_context.tools)
 
         if not available_tools:
             return None
 
+        # Get schemas for all available tools
+        tool_schemas = [
+            self.tool_registry.get_schema(tool_name).function
+            for tool_name in available_tools
+        ]
+
         return {
-            "tools": available_tools,
+            "tools": tool_schemas,
             "tool_choice": (
                 task_context.tool_choice
                 or (

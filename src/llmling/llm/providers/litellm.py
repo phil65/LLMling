@@ -24,7 +24,7 @@ class LiteLLMProvider(RetryableProvider):
     ) -> CompletionResult:
         """Implement completion using LiteLLM."""
         try:
-            # Convert messages to dict format, explicitly handling tool_calls
+            # Convert messages to dict format
             messages_dict = []
             for msg in messages:
                 msg_dict: dict[str, Any] = {
@@ -37,12 +37,7 @@ class LiteLLMProvider(RetryableProvider):
                     msg_dict["tool_calls"] = [tc.model_dump() for tc in msg.tool_calls]
                 messages_dict.append(msg_dict)
 
-            # Add tool configuration if present and provider supports it
-            if self.config.tools and not self._is_local_provider():
-                kwargs["tools"] = self.config.tools
-                if self.config.tool_choice is not None:
-                    kwargs["tool_choice"] = self.config.tool_choice
-
+            # Tools are now already in the correct format from TaskExecutor
             response = await litellm.acompletion(
                 model=self.config.model,
                 messages=messages_dict,
@@ -79,8 +74,8 @@ class LiteLLMProvider(RetryableProvider):
             )
 
         except Exception as exc:
-            msg_ = f"LiteLLM completion failed: {exc}"
-            raise exceptions.LLMError(msg_) from exc
+            error_msg = f"LiteLLM completion failed: {exc}"
+            raise exceptions.LLMError(error_msg) from exc
 
     def _is_local_provider(self) -> bool:
         """Check if the current model is a local provider (like Ollama)."""
