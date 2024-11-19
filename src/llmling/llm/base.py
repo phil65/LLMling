@@ -135,7 +135,7 @@ class LLMProvider(ABC):
         Raises:
             LLMError: If validation fails
         """
-        if not result.content:
+        if not result.content and not result.tool_calls:
             msg = "Empty response from LLM"
             raise exceptions.LLMError(msg)
 
