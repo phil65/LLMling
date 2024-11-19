@@ -45,7 +45,7 @@ class LLMLingClient:
         self,
         config_path: str | os.PathLike[str],
         *,
-        log_level: int | None = None,
+        log_level: int | str | None = None,
         validate_config: bool = True,
         components: dict[ComponentType, dict[str, Any]] | None = None,
     ) -> None:
