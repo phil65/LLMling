@@ -8,6 +8,7 @@ from llmling.tools.exceptions import ToolError
 
 EXAMPLE_IMPORT = "llmling.testing.tools.example_tool"
 FAILING_IMPORT = "llmling.testing.tools.failing_tool"
+ANALYZE_IMPORT = "llmling.testing.tools.analyze_ast"
 
 
 # Test fixtures
@@ -70,11 +71,9 @@ async def test_failing_tool():
 class TestDynamicTool:
     def test_init(self) -> None:
         """Test tool initialization."""
-        tool = DynamicTool(
-            import_path=EXAMPLE_IMPORT, name="name", description="Description"
-        )
+        tool = DynamicTool(import_path=EXAMPLE_IMPORT, name="name", description="desc")
         assert tool.name == "name"
-        assert tool.description == "Description"
+        assert tool.description == "desc"
         assert tool.import_path == EXAMPLE_IMPORT
 
     def test_default_name(self) -> None:
@@ -134,7 +133,7 @@ class TestToolRegistry:
     def test_list_tools(self, registry: ToolRegistry) -> None:
         """Test listing registered tools."""
         registry.register_path(EXAMPLE_IMPORT, name="tool1")
-        registry.register_path("llmling.testing.tools.analyze_ast", name="tool2")
+        registry.register_path(ANALYZE_IMPORT, name="tool2")
         tools = registry.list_tools()
         assert len(tools) == 2  # noqa: PLR2004
         assert "tool1" in tools
@@ -150,13 +149,11 @@ class TestToolRegistry:
     @pytest.mark.asyncio
     async def test_execute_with_validation(self, registry: ToolRegistry) -> None:
         """Test tool execution with invalid parameters."""
-        registry.register_path("llmling.testing.tools.analyze_ast")
+        registry.register_path(ANALYZE_IMPORT)
 
         # Valid Python code
-        result = await registry.execute(
-            "analyze_ast",
-            code="class Test: pass\ndef func(): pass",
-        )
+        code = "class Test: pass\ndef func(): pass"
+        result = await registry.execute("analyze_ast", code=code)
         assert result["classes"] == 1
         assert result["functions"] == 1
 
@@ -166,15 +163,13 @@ class TestToolRegistry:
 
     def test_schema_generation(self, registry: ToolRegistry) -> None:
         """Test schema generation for registered tools."""
-        registry.register_path(
-            "llmling.testing.tools.analyze_ast", description="Description"
-        )
+        registry.register_path(ANALYZE_IMPORT, description="desc")
         schema = registry.get_schema("analyze_ast")
 
         assert schema.type == "function"
         assert "code" in schema.function["parameters"]["properties"]
         assert schema.function["parameters"]["required"] == ["code"]
-        assert schema.function["description"] == "Description"
+        assert schema.function["description"] == "desc"
 
 
 # Integration tests
@@ -183,11 +178,7 @@ async def test_tool_integration() -> None:
     """Test full tool workflow."""
     # Setup
     registry = ToolRegistry()
-    registry.register_path(
-        "llmling.testing.tools.analyze_ast",
-        name="analyze",
-        description="Analyze Python code",
-    )
+    registry.register_path(ANALYZE_IMPORT, name="analyze", description="Analyze AST")
 
     # Get schema
     schema = registry.get_schema("analyze")
@@ -202,9 +193,8 @@ class TestClass:
         pass
     """
     result = await registry.execute("analyze", code=code)
-
-    assert result["classes"] == 1
-    assert result["functions"] == 2  # noqa: PLR2004
+    assert result["classes"] == code.count("class ")
+    assert result["functions"] == code.count("def ")
 
 
 if __name__ == "__main__":
