@@ -141,9 +141,8 @@ class LiteLLMProvider(RetryableProvider):
             )
 
         except Exception as exc:
-            logger.exception("LiteLLM completion failed with error:")
-            error_msg = f"LiteLLM completion failed: {exc}"
-            raise exceptions.LLMError(error_msg) from exc
+            error_msg = f"Failed to process LiteLLM response: {exc}"
+            raise ValueError(error_msg) from exc
 
     def _is_local_provider(self) -> bool:
         """Check if the current model is a local provider (like Ollama)."""

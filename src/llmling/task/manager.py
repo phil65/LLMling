@@ -30,8 +30,6 @@ class TaskManager:
         """Initialize task manager."""
         self.config = config
         self.executor = executor
-
-        # Register tools only if they exist in config
         if self.config.tools:
             self._register_tools()
 
@@ -86,16 +84,28 @@ class TaskManager:
         **kwargs: Any,
     ) -> TaskResult:
         """Execute a task template."""
+        # First do all validation/setup without retry
         try:
             task_context, task_provider = self._prepare_task(template_name, system_prompt)
+        except exceptions.TaskError:
+            # Configuration errors should fail immediately
+            logger.exception("Task preparation failed")
+            raise
+
+        # Then execute with retry only for LLM-related errors
+        try:
             return await self.executor.execute(
                 task_context,
                 task_provider,
                 system_prompt=system_prompt,
                 **kwargs,
             )
-        except Exception as exc:
+        except exceptions.LLMError:
+            # LLM errors can be retried by the provider
             logger.exception("Task execution failed")
+            raise
+        except Exception as exc:
+            # Other errors should not be retried
             msg = f"Task execution failed for template {template_name}: {exc}"
             raise exceptions.TaskError(msg) from exc
 

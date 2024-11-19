@@ -146,7 +146,7 @@ class LLMLingClient:
             # Start processor registry
             await self._processor_registry.startup()
 
-            # Create executor and manager
+            # Create executor with empty tool registry
             self._executor = TaskExecutor(
                 context_registry=context_registry,
                 processor_registry=self._processor_registry,
@@ -154,6 +154,8 @@ class LLMLingClient:
                 tool_registry=self.tool_registry,
                 config_manager=self.config_manager,
             )
+
+            # Create manager (will handle tool registration)
             self._manager = TaskManager(self.config_manager.config, self._executor)
 
             self._initialized = True
@@ -161,7 +163,7 @@ class LLMLingClient:
 
         except Exception as exc:
             logger.exception("Client initialization failed")
-            await self.shutdown()  # Ensure cleanup on failure
+            await self.shutdown()
             msg = f"Failed to initialize client: {exc}"
             raise exceptions.LLMLingError(msg) from exc
 

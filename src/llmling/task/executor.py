@@ -34,7 +34,7 @@ class TaskExecutor:
         processor_registry: ProcessorRegistry,
         provider_registry: ProviderRegistry,
         tool_registry: ToolRegistry | None = None,
-        config_manager: ConfigManager | None = None,  # Add this
+        config_manager: ConfigManager | None = None,
         *,
         default_timeout: int = 30,
         default_max_retries: int = 3,
@@ -97,9 +97,15 @@ class TaskExecutor:
         # Get schemas for all available tools
         tool_schemas: list[dict[str, Any]] = []
         for tool_name in available_tools:
+            # Verify tool exists before getting schema
+            if not self.tool_registry.has_tool(tool_name):
+                logger.warning("Tool not found in registry: %s", tool_name)
+                continue
+
             schema = self.tool_registry.get_schema(tool_name)
             logger.debug("Tool schema for %s: %s", tool_name, schema)
             tool_schemas.append(schema.function)
+
         return {
             "tools": tool_schemas,
             "tool_choice": (
@@ -125,6 +131,7 @@ class TaskExecutor:
         try:
             # Add tool configuration if available
             if tool_config := self._prepare_tool_config(task_context, task_provider):
+                logger.debug("Tool configuration prepared: %s", tool_config)
                 kwargs.update(tool_config)
             # Load and process context
             context_result = await self._load_context(task_context)
@@ -150,11 +157,8 @@ class TaskExecutor:
                 if completion.tool_calls:
                     tool_results = []
                     for tool_call in completion.tool_calls:
-                        logger.debug(
-                            "Executing tool call: %s with params: %s",
-                            tool_call.name,
-                            tool_call.parameters,
-                        )  # Add this
+                        msg = "Executing tool call: %s with params: %s"
+                        logger.debug(msg, tool_call.name, tool_call.parameters)
                         result = await self.tool_registry.execute(
                             tool_call.name,
                             **tool_call.parameters,

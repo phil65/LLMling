@@ -62,7 +62,7 @@ class TemplateProcessor(ChainableProcessor):
                 original_content=context.original_content,
                 metadata={
                     "template_vars": list(render_context.keys()),
-                    "template": self.config.template,  # Add this for debugging
+                    "template": self.config.template,
                 },
             )
         except Exception as exc:
