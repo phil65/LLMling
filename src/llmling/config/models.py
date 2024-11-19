@@ -190,7 +190,7 @@ class ToolConfig(BaseModel):
 class Config(BaseModel):
     """Root configuration model."""
 
-    version: str  # Required: configuration schema version
+    version: str = "1.0"
     global_settings: GlobalSettings = Field(
         default_factory=GlobalSettings
     )  # Optional with defaults
