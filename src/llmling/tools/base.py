@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import py2openai
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from llmling.tools.exceptions import ToolError
 from llmling.utils import calling
@@ -20,10 +20,19 @@ if TYPE_CHECKING:
 class ToolSchema(BaseModel):
     """OpenAPI-compatible schema for a tool."""
 
-    type: str = "function"
+    # Make type a required field with a default value
+    type: Literal["function"] = Field(
+        default="function",
+        # Ensure it's always included in output
+        exclude=False,
+    )
     function: dict[str, Any]
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        # Ensure type is always included even when using exclude_unset
+        populate_by_name=True,
+    )
 
 
 class BaseTool(ABC):

@@ -94,18 +94,17 @@ class TaskExecutor:
             logger.debug("No tools available")
             return None
 
-        # Get schemas for all available tools
+        # Get complete tool schemas including type
         tool_schemas = []
         for tool_name in available_tools:
-            # Verify tool exists before getting schema
             if not self.tool_registry.has_tool(tool_name):
                 logger.warning("Tool not found in registry: %s", tool_name)
                 continue
 
             schema = self.tool_registry.get_schema(tool_name)
-            tool_schemas.append(schema.function)
+            # Include the complete schema, not just the function part
+            tool_schemas.append(schema.model_dump())
 
-        # Only return tools config if we have actual tool schemas
         if not tool_schemas:
             return None
 
