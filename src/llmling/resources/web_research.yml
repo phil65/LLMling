@@ -1,0 +1,42 @@
+version: "1.0"
+
+global_settings:
+  timeout: 30
+  max_retries: 3
+  temperature: 0.7
+
+tools:
+  browser:
+    import_path: "llmling.tools.browser.BrowserTool"
+    description: "Control a web browser"
+
+llm_providers:
+  llama:
+    name: "Local Llama"
+    model: "ollama/llama3.2:3b" # Make sure this matches your local model name
+    temperature: 0.7
+    max_tokens: 2048
+    tools:
+      - browser # Just reference the tool by name
+
+contexts:
+  research_prompt:
+    type: "text"
+    content: |
+      You are a web research assistant. Use the browser tool to find information.
+      Current task: Go to python.org and tell me the latest news.
+
+      Use the browser tool with these steps:
+      1. Use browser action "open" with url="https://python.org"
+      2. Use browser action "read" to get the content
+      3. Summarize what you find.
+
+task_templates:
+  web_research:
+    provider: llama
+    context: research_prompt
+    inherit_tools: true # Inherit tools from provider
+    settings:
+      temperature: 0.7
+      max_tokens: 2048
+      tool_choice: "auto" # Let the model choose when to use tools

@@ -1,0 +1,39 @@
+version: "1.0"
+
+global_settings:
+  timeout: 30
+  max_retries: 3
+  temperature: 0.7
+
+tools:
+  system:
+    import_path: "llmling.tools.system.SystemTool"
+    description: "System operations and monitoring"
+
+llm_providers:
+  llama:
+    name: "Local Llama"
+    model: "ollama/llama3.2:3b"
+    temperature: 0.7
+    max_tokens: 2048
+    tools:
+      - system
+
+contexts:
+  check_folder:
+    type: "text"
+    content: |
+      Use the system tool to show the contents of the current folder.
+      Steps:
+      1. Use the system tool with action "execute" and command "ls" or "dir"
+      2. Display the results
+
+task_templates:
+  check_folder_content:
+    provider: llama
+    context: check_folder
+    inherit_tools: true
+    settings:
+      temperature: 0.7
+      max_tokens: 2048
+      tool_choice: "auto"
