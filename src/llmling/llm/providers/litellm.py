@@ -136,7 +136,13 @@ class LiteLLMProvider(LLMProvider):
             if k not in exclude_fields and v is not None
         })
         # Add additional kwargs (highest priority)
-        kwargs.update({k: v for k, v in additional_kwargs.items() if v is not None})
+        # Filter out empty tools array
+        filtered_kwargs = {
+            k: v
+            for k, v in additional_kwargs.items()
+            if v is not None and not (k == "tools" and not v)
+        }
+        kwargs.update(filtered_kwargs)
         return kwargs
 
     async def complete(
@@ -155,6 +161,12 @@ class LiteLLMProvider(LLMProvider):
                 }
                 for msg in messages
             ]
+
+            # Clean up kwargs
+            # Remove empty tools array and related settings
+            if "tools" in kwargs and not kwargs["tools"]:
+                kwargs.pop("tools")
+                kwargs.pop("tool_choice", None)
 
             # Prepare request kwargs
             request_kwargs = self._prepare_request_kwargs(**kwargs)
@@ -180,19 +192,17 @@ class LiteLLMProvider(LLMProvider):
         """Implement streaming completion using LiteLLM."""
         try:
             # Convert messages to dict format
-            messages_dict: list[dict[str, Any]] = []
-            for msg in messages:
-                msg_dict: dict[str, Any] = {
+            messages_dict = [
+                {
                     "role": msg.role,
                     "content": msg.content,
+                    **({"name": msg.name} if msg.name else {}),
                 }
-                if msg.name:
-                    msg_dict["name"] = msg.name
-                if msg.tool_calls:
-                    msg_dict["tool_calls"] = [tc.model_dump() for tc in msg.tool_calls]
-                messages_dict.append(msg_dict)
+                for msg in messages
+            ]
 
-            # Remove empty tools array if present
+            # Clean up kwargs
+            # Remove empty tools array and related settings
             if "tools" in kwargs and not kwargs["tools"]:
                 kwargs.pop("tools")
                 kwargs.pop("tool_choice", None)

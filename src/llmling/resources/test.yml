@@ -159,13 +159,9 @@ task_templates:
   quick_review:
     provider: local-llama
     context: system_prompt
-    inherit_tools: false # Explicitly set
-    tools: [] # Empty list for testing
     settings:
       temperature: 0.7
       max_tokens: 2048
-      tools: [] # Empty list for testing
-      tool_choice: "auto"
 
   detailed_review:
     provider: code_review

@@ -92,10 +92,10 @@ class TaskExecutor:
 
         if not available_tools:
             logger.debug("No tools available")
-            return None  # Return None instead of empty tools config
+            return None
 
         # Get schemas for all available tools
-        tool_schemas: list[dict[str, Any]] = []
+        tool_schemas = []
         for tool_name in available_tools:
             # Verify tool exists before getting schema
             if not self.tool_registry.has_tool(tool_name):
@@ -103,7 +103,6 @@ class TaskExecutor:
                 continue
 
             schema = self.tool_registry.get_schema(tool_name)
-            logger.debug("Tool schema for %s: %s", tool_name, schema)
             tool_schemas.append(schema.function)
 
         # Only return tools config if we have actual tool schemas
@@ -133,10 +132,11 @@ class TaskExecutor:
     ) -> TaskResult:
         """Execute a task."""
         try:
-            # Add tool configuration if available
-            if tool_config := self._prepare_tool_config(task_context, task_provider):
-                logger.debug("Tool configuration prepared: %s", tool_config)
+            # Add tool configuration if available and non-empty
+            tool_config = self._prepare_tool_config(task_context, task_provider)
+            if tool_config and tool_config.get("tools"):  # Only add if we have tools
                 kwargs.update(tool_config)
+
             # Load and process context
             context_result = await self._load_context(task_context)
 
@@ -149,10 +149,6 @@ class TaskExecutor:
                 task_provider.name,
                 llm_config,
             )
-            logger.debug(
-                "Sending request to LLM with tools config: %s", kwargs.get("tools")
-            )
-
             # Get completion with potential tool calls
             while True:
                 completion = await provider.complete(messages, **kwargs)
