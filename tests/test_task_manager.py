@@ -35,17 +35,9 @@ def mock_executor() -> TaskExecutor:
 def test_resolve_provider_direct(mock_config: mock.MagicMock) -> None:
     """Test direct provider resolution."""
     # Setup
-    provider_config = LLMProviderConfig(
-        name="Test Provider",
-        model="test/model",
-    )
+    provider_config = LLMProviderConfig(name="Test Provider", model="test/model")
     mock_config.llm_providers = {"test-provider": provider_config}
-
-    template = TaskTemplate(
-        provider="test-provider",
-        context="test-context",
-    )
-
+    template = TaskTemplate(provider="test-provider", context="test-context")
     manager = TaskManager(mock_config, mock.MagicMock())
     provider_name, config = manager._resolve_provider(template)
 
@@ -56,17 +48,11 @@ def test_resolve_provider_direct(mock_config: mock.MagicMock) -> None:
 def test_resolve_provider_group(mock_config: mock.MagicMock) -> None:
     """Test provider group resolution."""
     # Setup
-    provider_config = LLMProviderConfig(
-        name="Test Provider",
-        model="test/model",
-    )
+    provider_config = LLMProviderConfig(name="Test Provider", model="test/model")
     mock_config.llm_providers = {"test-provider": provider_config}
     mock_config.provider_groups = {"group1": ["test-provider"]}
 
-    template = TaskTemplate(
-        provider="group1",
-        context="test-context",
-    )
+    template = TaskTemplate(provider="group1", context="test-context")
 
     manager = TaskManager(mock_config, mock.MagicMock())
     provider_name, config = manager._resolve_provider(template)
@@ -79,10 +65,7 @@ def test_resolve_provider_not_found(mock_config: mock.MagicMock) -> None:
     """Test provider resolution failure."""
     # Config already has empty dicts from fixture
 
-    template = TaskTemplate(
-        provider="non-existent",
-        context="test-context",
-    )
+    template = TaskTemplate(provider="non-existent", context="test-context")
 
     manager = TaskManager(mock_config, mock.MagicMock())
     with pytest.raises(exceptions.TaskError):
@@ -95,10 +78,7 @@ def test_resolve_context_direct(mock_config: mock.MagicMock) -> None:
     context = mock.MagicMock()
     mock_config.contexts = {"test-context": context}
 
-    template = TaskTemplate(
-        provider="test-provider",
-        context="test-context",
-    )
+    template = TaskTemplate(provider="test-provider", context="test-context")
 
     manager = TaskManager(mock_config, mock.MagicMock())
     result = manager._resolve_context(template)
@@ -112,10 +92,7 @@ def test_resolve_context_group(mock_config: mock.MagicMock) -> None:
     mock_config.contexts = {"test-context": context}
     mock_config.context_groups = {"group1": ["test-context"]}
 
-    template = TaskTemplate(
-        provider="test-provider",
-        context="group1",
-    )
+    template = TaskTemplate(provider="test-provider", context="group1")
 
     manager = TaskManager(mock_config, mock.MagicMock())
     result = manager._resolve_context(template)
@@ -125,10 +102,7 @@ def test_resolve_context_group(mock_config: mock.MagicMock) -> None:
 
 def test_resolve_context_not_found(mock_config: mock.MagicMock) -> None:
     """Test context resolution failure."""
-    template = TaskTemplate(
-        provider="test-provider",
-        context="non-existent",
-    )
+    template = TaskTemplate(provider="test-provider", context="non-existent")
 
     manager = TaskManager(mock_config, mock.MagicMock())
     with pytest.raises(exceptions.TaskError):

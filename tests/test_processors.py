@@ -19,6 +19,10 @@ from llmling.processors.registry import ProcessorRegistry
 SAMPLE_TEXT = "Hello, World!"
 REVERSED_TEXT = "!dlroW ,olleH"
 UPPER_TEXT = "HELLO, WORLD!"
+REVERSE_IMPORT = "llmling.testing.processors.reverse_text"
+UPPERCASE_IMPORT = "llmling.testing.processors.uppercase_text"
+APPEND_IMPORT = "llmling.testing.processors.append_text"
+FAILING_IMPORT = "llmling.testing.processors.failing_processor"
 
 
 # Test helpers
@@ -43,10 +47,7 @@ async def failing_processor(text: str) -> str:
 @pytest.fixture
 def function_config() -> ProcessorConfig:
     """Create a test function processor config."""
-    return ProcessorConfig(
-        type="function",
-        import_path="llmling.testing.processors.reverse_text",
-    )
+    return ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
 
 
 @pytest.fixture
@@ -68,20 +69,10 @@ def registry() -> ProcessorRegistry:
 async def test_processor_pipeline(registry: ProcessorRegistry) -> None:
     """Test complete processor pipeline."""
     # Register processors
-    registry.register(
-        "upper",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.uppercase_text",
-        ),
-    )
-    registry.register(
-        "append",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.append_text",
-        ),
-    )
+    cfg = ProcessorConfig(type="function", import_path=UPPERCASE_IMPORT)
+    cfg_2 = ProcessorConfig(type="function", import_path=APPEND_IMPORT)
+    registry.register("upper", cfg)
+    registry.register("append", cfg_2)
 
     # Define processing steps
     steps = [
@@ -104,26 +95,17 @@ async def test_processor_pipeline(registry: ProcessorRegistry) -> None:
 @pytest.mark.asyncio
 async def test_function_processor() -> None:
     """Test function processor execution."""
-    config = ProcessorConfig(
-        type="function",
-        import_path="llmling.testing.processors.reverse_text",
-    )
+    config = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
 
     processor = FunctionProcessor(config)
 
     try:
         await processor.startup()
-        result = await processor.process(
-            ProcessingContext(
-                original_content=SAMPLE_TEXT,
-                current_content=SAMPLE_TEXT,
-                metadata={},
-                kwargs={},
-            ),
-        )
+        ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
+        result = await processor.process(ctx)
 
         assert result.content == REVERSED_TEXT
-        assert result.metadata["function"] == "llmling.testing.processors.reverse_text"
+        assert result.metadata["function"] == REVERSE_IMPORT
         assert not result.metadata["is_async"]
     finally:
         await processor.shutdown()
@@ -133,20 +115,10 @@ async def test_function_processor() -> None:
 def initialized_registry(registry: ProcessorRegistry) -> ProcessorRegistry:
     """Create and initialize a test processor registry."""
     # Register configurations
-    registry.register(
-        "reverse",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.reverse_text",
-        ),
-    )
-    registry.register(
-        "reverse1",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.reverse_text",
-        ),
-    )
+    cfg = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
+    cfg_2 = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
+    registry.register("reverse", cfg)
+    registry.register("reverse1", cfg_2)
     return registry
 
 
@@ -165,14 +137,8 @@ async def test_processor_lifecycle(function_config: ProcessorConfig) -> None:
     await processor.startup()
     assert processor.func is not None
 
-    result = await processor.process(
-        ProcessingContext(
-            original_content=SAMPLE_TEXT,
-            current_content=SAMPLE_TEXT,
-            metadata={},
-            kwargs={},
-        ),
-    )
+    ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
+    result = await processor.process(ctx)
     assert result.content == REVERSED_TEXT
 
     await processor.shutdown()
@@ -185,14 +151,8 @@ async def test_processor_validation(function_config: ProcessorConfig) -> None:
     processor = FunctionProcessor(function_config)
 
     await processor.startup()
-    result = await processor.process(
-        ProcessingContext(
-            original_content=SAMPLE_TEXT,
-            current_content=SAMPLE_TEXT,
-            metadata={},
-            kwargs={},
-        ),
-    )
+    ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
+    result = await processor.process(ctx)
     assert result.content == REVERSED_TEXT
 
 
@@ -202,22 +162,16 @@ async def test_function_processor_sync() -> None:
     """Test synchronous function processor."""
     config = ProcessorConfig(
         type="function",
-        import_path="llmling.testing.processors.reverse_text",
+        import_path=REVERSE_IMPORT,
     )
     processor = FunctionProcessor(config)
 
     await processor.startup()
-    result = await processor.process(
-        ProcessingContext(
-            original_content=SAMPLE_TEXT,
-            current_content=SAMPLE_TEXT,
-            metadata={},
-            kwargs={},
-        ),
-    )
+    ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
+    result = await processor.process(ctx)
 
     assert result.content == REVERSED_TEXT
-    assert result.metadata["function"] == "llmling.testing.processors.reverse_text"
+    assert result.metadata["function"] == REVERSE_IMPORT
     assert not result.metadata["is_async"]
 
 
@@ -232,14 +186,8 @@ async def test_function_processor_async() -> None:
     processor = FunctionProcessor(config)
 
     await processor.startup()
-    result = await processor.process(
-        ProcessingContext(
-            original_content=SAMPLE_TEXT,
-            current_content=SAMPLE_TEXT,
-            metadata={},
-            kwargs={},
-        ),
-    )
+    ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
+    result = await processor.process(ctx)
 
     assert result.content == REVERSED_TEXT
     assert result.metadata["function"] == "llmling.testing.processors.async_reverse_text"
@@ -252,20 +200,14 @@ async def test_function_processor_error() -> None:
     config = ProcessorConfig(
         type="function",
         name="failing_processor",
-        import_path="llmling.testing.processors.failing_processor",
+        import_path=FAILING_IMPORT,
     )
     processor = FunctionProcessor(config)
 
     await processor.startup()
+    ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
     with pytest.raises(exceptions.ProcessorError, match="Function execution failed"):
-        await processor.process(
-            ProcessingContext(
-                original_content=SAMPLE_TEXT,
-                current_content=SAMPLE_TEXT,
-                metadata={},
-                kwargs={},
-            ),
-        )
+        await processor.process(ctx)
 
 
 # Template processor tests
@@ -278,7 +220,6 @@ async def test_template_processor_basic(template_config: ProcessorConfig) -> Non
     context = ProcessingContext(
         original_content=SAMPLE_TEXT,
         current_content=SAMPLE_TEXT,
-        metadata={},
         kwargs={"extra": "value"},
     )
 
@@ -292,22 +233,14 @@ async def test_template_processor_basic(template_config: ProcessorConfig) -> Non
 @pytest.mark.asyncio
 async def test_template_processor_error() -> None:
     """Test template processor error handling."""
-    config = ProcessorConfig(
-        type="template",
-        template="{{ undefined_var + 123 }}",  # Force a template error
-    )
+    # Force a template error
+    config = ProcessorConfig(type="template", template="{{ undefined_var + 123 }}")
     processor = TemplateProcessor(config)
 
     await processor.startup()
+    ctx = ProcessingContext(original_content=SAMPLE_TEXT, current_content=SAMPLE_TEXT)
     with pytest.raises(exceptions.ProcessorError):
-        await processor.process(
-            ProcessingContext(
-                original_content=SAMPLE_TEXT,
-                current_content=SAMPLE_TEXT,
-                metadata={},
-                kwargs={},
-            ),
-        )
+        await processor.process(ctx)
 
 
 # Registry tests
@@ -335,10 +268,8 @@ async def test_registry_sequential_processing(
     """Test sequential processing."""
     await initialized_registry.startup()
     try:
-        result = await initialized_registry.process(
-            "hello",
-            [ProcessingStep(name="reverse")],
-        )
+        steps = [ProcessingStep(name="reverse")]
+        result = await initialized_registry.process("hello", steps)
         assert result.content == "olleh"
     finally:
         await initialized_registry.shutdown()
@@ -348,20 +279,10 @@ async def test_registry_sequential_processing(
 async def test_registry_parallel_processing(registry: ProcessorRegistry) -> None:
     """Test parallel processing."""
     # Register processors first
-    registry.register(
-        "reverse1",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.reverse_text",
-        ),
-    )
-    registry.register(
-        "reverse2",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.reverse_text",
-        ),
-    )
+    cfg = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
+    cfg_2 = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
+    registry.register("reverse1", cfg)
+    registry.register("reverse2", cfg_2)
 
     # Then start the registry
     await registry.startup()
@@ -380,13 +301,8 @@ async def test_registry_parallel_processing(registry: ProcessorRegistry) -> None
 
 @pytest.mark.asyncio
 async def test_registry_streaming(registry: ProcessorRegistry) -> None:
-    registry.register(
-        "reverse",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.async_reverse_text",
-        ),
-    )
+    p = "llmling.testing.processors.async_reverse_text"
+    registry.register("reverse", ProcessorConfig(type="function", import_path=p))
 
     steps = [ProcessingStep(name="reverse")]
     results = [result async for result in registry.process_stream(SAMPLE_TEXT, steps)]
@@ -396,20 +312,10 @@ async def test_registry_streaming(registry: ProcessorRegistry) -> None:
 
 @pytest.mark.asyncio
 async def test_registry_optional_step(registry: ProcessorRegistry) -> None:
-    registry.register(
-        "fail",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.failing_processor",
-        ),
-    )
-    registry.register(
-        "reverse",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.reverse_text",
-        ),
-    )
+    cfg = ProcessorConfig(type="function", import_path=FAILING_IMPORT)
+    registry.register("fail", cfg)
+    cfg = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
+    registry.register("reverse", cfg)
 
     steps = [
         ProcessingStep(name="fail", required=False),
@@ -423,17 +329,10 @@ async def test_registry_optional_step(registry: ProcessorRegistry) -> None:
 @pytest.mark.asyncio
 async def test_registry_error_handling(registry: ProcessorRegistry) -> None:
     """Test registry error handling."""
-    registry.register(
-        "fail",
-        ProcessorConfig(
-            type="function",
-            name="failing_processor",
-            import_path=f"{__name__}.failing_processor",
-        ),
-    )
-
+    p = f"{__name__}.failing_processor"
+    cfg = ProcessorConfig(type="function", name="failing_processor", import_path=p)
+    registry.register("fail", cfg)
     steps = [ProcessingStep(name="fail")]
-
     with pytest.raises(exceptions.ProcessorError):
         await registry.process(SAMPLE_TEXT, steps)
 
@@ -445,27 +344,12 @@ async def test_complex_processing_pipeline(processor_registry: ProcessorRegistry
     await processor_registry.startup()
     try:
         # Register processors
-        processor_registry.register(
-            "reverse",
-            ProcessorConfig(
-                type="function",
-                import_path=f"{__name__}.sync_reverse",
-            ),
-        )
-        processor_registry.register(
-            "template1",
-            ProcessorConfig(
-                type="template",
-                template="First: {{ content }}",
-            ),
-        )
-        processor_registry.register(
-            "template2",
-            ProcessorConfig(
-                type="template",
-                template="Second: {{ content }}",
-            ),
-        )
+        cfg = ProcessorConfig(type="function", import_path=f"{__name__}.sync_reverse")
+        processor_registry.register("reverse", cfg)
+        cfg = ProcessorConfig(type="template", template="First: {{ content }}")
+        processor_registry.register("template1", cfg)
+        cfg = ProcessorConfig(type="template", template="Second: {{ content }}")
+        processor_registry.register("template2", cfg)
 
         steps = [
             ProcessingStep(name="template1"),
