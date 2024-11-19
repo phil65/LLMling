@@ -57,8 +57,7 @@ class ProviderRegistry:
     ) -> LLMProvider:
         """Create a provider instance."""
         try:
-            implementation = self._providers.get(name)
-            if not implementation:
+            if not (implementation := self._providers.get(name)):
                 msg = f"Provider not found: {name}"
                 raise exceptions.LLMError(msg)
 
