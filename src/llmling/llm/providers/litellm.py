@@ -3,23 +3,23 @@
 from __future__ import annotations
 
 import json
-import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import litellm
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 
 from llmling.core import exceptions
+from llmling.core.log import get_logger
 from llmling.llm.base import (
     CompletionResult,
     LLMConfig,
+    LLMProvider,
     Message,
-    RetryableProvider,
     ToolCall,
 )
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -38,53 +38,13 @@ class LiteLLMFunction(BaseModel):
 class LiteLLMTool(BaseModel):
     """Tool definition for LiteLLM."""
 
-    type: Literal["function"] = "function"
+    type: str = "function"
     function: LiteLLMFunction
 
     model_config = ConfigDict(frozen=True)
 
 
-class LiteLLMMessage(BaseModel):
-    """Message format for LiteLLM."""
-
-    role: Literal["system", "user", "assistant", "tool"]
-    content: str
-    name: str | None = None
-    tool_calls: list[ToolCall] | None = None
-    tool_call_id: str | None = None
-
-    model_config = ConfigDict(frozen=True)
-
-
-class LiteLLMRequest(BaseModel):
-    """Complete request format for LiteLLM."""
-
-    model: str
-    messages: list[LiteLLMMessage]
-    temperature: float = 0.7
-    max_tokens: int | None = None
-    top_p: float | None = None
-    timeout: int = 30
-    stream: bool = False
-    tools: list[LiteLLMTool] | None = None
-    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
-
-    model_config = ConfigDict(frozen=True)
-
-    @model_validator(mode="after")
-    def validate_tools_and_choice(self) -> LiteLLMRequest:
-        """Validate tool configuration."""
-        if (
-            self.tool_choice
-            and self.tool_choice not in ("none", "auto")
-            and not self.tools
-        ):
-            msg = "tool_choice provided but no tools defined"
-            raise ValueError(msg)
-        return self
-
-
-class LiteLLMProvider(RetryableProvider):
+class LiteLLMProvider(LLMProvider):
     """Provider implementation using LiteLLM."""
 
     # Default capabilities by provider
@@ -111,14 +71,13 @@ class LiteLLMProvider(RetryableProvider):
     def __init__(self, config: LLMConfig) -> None:
         """Initialize provider with capability checking."""
         super().__init__(config)
-        # Get model capabilities on initialization
         self.model_info = self._get_model_capabilities()
-        logger.debug(
-            "Model %s capabilities: supports_tools=%s, supported_params=%s",
-            self.config.model,
-            self.model_info.get("supports_function_calling"),
-            self.model_info.get("supported_openai_params"),
-        )
+        # Preserve important settings that should always be passed
+        self._base_settings = {
+            k: v
+            for k, v in config.model_dump(exclude_unset=True, exclude_none=True).items()
+            if k in {"api_base", "api_key"} and v is not None
+        }
 
     def _get_model_name_without_provider(self) -> str:
         """Extract model name without provider prefix."""
@@ -140,131 +99,137 @@ class LiteLLMProvider(RetryableProvider):
         model_name = self._get_model_name_without_provider()
 
         try:
-            # Try getting official info first
             return litellm.get_model_info(model_name)
         except Exception:  # noqa: BLE001
-            # Don't log a warning - this is expected for new/custom models
             logger.debug(
                 "Using default capabilities for %s model %s", provider, self.config.model
             )
             return self.DEFAULT_CAPABILITIES.get(
                 provider,
                 {
-                    # Conservative defaults if provider unknown
                     "supports_function_calling": False,
                     "supported_openai_params": ["temperature", "max_tokens", "stream"],
                     "supports_system_messages": True,
                 },
             )
 
-    def _prepare_request(
-        self,
-        messages: list[Message],
-        **kwargs: Any,
-    ) -> LiteLLMRequest:
-        """Prepare request based on model capabilities."""
-        try:
-            messages_litellm = [
-                LiteLLMMessage(
-                    role=msg.role,
-                    content=msg.content,
-                    name=msg.name,
-                ).model_dump()
-                for msg in messages
-            ]
+    def _prepare_request_kwargs(self, **additional_kwargs: Any) -> dict[str, Any]:
+        """Prepare request kwargs from config and additional kwargs."""
+        # Start with essential settings preserved from initialization
+        kwargs = self._base_settings.copy()
 
-            # Filter kwargs based on supported parameters
-            supported_params = self.model_info.get("supported_openai_params", [])
-            filtered_kwargs = {k: v for k, v in kwargs.items() if k in supported_params}
+        # Get all fields that were explicitly set
+        config_dict = self.config.model_dump(exclude_unset=True)
 
-            # Handle tools specifically
-            supports_tools = (
-                self.model_info.get("supports_function_calling", False)
-                or "tools" in supported_params
-            )
+        # Fields we don't want to pass to litellm
+        exclude_fields = {
+            "provider_name",
+            "display_name",
+            "streaming",
+            "model",  # Exclude model as it's passed explicitly
+        }
 
-            tools_litellm = None
-            if supports_tools and "tools" in kwargs:
-                tools_litellm = [
-                    LiteLLMTool(
-                        type="function",
-                        function=LiteLLMFunction(
-                            name=tool["name"],
-                            description=tool["description"],
-                            parameters=tool["parameters"],
-                        ),
-                    ).model_dump()
-                    for tool in kwargs["tools"]
-                ]
+        # Add all config values except excluded fields and None values
+        kwargs.update({
+            k: v
+            for k, v in config_dict.items()
+            if k not in exclude_fields and v is not None
+        })
+        # Add additional kwargs (highest priority)
+        kwargs.update({k: v for k, v in additional_kwargs.items() if v is not None})
+        return kwargs
 
-            # Create request with supported parameters
-            request = LiteLLMRequest(
-                model=self.config.model,
-                messages=messages_litellm,
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
-                top_p=self.config.top_p,
-                timeout=self.config.timeout,
-                tools=tools_litellm if supports_tools else None,
-                tool_choice=filtered_kwargs.get("tool_choice")
-                if supports_tools
-                else None,
-            )
-        except Exception as exc:
-            error_msg = f"Failed to prepare LiteLLM request: {exc}"
-            raise ValueError(error_msg) from exc
-        else:
-            return request
-
-    async def _complete_impl(
+    async def complete(
         self,
         messages: list[Message],
         **kwargs: Any,
     ) -> CompletionResult:
         """Implement completion using LiteLLM."""
         try:
-            # Format request
-            request = self._prepare_request(messages, **kwargs)
+            # Convert messages to dict format
+            messages_dict = [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    **({"name": msg.name} if msg.name else {}),
+                }
+                for msg in messages
+            ]
 
-            try:
-                # Only retry the actual API call
-                response = await litellm.acompletion(
-                    **request.model_dump(exclude_none=True)
-                )
-            except (
-                litellm.APIError,
-                litellm.APIConnectionError,
-            ) as exc:
-                # These are retryable errors
-                msg = f"LiteLLM API error: {exc}"
-                raise exceptions.LLMError(msg) from exc
-            except Exception as exc:
-                # Other errors should not be retried
-                msg = f"LiteLLM completion failed: {exc}"
-                raise exceptions.TaskError(msg) from exc
+            # Prepare request kwargs
+            request_kwargs = self._prepare_request_kwargs(**kwargs)
+
+            # Execute completion
+            response = await litellm.acompletion(
+                model=self.config.model,
+                messages=messages_dict,
+                **request_kwargs,
+            )
 
             return self._process_response(response)
 
-        except exceptions.LLMError:
-            # Re-raise LLM errors for retry
-            raise
         except Exception as exc:
-            # Convert other errors to TaskError
             msg = f"LiteLLM completion failed: {exc}"
-            raise exceptions.TaskError(msg) from exc
+            raise exceptions.LLMError(msg) from exc
+
+    async def complete_stream(
+        self,
+        messages: list[Message],
+        **kwargs: Any,
+    ) -> AsyncIterator[CompletionResult]:
+        """Implement streaming completion using LiteLLM."""
+        try:
+            # Convert messages to dict format
+            messages_dict: list[dict[str, Any]] = []
+            for msg in messages:
+                msg_dict: dict[str, Any] = {
+                    "role": msg.role,
+                    "content": msg.content,
+                }
+                if msg.name:
+                    msg_dict["name"] = msg.name
+                if msg.tool_calls:
+                    msg_dict["tool_calls"] = [tc.model_dump() for tc in msg.tool_calls]
+                messages_dict.append(msg_dict)
+
+            # Remove empty tools array if present
+            if "tools" in kwargs and not kwargs["tools"]:
+                kwargs.pop("tools")
+                kwargs.pop("tool_choice", None)
+
+            # Remove tool-related kwargs if model doesn't support them
+            if not self.model_info.get("supports_function_calling", False):
+                kwargs.pop("tools", None)
+                kwargs.pop("tool_choice", None)
+
+            # Prepare kwargs with streaming enabled
+            request_kwargs = self._prepare_request_kwargs(stream=True, **kwargs)
+
+            # Execute streaming completion
+            stream = await litellm.acompletion(
+                model=self.config.model,
+                messages=messages_dict,
+                **request_kwargs,
+            )
+
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield CompletionResult(
+                        content=chunk.choices[0].delta.content,
+                        model=chunk.model,
+                        finish_reason=chunk.choices[0].finish_reason,
+                        metadata={
+                            "provider": "litellm",
+                            "chunk": True,
+                        },
+                    )
+
+        except Exception as e:
+            error_msg = f"LiteLLM streaming failed: {e}"
+            raise exceptions.LLMError(error_msg) from e
 
     def _process_response(self, response: Any) -> CompletionResult:
-        """Process LiteLLM response into CompletionResult.
-
-        Args:
-            response: Raw response from LiteLLM
-
-        Returns:
-            Processed completion result
-
-        Raises:
-            ValueError: If response processing fails
-        """
+        """Process LiteLLM response into CompletionResult."""
         try:
             # Handle tool calls if present
             tool_calls = None
@@ -274,7 +239,6 @@ class LiteLLMProvider(RetryableProvider):
                 if tc:
                     tool_calls = []
                     for call in tc:
-                        # Parse the arguments string into a dictionary
                         try:
                             parameters = (
                                 json.loads(call.function.arguments)
@@ -308,65 +272,5 @@ class LiteLLMProvider(RetryableProvider):
             )
 
         except Exception as exc:
-            error_msg = f"Failed to process LiteLLM response: {exc}"
-            raise ValueError(error_msg) from exc
-
-    def _is_local_provider(self) -> bool:
-        """Check if the current model is a local provider (like Ollama)."""
-        return self.config.model.startswith(("ollama/", "local/"))
-
-    async def _complete_stream_impl(
-        self,
-        messages: list[Message],
-        **kwargs: Any,
-    ) -> AsyncIterator[CompletionResult]:
-        """Implement streaming completion using LiteLLM."""
-        try:
-            # Convert messages to dict format, same as above
-            messages_dict = []
-            for msg in messages:
-                msg_dict: dict[str, Any] = {
-                    "role": msg.role,
-                    "content": msg.content,
-                }
-                if msg.name:
-                    msg_dict["name"] = msg.name
-                if msg.tool_calls:
-                    msg_dict["tool_calls"] = [tc.model_dump() for tc in msg.tool_calls]
-                messages_dict.append(msg_dict)
-
-            # Add tool configuration if present and provider supports it
-            if self.config.tools and not self._is_local_provider():
-                kwargs["tools"] = self.config.tools
-                if self.config.tool_choice is not None:
-                    kwargs["tool_choice"] = self.config.tool_choice
-
-            response_stream = await litellm.acompletion(
-                model=self.config.model,
-                messages=messages_dict,
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
-                top_p=self.config.top_p,
-                timeout=self.config.timeout,
-                stream=True,
-                **kwargs,
-            )
-
-            async for chunk in response_stream:
-                if not chunk.choices[0].delta.content:
-                    continue
-
-                # Tool calls aren't supported in streaming mode yet
-                yield CompletionResult(
-                    content=chunk.choices[0].delta.content,
-                    model=chunk.model,
-                    finish_reason=chunk.choices[0].finish_reason,
-                    metadata={
-                        "provider": "litellm",
-                        "chunk": True,
-                    },
-                )
-
-        except Exception as e:
-            error_msg = f"LiteLLM streaming failed: {e}"
-            raise exceptions.LLMError(error_msg) from e
+            msg = f"Failed to process LiteLLM response: {exc}"
+            raise exceptions.LLMError(msg) from exc

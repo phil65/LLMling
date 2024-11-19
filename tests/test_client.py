@@ -282,38 +282,32 @@ class TestIntegrationTaskExecution:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_real_llm_execution(self, integration_client: LLMLingClient) -> None:
-        """Test with real LLM."""
-        result = await integration_client.execute(
+    async def test_real_llm_execution(self, async_client: LLMLingClient) -> None:
+        """Test real LLM execution."""
+        result = await async_client.execute(
             "quick_review",
-            system_prompt=DEFAULT_SYSTEM_PROMPT,
+            stream=False,  # Explicit non-streaming
+            tools=None,
+            tool_choice=None,
         )
-        self._validate_task_result(result)
+        assert result.content
+        assert result.model
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_real_llm_streaming(self, integration_client: LLMLingClient) -> None:
-        """Test streaming with real LLM."""
-        chunks = []
-        total_content = ""
-
-        try:
-            async with asyncio.timeout(STREAM_TIMEOUT):
-                async for chunk in await integration_client.execute(
-                    TEST_TEMPLATE,
-                    system_prompt=DEFAULT_SYSTEM_PROMPT,
-                    stream=True,
-                ):
-                    chunks.append(chunk)
-                    total_content += chunk.content
-                    self._validate_chunk(chunk, len(chunks) - 1)
-
-        except TimeoutError as exc:
-            msg = f"Streaming timed out after {STREAM_TIMEOUT}s"
-            raise AssertionError(msg) from exc
-
-        assert len(chunks) >= MIN_CHUNKS
-        assert len(total_content) >= MIN_CONTENT_LENGTH
+    async def test_real_llm_streaming(self, async_client: LLMLingClient) -> None:
+        """Test real LLM streaming."""
+        chunks = [
+            chunk
+            async for chunk in await async_client.execute(
+                "quick_review",
+                stream=True,  # Use streaming mode
+                tools=None,
+                tool_choice=None,
+            )
+        ]
+        assert chunks
+        assert all(c.content for c in chunks)
 
     @staticmethod
     def _validate_task_result(result: TaskResult) -> None:

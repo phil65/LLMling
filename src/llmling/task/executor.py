@@ -92,7 +92,7 @@ class TaskExecutor:
 
         if not available_tools:
             logger.debug("No tools available")
-            return None
+            return None  # Return None instead of empty tools config
 
         # Get schemas for all available tools
         tool_schemas: list[dict[str, Any]] = []
@@ -105,6 +105,10 @@ class TaskExecutor:
             schema = self.tool_registry.get_schema(tool_name)
             logger.debug("Tool schema for %s: %s", tool_name, schema)
             tool_schemas.append(schema.function)
+
+        # Only return tools config if we have actual tool schemas
+        if not tool_schemas:
+            return None
 
         return {
             "tools": tool_schemas,
