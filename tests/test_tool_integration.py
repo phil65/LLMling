@@ -18,40 +18,29 @@ from llmling.task.models import TaskContext, TaskProvider
 from llmling.tools.base import ToolRegistry
 
 
+ANALYZE_IMPORT = "llmling.testing.tools.analyze_ast"
+EXAMPLE_IMPORT = "llmling.testing.tools.example_tool"
+
+
 @pytest.fixture
 def tool_config() -> Config:
     """Create a test configuration with tools."""
     return Config(
         version="1.0",
-        global_settings=GlobalSettings(
-            timeout=30,
-            max_retries=3,
-            temperature=0.7,
-        ),
+        global_settings=GlobalSettings(timeout=30, max_retries=3, temperature=0.7),
         context_processors={},
         llm_providers={
-            "test_provider": LLMProviderConfig(
-                name="Test Provider",
-                model="test/model",
-            ),
+            "test_provider": LLMProviderConfig(name="ABC", model="test/model"),
         },
         contexts={
-            "test_context": TextContext(
-                type="text",
-                content="Test content",
-                description="Test context",
+            "test_ctx": TextContext(
+                type="text", content="Test content", description="Test context"
             ),
         },
         task_templates={},
         tools={
-            "analyze": ToolConfig(
-                import_path="llmling.testing.tools.analyze_ast",
-                description="Analyze code",
-            ),
-            "repeat": ToolConfig(
-                import_path="llmling.testing.tools.example_tool",
-                name="repeat_text",
-            ),
+            "analyze": ToolConfig(import_path=ANALYZE_IMPORT, description="Analyze code"),
+            "repeat": ToolConfig(import_path=EXAMPLE_IMPORT, name="repeat_text"),
         },
     )
 
@@ -61,15 +50,9 @@ def mock_context_registry() -> mock.MagicMock:
     """Create mock context registry with async support."""
     registry = mock.MagicMock()
     loader = mock.MagicMock()
-
+    context = LoadedContext(content="Test content", source_type="test", metadata={})
     # Make load method a coroutine
-    loader.load = mock.AsyncMock(
-        return_value=LoadedContext(
-            content="Test content",
-            source_type="test",
-            metadata={},
-        )
-    )
+    loader.load = mock.AsyncMock(return_value=context)
 
     registry.get_loader.return_value = loader
     return registry
@@ -92,13 +75,8 @@ def mock_provider_registry() -> mock.MagicMock:
     mock_provider = mock.MagicMock()
 
     # Regular completion
-    mock_provider.complete = mock.AsyncMock(
-        return_value=CompletionResult(
-            content="Test response",
-            model="test/model",
-            metadata={},
-        )
-    )
+    result = CompletionResult(content="Test response", model="test/model", metadata={})
+    mock_provider.complete = mock.AsyncMock(return_value=result)
 
     # Streaming completion will be set by the test that needs it
     mock_provider.complete_stream = None
@@ -134,23 +112,21 @@ async def test_task_with_tools(
     )
 
     # Create test context
-    test_context = tool_config.contexts["test_context"]
+    test_ctx = tool_config.contexts["test_ctx"]
 
     # Create and execute task
-    task_context = TaskContext(
-        context=test_context,
-        processors=[],
-        tools=["analyze", "repeat_text"],
-        tool_choice="auto",
+    tools = ["analyze", "repeat_text"]
+    task_ctx = TaskContext(
+        context=test_ctx, processors=[], tools=tools, tool_choice="auto"
     )
 
     task_provider = TaskProvider(
         name="test_provider",
         model="test/model",
-        display_name="Test Provider",
+        display_name="ABC",
     )
 
-    result = await executor.execute(task_context, task_provider)
+    result = await executor.execute(task_ctx, task_provider)
 
     # Verify the result
     assert result.content == "Test response"
@@ -183,11 +159,7 @@ async def test_task_with_tools_streaming(
     # Create a proper async generator for streaming
     async def mock_stream(*args, **kwargs):
         for content in ["Chunk 1", "Chunk 2"]:
-            yield CompletionResult(
-                content=content,
-                model="test/model",
-                metadata={},
-            )
+            yield CompletionResult(content=content, model="test/model", metadata={})
 
     # Set up mock provider with streaming support
     mock_provider = mock.MagicMock()
@@ -210,23 +182,22 @@ async def test_task_with_tools_streaming(
         tool_registry=tool_registry,
     )
 
-    test_context = tool_config.contexts["test_context"]
-    task_context = TaskContext(
-        context=test_context,
+    test_ctx = tool_config.contexts["test_ctx"]
+    tools = ["analyze", "repeat_text"]
+    task_ctx = TaskContext(
+        context=test_ctx,
         processors=[],
-        tools=["analyze", "repeat_text"],
+        tools=tools,
         tool_choice="auto",
     )
 
     task_provider = TaskProvider(
         name="test_provider",
         model="test/model",
-        display_name="Test Provider",
+        display_name="ABC",
     )
     # Collect streaming results
-    chunks = [
-        chunk async for chunk in executor.execute_stream(task_context, task_provider)
-    ]
+    chunks = [chunk async for chunk in executor.execute_stream(task_ctx, task_provider)]
 
     # Verify results
     assert len(chunks) == 2  # noqa: PLR2004

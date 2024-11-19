@@ -220,13 +220,9 @@ async def test_execute_with_custom_llm_config(
 ) -> None:
     """Test execution with custom LLM configuration."""
     # Create a new provider instance with custom settings
-    custom_provider = TaskProvider(
-        name=TEST_PROVIDER,
-        model=TEST_MODEL,
-        settings=TaskSettings(temperature=0.5, max_tokens=100, top_p=0.9),
-    )
-
-    result = await executor.execute(task_context, custom_provider)
+    settings = TaskSettings(temperature=0.5, max_tokens=100, top_p=0.9)
+    provider = TaskProvider(name=TEST_PROVIDER, model=TEST_MODEL, settings=settings)
+    result = await executor.execute(task_context, provider)
     assert result.content == "test response"
 
 
@@ -235,13 +231,11 @@ async def test_concurrent_executions(
     executor: TaskExecutor, task_context: TaskContext, task_provider: TaskProvider
 ) -> None:
     """Test multiple concurrent executions."""
-    num_connections = 3
-    tasks = [
-        executor.execute(task_context, task_provider) for _ in range(num_connections)
-    ]
+    i = 3
+    tasks = [executor.execute(task_context, task_provider) for _ in range(i)]
     results = await asyncio.gather(*tasks)
 
-    assert len(results) == num_connections
+    assert len(results) == i
     assert all(r.content == "test response" for r in results)
 
 
@@ -280,32 +274,18 @@ def test_invalid_task_context(
 
     executor.context_registry.get_loader = get_failing_loader
 
+    text_ctx = TextContext(type="text", description="invalid ctx", content="some content")
+    task_ctx = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
     with pytest.raises(exceptions.TaskError):
-        asyncio.run(
-            executor.execute(
-                TaskContext(
-                    context=TextContext(
-                        type="text",
-                        description="invalid context test",
-                        content="some content",  # Valid content
-                    ),
-                    processors=[],
-                    inherit_tools=True,
-                ),
-                task_provider,
-            )
-        )
+        asyncio.run(executor.execute(task_ctx, task_provider))
 
 
 # Additionally, let's add a test for validation errors
 def test_validation_errors() -> None:
     """Test that validation errors are caught properly."""
     with pytest.raises(ValueError, match="text"):
-        TextContext(
-            type="text",
-            description="test",
-            content="",  # This should raise a validation error
-        )
+        # Empty content should raise a validation error
+        TextContext(type="text", description="test", content="")
 
 
 # And a test for proper error chaining
@@ -325,12 +305,8 @@ async def test_error_chaining(
                 raise exceptions.LoaderError(msg) from e
 
     executor.context_registry.get_loader = lambda x: ChainTestLoader()
-
-    valid_context = TaskContext(
-        context=TextContext(type="text", description="test", content="test content"),
-        processors=[],
-        inherit_tools=True,
-    )
+    text_ctx = TextContext(type="text", description="test", content="test content")
+    valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
 
     with pytest.raises(exceptions.TaskError) as exc_info:
         await executor.execute(valid_context, task_provider)
@@ -368,12 +344,8 @@ async def test_simple_error_chain(
             raise exceptions.LoaderError(msg)
 
     executor.context_registry.get_loader = lambda x: SimpleErrorLoader()
-
-    valid_context = TaskContext(
-        context=TextContext(type="text", description="test", content="test content"),
-        processors=[],
-        inherit_tools=True,
-    )
+    text_ctx = TextContext(type="text", description="test", content="test content")
+    valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
 
     with pytest.raises(exceptions.TaskError) as exc_info:
         await executor.execute(valid_context, task_provider)
@@ -398,11 +370,7 @@ async def test_custom_provider_settings(
 ) -> None:
     """Test provider creation with custom settings."""
     # Create a provider with custom settings
-    custom_settings = TaskSettings(
-        temperature=0.8,
-        max_tokens=100,
-        top_p=0.95,
-    )
+    custom_settings = TaskSettings(temperature=0.8, max_tokens=100, top_p=0.95)
     provider = TaskProvider(
         name=TEST_PROVIDER,
         model=TEST_MODEL,
@@ -444,15 +412,8 @@ async def test_provider_call_validation(
 ) -> None:
     """Test that provider is called with correct parameters."""
     system_prompt = "Test system prompt"
-
-    provider = TaskProvider(
-        name=TEST_PROVIDER,
-        model=TEST_MODEL,
-        settings=TaskSettings(
-            temperature=0.7,
-            max_tokens=50,
-        ),
-    )
+    task_settings = TaskSettings(temperature=0.7, max_tokens=50)
+    provider = TaskProvider(name=TEST_PROVIDER, model=TEST_MODEL, settings=task_settings)
 
     # Execute the task
     result = await executor.execute(
@@ -471,24 +432,13 @@ async def test_provider_settings_validation(
     task_context: TaskContext,
 ) -> None:
     """Test provider settings validation."""
-    base_settings = TaskSettings(
-        temperature=0.7,
-        max_tokens=100,
-        top_p=0.9,
-    )
+    base_settings = TaskSettings(temperature=0.7, max_tokens=100, top_p=0.9)
 
     # Create provider with base settings
-    provider = TaskProvider(
-        name=TEST_PROVIDER,
-        model=TEST_MODEL,
-        settings=base_settings,
-    )
+    provider = TaskProvider(name=TEST_PROVIDER, model=TEST_MODEL, settings=base_settings)
 
     # Execute with settings
-    result = await executor.execute(
-        task_context,
-        provider,
-    )
+    result = await executor.execute(task_context, provider)
 
     assert result.content == "test response"
     assert result.model == TEST_MODEL
