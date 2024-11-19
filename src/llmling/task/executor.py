@@ -16,6 +16,7 @@ from llmling.tools.base import ToolRegistry
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from llmling.config.manager import ConfigManager
     from llmling.context import ContextLoaderRegistry
     from llmling.llm.registry import ProviderRegistry
     from llmling.processors.registry import ProcessorRegistry
@@ -33,6 +34,7 @@ class TaskExecutor:
         processor_registry: ProcessorRegistry,
         provider_registry: ProviderRegistry,
         tool_registry: ToolRegistry | None = None,
+        config_manager: ConfigManager | None = None,  # Add this
         *,
         default_timeout: int = 30,
         default_max_retries: int = 3,
@@ -44,6 +46,7 @@ class TaskExecutor:
             processor_registry: Registry of processors
             provider_registry: Registry of LLM providers
             tool_registry: Registry of LLM model tools
+            config_manager: Config manager instance
             default_timeout: Default timeout for LLM calls
             default_max_retries: Default retry count for LLM calls
         """
@@ -51,6 +54,7 @@ class TaskExecutor:
         self.processor_registry = processor_registry
         self.provider_registry = provider_registry
         self.tool_registry = tool_registry or ToolRegistry()
+        self.config_manager = config_manager
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
         logger.debug(

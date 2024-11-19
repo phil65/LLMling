@@ -152,6 +152,7 @@ class LLMLingClient:
                 processor_registry=self._processor_registry,
                 provider_registry=llm_registry,
                 tool_registry=self.tool_registry,
+                config_manager=self.config_manager,
             )
             self._manager = TaskManager(self.config_manager.config, self._executor)
 
