@@ -213,19 +213,12 @@ class TaskExecutor:
             context_result = await self._load_context(task_context)
 
             # Prepare messages
-            messages = self._prepare_messages(
-                context_result.content,
-                system_prompt,
-            )
+            messages = self._prepare_messages(context_result.content, system_prompt)
 
             # Configure and create provider
-            llm_config = self._create_llm_config(
-                task_provider,
-                streaming=True,
-            )
+            llm_config = self._create_llm_config(task_provider, streaming=True)
             provider = self.provider_registry.create_provider(
-                task_provider.name,
-                llm_config,
+                task_provider.name, llm_config
             )
 
             # Stream completions

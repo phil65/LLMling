@@ -44,21 +44,11 @@ class TextContextLoader(ContextLoader):
         try:
             content = context.content
 
-            if context.processors:
-                processed = await processor_registry.process(
-                    content,
-                    context.processors,
-                )
+            if procs := context.processors:
+                processed = await processor_registry.process(content, procs)
                 content = processed.content
-
-            return LoadedContext(
-                content=content,
-                source_type="text",
-                metadata={
-                    "type": "text",
-                    "size": len(content),
-                },
-            )
+            meta = {"type": "text", "size": len(content)}
+            return LoadedContext(content=content, source_type="text", metadata=meta)
         except Exception as exc:
             msg = "Failed to load text content"
             raise exceptions.LoaderError(msg) from exc

@@ -52,22 +52,15 @@ class SourceContextLoader(ContextLoader):
                 include_tests=context.include_tests,
             )
 
-            if context.processors:
-                processed = await processor_registry.process(
-                    content,
-                    context.processors,
-                )
+            if procs := context.processors:
+                processed = await processor_registry.process(content, procs)
                 content = processed.content
-
-            return LoadedContext(
-                content=content,
-                source_type="source",
-                metadata={
-                    "type": "source",
-                    "import_path": context.import_path,
-                    "size": len(content),
-                },
-            )
+            meta = {
+                "type": "source",
+                "import_path": context.import_path,
+                "size": len(content),
+            }
+            return LoadedContext(content=content, source_type="source", metadata=meta)
         except Exception as exc:
             msg = f"Failed to load source from {context.import_path}"
             raise exceptions.LoaderError(msg) from exc

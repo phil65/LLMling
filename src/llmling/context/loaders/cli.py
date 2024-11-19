@@ -90,23 +90,16 @@ class CLIContextLoader(ContextLoader):
 
             content = stdout.decode()
 
-            if context.processors:
-                processed = await processor_registry.process(
-                    content,
-                    context.processors,
-                )
+            if procs := context.processors:
+                processed = await processor_registry.process(content, procs)
                 content = processed.content
-
-            return LoadedContext(
-                content=content,
-                source_type="cli",
-                metadata={
-                    "type": "cli",
-                    "command": context.command,
-                    "exit_code": proc.returncode,
-                    "size": len(content),
-                },
-            )
+            meta = {
+                "type": "cli",
+                "command": context.command,
+                "exit_code": proc.returncode,
+                "size": len(content),
+            }
+            return LoadedContext(content=content, source_type="cli", metadata=meta)
 
         except TimeoutError as exc:
             msg = f"Command timed out after {context.timeout} seconds"

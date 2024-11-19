@@ -31,11 +31,8 @@ class TemplateProcessor(ChainableProcessor):
     async def startup(self) -> None:
         """Compile template during startup."""
         try:
-            env = jinja2.Environment(
-                loader=jinja2.BaseLoader(),
-                autoescape=True,
-                enable_async=True,
-            )
+            loader = jinja2.BaseLoader()
+            env = jinja2.Environment(loader=loader, autoescape=True, enable_async=True)
             self.template = env.from_string(self.config.template or "")
         except Exception as exc:
             msg = f"Failed to compile template: {exc}"
@@ -49,22 +46,13 @@ class TemplateProcessor(ChainableProcessor):
             raise exceptions.ProcessorError(msg)
 
         try:
-            render_context = {
-                "content": context.current_content,
-                **context.kwargs,
-            }
-
-            result = await self.template.render_async(**render_context)
-            print(f"Template rendered: {result}")  # Debug print
-
-            return ProcessorResult(
-                content=result,
-                original_content=context.original_content,
-                metadata={
-                    "template_vars": list(render_context.keys()),
-                    "template": self.config.template,
-                },
-            )
+            render_ctx = {"content": context.current_content, **context.kwargs}
+            result = await self.template.render_async(**render_ctx)
+            logger.debug("Template rendered: %s", result)
+            keys = list(render_ctx.keys())
+            meta = {"template_vars": keys, "template": self.config.template}
+            orig = context.original_content
+            return ProcessorResult(content=result, original_content=orig, metadata=meta)
         except Exception as exc:
             msg = f"Template rendering failed: {exc}"
             raise exceptions.ProcessorError(msg) from exc

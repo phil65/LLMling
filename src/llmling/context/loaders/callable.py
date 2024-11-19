@@ -44,26 +44,18 @@ class CallableContextLoader(ContextLoader):
 
         try:
             content = await calling.execute_callable(
-                context.import_path,
-                **context.keyword_args,
+                context.import_path, **context.keyword_args
             )
 
-            if context.processors:
-                processed = await processor_registry.process(
-                    content,
-                    context.processors,
-                )
+            if procs := context.processors:
+                processed = await processor_registry.process(content, procs)
                 content = processed.content
-
-            return LoadedContext(
-                content=content,
-                source_type="callable",
-                metadata={
-                    "type": "callable",
-                    "import_path": context.import_path,
-                    "size": len(content),
-                },
-            )
+            meta = {
+                "type": "callable",
+                "import_path": context.import_path,
+                "size": len(content),
+            }
+            return LoadedContext(content=content, source_type="callable", metadata=meta)
         except Exception as exc:
             msg = f"Failed to execute callable {context.import_path}"
             raise exceptions.LoaderError(msg) from exc

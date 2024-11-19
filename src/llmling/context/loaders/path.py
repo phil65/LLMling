@@ -49,23 +49,16 @@ class PathContextLoader(ContextLoader):
             path = UPath(context.path)
             content = path.read_text("utf-8")
 
-            if context.processors:
-                processed = await processor_registry.process(
-                    content,
-                    context.processors,
-                )
+            if procs := context.processors:
+                processed = await processor_registry.process(content, procs)
                 content = processed.content
-
-            return LoadedContext(
-                content=content,
-                source_type="path",
-                metadata={
-                    "type": "path",
-                    "path": str(path),
-                    "size": len(content),
-                    "scheme": path.protocol,
-                },
-            )
+            meta = {
+                "type": "path",
+                "path": str(path),
+                "size": len(content),
+                "scheme": path.protocol,
+            }
+            return LoadedContext(content=content, source_type="path", metadata=meta)
         except Exception as exc:
             msg = f"Failed to load content from {context.path}"
             logger.exception(msg)
