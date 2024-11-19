@@ -30,7 +30,7 @@ TEST_MESSAGES = [
 ]
 
 TEST_CONFIG = LLMConfig(
-    model="test/model",
+    model="ollama/llama3.2:3b",
     provider_name="test-provider",
     temperature=0.7,
     max_tokens=100,
