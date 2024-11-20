@@ -13,7 +13,7 @@ class ImmediateAction:
     """Represents an action that should be executed immediately."""
 
     action: Callable[..., Awaitable[Any]]
-    args: tuple[Any]
+    args: tuple[Any, ...]
     kwargs: dict[str, Any]
     requires_confirmation: bool = False
     description: str = ""  # Human readable description of what the action will do
