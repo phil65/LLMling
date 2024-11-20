@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 OpenAIParam = Literal[
@@ -139,7 +139,7 @@ class Capabilities(BaseModel):
     """Size of output vectors"""
 
     # OpenAI compatibility (Literals for LSP help)
-    supported_openai_params: list[OpenAIParam | str] | None = None
+    supported_openai_params: list[OpenAIParam | str] = Field(default_factory=list)
     """List of supported OpenAI parameters"""
 
     supports_function_calling: bool | None = None

@@ -361,11 +361,11 @@ class TestLiteLLMProvider:
     def test_model_capabilities(self) -> None:
         """Test model capabilities detection."""
         provider = LiteLLMProvider(TEST_CONFIG)
-        model_info: dict[str, Any] = provider.model_info
+        model_info = provider.model_info
 
-        assert model_info["supports_function_calling"]
-        assert "temperature" in model_info["supported_openai_params"]
-        assert "stream" in model_info["supported_openai_params"]
+        assert model_info.supports_function_calling
+        assert "temperature" in model_info.supported_openai_params
+        assert "stream" in model_info.supported_openai_params
 
 
 if __name__ == "__main__":

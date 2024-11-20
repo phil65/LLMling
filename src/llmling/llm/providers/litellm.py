@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import json
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
+from diskcache import Cache
 import litellm
 from pydantic import BaseModel, ConfigDict
 
-from llmling.core import exceptions
+from llmling.core import capabilities, exceptions
 from llmling.core.log import get_logger
 from llmling.llm.base import (
     CompletionResult,
@@ -47,31 +49,10 @@ class LiteLLMTool(BaseModel):
 class LiteLLMProvider(LLMProvider):
     """Provider implementation using LiteLLM."""
 
-    # Default capabilities by provider
-    DEFAULT_CAPABILITIES: ClassVar = {
-        "ollama": {
-            "supports_function_calling": False,
-            "supported_openai_params": ["temperature", "max_tokens", "top_p", "stream"],
-            "supports_system_messages": True,
-        },
-        "openai": {
-            "supports_function_calling": True,
-            "supported_openai_params": [
-                "tools",
-                "tool_choice",
-                "temperature",
-                "max_tokens",
-                "top_p",
-                "stream",
-            ],
-            "supports_system_messages": True,
-        },
-    }
-
     def __init__(self, config: LLMConfig) -> None:
         """Initialize provider with capability checking."""
         super().__init__(config)
-        self.model_info = self._get_model_capabilities()
+        self.model_info = get_model_capabilities(self.config.model)
         # Preserve important settings that should always be passed
         self._base_settings = {
             k: v
@@ -92,26 +73,6 @@ class LiteLLMProvider(LLMProvider):
             return self.config.model.split("/")[0]
         except Exception:  # noqa: BLE001
             return "unknown"
-
-    def _get_model_capabilities(self) -> dict[str, Any]:
-        """Get model capabilities with fallback to defaults."""
-        provider = self._get_provider_from_model()
-        model_name = self._get_model_name_without_provider()
-
-        try:
-            return litellm.get_model_info(model_name)
-        except Exception:  # noqa: BLE001
-            logger.debug(
-                "Using default capabilities for %s model %s", provider, self.config.model
-            )
-            return self.DEFAULT_CAPABILITIES.get(
-                provider,
-                {
-                    "supports_function_calling": False,
-                    "supported_openai_params": ["temperature", "max_tokens", "stream"],
-                    "supports_system_messages": True,
-                },
-            )
 
     def _prepare_request_kwargs(self, **additional_kwargs: Any) -> dict[str, Any]:
         """Prepare request kwargs from config and additional kwargs."""
@@ -208,7 +169,7 @@ class LiteLLMProvider(LLMProvider):
                 kwargs.pop("tool_choice", None)
 
             # Remove tool-related kwargs if model doesn't support them
-            if not self.model_info.get("supports_function_calling", False):
+            if not self.model_info.supports_function_calling:
                 kwargs.pop("tools", None)
                 kwargs.pop("tool_choice", None)
 
@@ -284,3 +245,55 @@ class LiteLLMProvider(LLMProvider):
         except Exception as exc:
             msg = f"Failed to process LiteLLM response: {exc}"
             raise exceptions.LLMError(msg) from exc
+
+
+# Initialize disk cache with 1 day TTL
+_cache = Cache(".model_cache")
+_CACHE_TTL = timedelta(days=1).total_seconds()
+
+
+def get_model_capabilities(
+    model: str,
+    provider: str | None = None,
+) -> capabilities.Capabilities:
+    """Get model capabilities from LiteLLM (caches because no idea if IO is involved)."""
+    # Construct cache key
+    cache_key = f"{provider}/{model}" if provider else model
+
+    # Try to get from cache
+    try:
+        if cached := _cache.get(cache_key):
+            return capabilities.Capabilities.model_validate(cached)
+    except Exception:  # noqa: BLE001
+        # Handle potential cache corruption
+        _cache.delete(cache_key)
+
+    # Not in cache or cache error, fetch fresh
+    try:
+        model_name = f"{provider}/{model}" if provider else model
+        info = litellm.get_model_info(model_name)
+        caps = capabilities.Capabilities(**info)
+
+        # Cache the dict representation
+        _cache.set(cache_key, caps.model_dump(), expire=_CACHE_TTL)
+    except Exception:  # noqa: BLE001
+        # If we can't get info, return minimal capabilities
+        logger.warning("Could not fetch info for model %s", model)
+        return capabilities.Capabilities(
+            key=model,
+            litellm_provider=provider,
+        )
+    else:
+        return caps
+
+
+def clear_capabilities_cache() -> None:
+    """Clear the disk cache of model capabilities."""
+    _cache.clear()
+
+
+if __name__ == "__main__":
+    import devtools
+
+    info = get_model_capabilities("openai/gpt-3.5-turbo")
+    devtools.debug(info)

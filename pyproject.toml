@@ -43,6 +43,7 @@ dependencies = [
     "logfire>=2.3.0",
     "py2openai",
     "playwright>=1.48.0",
+    "diskcache>=5.6.3",
 ]
 
 license = { file = "LICENSE" }
