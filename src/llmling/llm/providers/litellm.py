@@ -152,30 +152,32 @@ class LiteLLMProvider(LLMProvider):
     ) -> CompletionResult:
         """Implement completion using LiteLLM."""
         try:
-            # Convert messages to dict format
-            messages_dict = [
-                {
-                    "role": msg.role,
-                    "content": msg.content,
-                    **({"name": msg.name} if msg.name else {}),
-                }
+            # Check for image content and ensure model supports it
+            has_images = any(
+                isinstance(msg.content, list)
+                and any(c.type == "image" for c in msg.content)
                 for msg in messages
-            ]
+            )
 
-            # Clean up kwargs
-            # Remove empty tools array and related settings
-            if "tools" in kwargs and not kwargs["tools"]:
-                kwargs.pop("tools")
-                kwargs.pop("tool_choice", None)
+            if has_images and not self.model_info.get("supports_vision", False):
+                msg = f"Model {self.config.model} does not support vision"
+                raise exceptions.LLMError(msg)
 
-            # Prepare request kwargs
-            request_kwargs = self._prepare_request_kwargs(**kwargs)
+            # Convert messages to dict format
+            messages_dict = [self._convert_message(msg) for msg in messages]
 
-            # Execute completion
+            # Add base64 encoding for image data if needed
+            if has_images:
+                for msg in messages_dict:
+                    if isinstance(msg["content"], list):
+                        for content in msg["content"]:
+                            if content["type"] == "image":
+                                content["data"] = self._encode_image(content["data"])
+
             response = await litellm.acompletion(
                 model=self.config.model,
                 messages=messages_dict,
-                **request_kwargs,
+                **kwargs,
             )
 
             return self._process_response(response)
@@ -184,48 +186,70 @@ class LiteLLMProvider(LLMProvider):
             msg = f"LiteLLM completion failed: {exc}"
             raise exceptions.LLMError(msg) from exc
 
+    def _convert_message(self, message: Message) -> dict[str, Any]:
+        """Convert internal message format to LiteLLM format."""
+        if isinstance(message.content, str):
+            return {
+                "role": message.role,
+                "content": message.content,
+                **({"name": message.name} if message.name else {}),
+            }
+
+        # Handle multimodal content
+        return {
+            "role": message.role,
+            "content": [
+                {
+                    "type": content.type,
+                    "data": content.data,
+                }
+                for content in message.content
+            ],
+            **({"name": message.name} if message.name else {}),
+        }
+
+    def _encode_image(self, image_data: bytes) -> str:
+        """Encode image data to base64."""
+        return base64.b64encode(image_data).decode()
+
     async def complete_stream(
         self,
         messages: list[Message],
         **kwargs: Any,
     ) -> AsyncIterator[CompletionResult]:
-        """Implement streaming completion using LiteLLM."""
+        """Stream completions with mixed content support."""
         try:
-            # Convert messages to dict format
-            messages_dict = [
-                {
-                    "role": msg.role,
-                    "content": msg.content,
-                    **({"name": msg.name} if msg.name else {}),
-                }
+            messages_dict = [self._convert_message(msg) for msg in messages]
+
+            # Handle image content in streaming mode
+            has_images = any(
+                isinstance(msg.content, list)
+                and any(c.type == "image" for c in msg.content)
                 for msg in messages
-            ]
+            )
 
-            # Clean up kwargs
-            # Remove empty tools array and related settings
-            if "tools" in kwargs and not kwargs["tools"]:
-                kwargs.pop("tools")
-                kwargs.pop("tool_choice", None)
+            if has_images:
+                # Some providers don't support streaming with images
+                if not self.model_info.get("supports_vision_streaming", False):
+                    result = await self.complete(messages, **kwargs)
+                    yield result
+                    return
 
-            # Remove tool-related kwargs if model doesn't support them
-            if not self.model_info.get("supports_function_calling", False):
-                kwargs.pop("tools", None)
-                kwargs.pop("tool_choice", None)
-
-            # Prepare kwargs with streaming enabled
-            request_kwargs = self._prepare_request_kwargs(stream=True, **kwargs)
-
-            # Execute streaming completion
             stream = await litellm.acompletion(
                 model=self.config.model,
                 messages=messages_dict,
-                **request_kwargs,
+                stream=True,
+                **kwargs,
             )
 
             async for chunk in stream:
                 if chunk.choices[0].delta.content:
                     yield CompletionResult(
-                        content=chunk.choices[0].delta.content,
+                        content=Content(
+                            type=ContentType.TEXT,
+                            data=chunk.choices[0].delta.content,
+                            metadata={"chunk": True},
+                        ),
                         model=chunk.model,
                         finish_reason=chunk.choices[0].finish_reason,
                         metadata={

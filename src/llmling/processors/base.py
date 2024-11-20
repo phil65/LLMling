@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.core.typedefs import Content, ContentData, ContentType
 
 
 if TYPE_CHECKING:
@@ -103,11 +104,26 @@ class ProcessorConfig(BaseModel):
 class ProcessorResult(BaseModel):
     """Result of processing content."""
 
-    content: str
-    original_content: str
+    content: Content[ContentData]
+    original_content: Content[ContentData]
     metadata: dict[str, Any] = Field(default_factory=dict)
+    content_type_chain: list[ContentType] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        # Track content type changes
+        self.content_type_chain = [self.original_content.type, self.content.type]
+
+    @classmethod
+    def text(cls, content: str, original: str, **meta: Any) -> ProcessorResult:
+        """Create a text-only result."""
+        return cls(
+            content=Content(type=ContentType.TEXT, data=content),
+            original_content=Content(type=ContentType.TEXT, data=original),
+            metadata=meta,
+        )
 
 
 class BaseProcessor:
@@ -183,17 +199,26 @@ class ChainableProcessor(AsyncProcessor):
         return result
 
     async def process(self, context: ProcessingContext) -> ProcessorResult:
-        """Process content with pre and post processing."""
+        """Process content with type tracking."""
         try:
             prepared_context = await self.pre_process(context)
             result = await self._process_impl(prepared_context)
+
+            # Track content type changes
+            if result.content.type != context.current_content.type:
+                logger.debug(
+                    "Content type changed from %s to %s",
+                    context.current_content.type,
+                    result.content.type,
+                )
+
             final_result = await self.post_process(prepared_context, result)
             await self.validate_result(final_result)
+
+            return final_result
         except Exception as exc:
             msg = f"Processing failed: {exc}"
             raise exceptions.ProcessorError(msg) from exc
-        else:
-            return final_result
 
     @abstractmethod
     async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:

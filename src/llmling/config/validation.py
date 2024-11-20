@@ -42,24 +42,28 @@ class ConfigValidator:
         return warnings
 
     def _validate_providers(self) -> list[str]:
-        """Validate provider configuration.
+        """Validate provider configuration."""
+        warnings = []
 
-        Returns:
-            List of validation warnings
-        """
-        warnings = [
-            f"Provider {provider} in group {group} not found"
-            for group, providers in self.config.provider_groups.items()
-            for provider in providers
-            if provider not in self.config.llm_providers
-        ]
-
-        # Check provider models
         for name, provider in self.config.llm_providers.items():
-            if "/" not in provider.model:
+            # Check model capabilities
+            if provider.model.startswith("gpt-4-vision") and not any(
+                context.type in {"path", "vision_callable"}
+                for context in self.config.contexts.values()
+            ):
                 warnings.append(
-                    f"Provider {name} model should be in format 'provider/model'",
+                    f"Vision model {name} configured but no image contexts found"
                 )
+
+            # Check image generation capabilities
+            if provider.model.startswith(("dall-e", "stable-diffusion")):
+                for template in self.config.task_templates.values():
+                    if template.provider == name and template.context:
+                        context = self.config.contexts.get(template.context)
+                        if context and context.type != "text":
+                            warnings.append(
+                                f"Image generation model {name} requires text context"
+                            )
 
         return warnings
 

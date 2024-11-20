@@ -41,3 +41,15 @@ class TaskError(LLMLingError):
 
 class LLMError(LLMLingError):
     """LLM related errors."""
+
+
+class ImageProcessingError(ProcessorError):
+    """Error during image processing."""
+
+
+class UnsupportedImageFormatError(ImageProcessingError):
+    """Image format not supported."""
+
+
+class ImageValidationError(ValidationError):
+    """Image validation failed."""

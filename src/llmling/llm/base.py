@@ -72,16 +72,49 @@ class ToolCall(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class MessageContent(BaseModel):
+    """Content structure for messages."""
+
+    type: Literal["text", "image"]
+    data: str | dict[str, Any]  # text or image data
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Message(BaseModel):
     """A chat message."""
 
     role: MessageRole
-    content: str
+    content: str | list[MessageContent]
     name: str | None = None  # For tool messages
     tool_calls: list[ToolCall] | None = None  # For assistant messages
     tool_call_id: str | None = None  # For tool response messages
 
     model_config = ConfigDict(frozen=True)
+
+    @classmethod
+    def text(cls, role: MessageRole, content: str, **kwargs: Any) -> Message:
+        """Create a text-only message."""
+        return cls(role=role, content=content, **kwargs)
+
+    @classmethod
+    def multimodal(
+        cls, role: MessageRole, contents: list[MessageContent], **kwargs: Any
+    ) -> Message:
+        """Create a multimodal message."""
+        return cls(role=role, content=contents, **kwargs)
+
+    def get_text_content(self) -> str:
+        """Get text content, useful for backwards compatibility."""
+        if isinstance(self.content, str):
+            return self.content
+        # For multimodal, concatenate any text content
+        text_parts = [
+            c.data
+            for c in self.content
+            if isinstance(c, MessageContent) and c.type == "text"
+        ]
+        return " ".join(text_parts) if text_parts else ""
 
 
 class CompletionResult(BaseModel):

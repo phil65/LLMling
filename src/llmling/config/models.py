@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from llmling.core.typedefs import ProcessingStep  # noqa: TCH001
+from llmling.core.typedefs import ContentType, ProcessingStep  # noqa: TCH001
 from llmling.processors.base import ProcessorConfig  # noqa: TCH001
 
 
@@ -167,12 +167,13 @@ Context = PathContext | TextContext | CLIContext | SourceContext | CallableConte
 class TaskTemplate(BaseModel):
     """Template for a specific task."""
 
-    provider: str  # Required: provider name or group name
-    context: str  # Required: context name or group name
-    settings: TaskSettings | None = None  # Optional
-    inherit_tools: bool | None = None  # Optional
-    tools: list[str] | None = None  # Optional
-    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+    provider: str
+    context: str
+    settings: TaskSettings | None = None
+    inherit_tools: bool | None = None
+    tools: list[str] | None = None
+    tool_choice: Literal["none", "auto"] | str | None = None
+    content_type: ContentType | None = None
 
     model_config = ConfigDict(frozen=True)
 

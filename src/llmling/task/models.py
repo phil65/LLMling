@@ -7,7 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 
 from llmling.config import Context, TaskSettings  # noqa: TCH001
-from llmling.core.typedefs import ProcessingStep  # noqa: TCH001
+from llmling.core.typedefs import Content, ContentData, ContentType, ProcessingStep
 
 
 class TaskContext(BaseModel):
@@ -36,9 +36,35 @@ class TaskProvider(BaseModel):
 class TaskResult(BaseModel):
     """Result of a task execution."""
 
-    content: str
+    content: Content[ContentData]
     model: str
     context_metadata: dict[str, Any]
     completion_metadata: dict[str, Any]
+    is_chunk: bool = False  # Indicate if this is a streaming chunk
 
     model_config = ConfigDict(frozen=True)
+
+    @classmethod
+    def create_chunk(
+        cls, content: str | Content[ContentData], model: str, **kwargs: Any
+    ) -> TaskResult:
+        """Create a streaming chunk result."""
+        if isinstance(content, str):
+            content = Content(
+                type=ContentType.TEXT, data=content, metadata={"chunk": True}
+            )
+        return cls(
+            content=content,
+            model=model,
+            is_chunk=True,
+            context_metadata=kwargs.get("context_metadata", {}),
+            completion_metadata=kwargs.get("completion_metadata", {}),
+        )
+
+    def get_text(self) -> str:
+        """Get text content with safety checks."""
+        if isinstance(self.content, Content):
+            if self.content.type == ContentType.TEXT:
+                return str(self.content.data)
+            return f"[{self.content.type.value} content]"
+        return str(self.content)

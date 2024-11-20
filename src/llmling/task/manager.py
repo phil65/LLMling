@@ -115,20 +115,35 @@ class TaskManager:
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[TaskResult]:
-        """Execute a task template with streaming results."""
-        try:
-            task_context, task_provider = self._prepare_task(template_name, system_prompt)
-            async for result in self.executor.execute_stream(
-                task_context,
-                task_provider,
-                system_prompt=system_prompt,
-                **kwargs,
-            ):
+        """Execute template with streaming support for all content types."""
+        task_context, task_provider = self._prepare_task(template_name, system_prompt)
+
+        async for result in self.executor.execute_stream(
+            task_context,
+            task_provider,
+            system_prompt=system_prompt,
+            **kwargs,
+        ):
+            # Ensure proper content type handling in stream
+            if isinstance(result.content, Content):
+                # For image content, we don't stream chunks
+                if result.content.type == ContentType.IMAGE:
+                    yield result
+                # For text content, we can stream chunks
+                elif result.content.type == ContentType.TEXT:
+                    yield TaskResult(
+                        content=Content(
+                            type=ContentType.TEXT,
+                            data=str(result.content.data),
+                            metadata=result.content.metadata,
+                        ),
+                        model=result.model,
+                        context_metadata=result.context_metadata,
+                        completion_metadata=result.completion_metadata,
+                    )
+            else:
+                # Legacy support for direct string content
                 yield result
-        except Exception as exc:
-            logger.exception("Task streaming failed")
-            msg = f"Task streaming failed: {exc}"
-            raise exceptions.TaskError(msg) from exc
 
     def _get_template(self, name: str) -> TaskTemplate:
         """Get a task template by name."""

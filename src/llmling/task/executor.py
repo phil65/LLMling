@@ -8,7 +8,8 @@ import logfire
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.llm.base import LLMConfig, Message
+from llmling.core.typedefs import Content, ContentData, ContentType
+from llmling.llm.base import LLMConfig, Message, MessageContent
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
 from llmling.tools.base import ToolRegistry
 
@@ -223,12 +224,23 @@ class TaskExecutor:
 
             # Stream completions
             async for completion in provider.complete_stream(messages, **kwargs):
-                yield TaskResult(
-                    content=completion.content,
-                    model=completion.model,
-                    context_metadata=context_result.metadata,
-                    completion_metadata=completion.metadata,
-                )
+                if isinstance(completion.content, (list, tuple)):
+                    # Handle multiple content pieces
+                    for content_piece in completion.content:
+                        yield TaskResult.create_chunk(
+                            content=content_piece,
+                            model=completion.model,
+                            context_metadata=context_result.metadata,
+                            completion_metadata=completion.metadata,
+                        )
+                else:
+                    # Single content piece
+                    yield TaskResult.create_chunk(
+                        content=completion.content,
+                        model=completion.model,
+                        context_metadata=context_result.metadata,
+                        completion_metadata=completion.metadata,
+                    )
 
         except Exception as exc:
             msg = "Task streaming failed"
@@ -262,24 +274,33 @@ class TaskExecutor:
 
     def _prepare_messages(
         self,
-        content: str,
-        system_prompt: str | None,
+        content: Content[ContentData],
+        system_prompt: str | None = None,
     ) -> list[Message]:
-        """Prepare messages for LLM completion.
-
-        Args:
-            content: Context content
-            system_prompt: Optional system prompt
-
-        Returns:
-            List of messages
-        """
+        """Prepare messages with mixed content support."""
         messages: list[Message] = []
 
         if system_prompt:
-            messages.append(Message(role="system", content=system_prompt))
+            messages.append(Message.text(role="system", content=system_prompt))
 
-        messages.append(Message(role="user", content=content))
+        # Handle different content types
+        if content.type == ContentType.TEXT:
+            messages.append(Message.text(role="user", content=str(content.data)))
+        elif content.type == ContentType.IMAGE:
+            messages.append(
+                Message.multimodal(
+                    role="user",
+                    contents=[
+                        MessageContent(
+                            type="image", data={"bytes": content.data, **content.metadata}
+                        )
+                    ],
+                )
+            )
+        else:
+            msg = f"Unsupported content type: {content.type}"
+            raise ValueError(msg)
+
         return messages
 
     def _create_llm_config(

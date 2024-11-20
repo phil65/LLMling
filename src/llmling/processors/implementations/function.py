@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import inspect
 from typing import TYPE_CHECKING, Any
 
 import logfire
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.core.typedefs import Content, ContentType
 from llmling.processors.base import ChainableProcessor, ProcessorConfig, ProcessorResult
+from llmling.utils import calling
 
 
 if TYPE_CHECKING:
@@ -63,24 +64,22 @@ class FunctionProcessor(ChainableProcessor):
 
     @logfire.instrument("Executing function processor")
     async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:
-        """Execute function with content."""
         if not self.func:
             msg = "Processor not initialized"
             raise exceptions.ProcessorError(msg)
 
         try:
-            # Execute function
-            result = self.func(context.current_content, **context.kwargs)
-
-            # Handle async functions
-            if inspect.iscoroutine(result):
-                result = await result
-
-            # Convert result to string
-            content = str(result)
+            # Handle based on content type
+            if context.current_content.type == ContentType.TEXT:
+                result = await self._process_text(context)
+            elif context.current_content.type == ContentType.IMAGE:
+                result = await self._process_image(context)
+            else:
+                msg = f"Unsupported content type: {context.current_content.type}"
+                raise exceptions.ProcessorError(msg)
 
             return ProcessorResult(
-                content=content,
+                content=result,
                 original_content=context.original_content,
                 metadata={
                     "function": self.config.import_path,
@@ -90,3 +89,26 @@ class FunctionProcessor(ChainableProcessor):
         except Exception as exc:
             msg = f"Function execution failed: {exc}"
             raise exceptions.ProcessorError(msg) from exc
+
+    async def _process_text(self, context: ProcessingContext) -> Content[str]:
+        result = await calling.execute_callable(
+            self.func, str(context.current_content.data), **context.kwargs
+        )
+        return Content(
+            type=ContentType.TEXT,
+            data=str(result),
+            metadata=context.current_content.metadata,
+        )
+
+    async def _process_image(self, context: ProcessingContext) -> Content[bytes]:
+        result = await calling.execute_callable(
+            self.func, context.current_content.data, **context.kwargs
+        )
+        if isinstance(result, bytes):
+            return Content(
+                type=ContentType.IMAGE,
+                data=result,
+                metadata=context.current_content.metadata,
+            )
+        msg = f"Image processor must return bytes, got {type(result)}"
+        raise exceptions.ProcessorError(msg)
