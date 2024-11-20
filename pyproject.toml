@@ -42,7 +42,9 @@ dependencies = [
     "jinja2>=3.1.4",
     "logfire>=2.3.0",
     "py2openai",
+    "playwright>=1.48.0",
 ]
+
 license = { file = "LICENSE" }
 
 [tool.uv]
