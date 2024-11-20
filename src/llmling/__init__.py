@@ -20,7 +20,7 @@ from llmling.task.executor import TaskExecutor
 from llmling.task.manager import TaskManager
 
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 __all__ = [
     # Core components
