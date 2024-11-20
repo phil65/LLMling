@@ -72,9 +72,6 @@ docs = [
     # Only add below (Copier)
 ]
 
-[project.scripts]
-llmling = "llmling.cli:main"
-
 [project.urls]
 Documentation = "https://phil65.github.io/llmling/"
 Source = "https://github.com/phil65/llmling"
