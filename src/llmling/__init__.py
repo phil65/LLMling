@@ -46,31 +46,38 @@ __all__ = [
 # ├── src/
 # │   └── llmling/
 # │       ├── __init__.py                 # Main package exports
-# │       ├── cli.py                      # Command-line interface
+# │       ├── client.py                   # High-level client interface
 # │       │
 # │       ├── core/                       # Core components
 # │       │   ├── __init__.py
-# │       │   ├── exceptions.py           # Central exception hierarchy
-# │       │   ├── log.py             # Logging configuration
-# │       │   └── types.py               # Common type definitions
+# │       │   ├── capabilities.py         # LLM model capabilities
+# │       │   ├── descriptors.py          # Python descriptors
+# │       │   ├── exceptions.py           # Exception hierarchy
+# │       │   ├── log.py                  # Logging configuration
+# │       │   ├── typedefs.py            # Common type definitions
+# │       │   ├── utils.py               # Generic utilities
+# │       │   └── baseregistry.py        # Base registry class
 # │       │
-# │       ├── config/                     # Configuration management
+# │       ├── config/                     # Configuration handling
 # │       │   ├── __init__.py
 # │       │   ├── models.py              # Configuration models
-# │       │   ├── manager.py             # Configuration management
-# │       │   └── validation.py          # Configuration validation
+# │       │   ├── loading.py             # Config loading utilities
+# │       │   ├── manager.py             # Config management
+# │       │   └── validation.py          # Config validation
 # │       │
 # │       ├── context/                    # Context handling
 # │       │   ├── __init__.py
 # │       │   ├── base.py                # Base context classes
-# │       │   ├── registry.py            # Context loader registry
+# │       │   ├── models.py              # Context models
+# │       │   ├── registry.py            # Context registry
 # │       │   └── loaders/               # Context loaders
 # │       │       ├── __init__.py
-# │       │       ├── path.py
-# │       │       ├── text.py
+# │       │       ├── callable.py
 # │       │       ├── cli.py
+# │       │       ├── image.py
+# │       │       ├── path.py
 # │       │       ├── source.py
-# │       │       └── callable.py
+# │       │       └── text.py
 # │       │
 # │       ├── processors/                 # Content processing
 # │       │   ├── __init__.py
@@ -96,20 +103,31 @@ __all__ = [
 # │       │   ├── manager.py             # Task management
 # │       │   └── concurrent.py          # Concurrent execution
 # │       │
-# │       └── utils/                     # Utilities
-# │           ├── __init__.py
-# │           ├── importing.py           # Import utilities
-# │           └── calling.py             # Callable utilities
+# │       ├── tools/                     # Tool system
+# │       │   ├── __init__.py
+# │       │   ├── base.py                # Base tool classes
+# │       │   ├── actions.py             # Action definitions
+# │       │   ├── browser.py             # Browser automation
+# │       │   ├── code.py                # Code analysis
+# │       │   └── exceptions.py          # Tool exceptions
+# │       │
+# │       ├── utils/                     # Utilities
+# │       │   ├── __init__.py
+# │       │   ├── importing.py           # Import utilities
+# │       │   └── calling.py             # Callable utilities
+# │       │
+# │       ├── testing/                   # Testing utilities
+# │       │   ├── __init__.py
+# │       │   ├── processors.py          # Test processors
+# │       │   └── tools.py               # Test tools
+# │       │
+# │       └── resources/                 # Configuration resources
+# │           ├── system_tools.yml       # System tools config
+# │           ├── test.yml              # Test configuration
+# │           ├── vision_test.yml       # Vision testing config
+# │           └── web_research.yml      # Web research config
 # │
 # ├── tests/                             # Test suite
-# │   ├── __init__.py
-# │   ├── test_config.py
-# │   ├── test_context.py
-# │   ├── test_processors.py
-# │   ├── test_llm.py
-# │   ├── test_task.py
-# │   └── test_concurrent.py
-# │
 # ├── examples/                          # Example usage
 # ├── docs/                             # Documentation
 # └── resources/                        # Resource files
