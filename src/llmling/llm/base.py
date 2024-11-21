@@ -103,13 +103,23 @@ class Message(BaseModel):
     @classmethod
     def ensure_content_items(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Ensure content_items is populated from content if empty."""
-        if isinstance(data, dict):  # Type check for static analysis
+        if isinstance(data, dict):
             content = data.get("content", "")
             content_items = data.get("content_items", [])
+            # Only create content_items from content if we have content and no items
             if content and not content_items:
                 data["content_items"] = [
                     MessageContent(type="text", content=content).model_dump()
                 ]
+            # Always keep content in sync with first text content item
+            elif content_items:
+                text_items = [
+                    item
+                    for item in content_items
+                    if isinstance(item, dict) and item.get("type") == "text"
+                ]
+                if text_items:
+                    data["content"] = text_items[0]["content"]
         return data
 
 

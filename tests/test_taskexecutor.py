@@ -8,7 +8,12 @@ import pytest
 from llmling.config.models import Context, TaskSettings, TextContext
 from llmling.context.models import LoadedContext
 from llmling.core import exceptions
-from llmling.llm.base import CompletionResult, LLMConfig, LLMProvider, Message
+from llmling.llm.base import (
+    CompletionResult,
+    LLMConfig,
+    LLMProvider,
+    Message,
+)
 from llmling.task.executor import TaskExecutor
 from llmling.task.models import TaskContext, TaskProvider
 
@@ -128,8 +133,8 @@ def executor(
     """TaskExecutor fixture with mock dependencies."""
     return TaskExecutor(
         context_registry=context_registry,
-        processor_registry=processor_registry,
-        provider_registry=provider_registry,
+        processor_registry=processor_registry,  # type: ignore
+        provider_registry=provider_registry,  # type: ignore
         default_timeout=DEFAULT_TIMEOUT,
         default_max_retries=DEFAULT_MAX_RETRIES,
     )
@@ -250,7 +255,7 @@ async def test_execute_with_empty_messages(
             return LoadedContext(content="", source_type="test")
 
     # Override context loader to return empty content
-    executor.context_registry.get_loader = lambda x: EmptyContentLoader()
+    executor.context_registry.get_loader = lambda x: EmptyContentLoader()  # type: ignore
 
     result = await executor.execute(task_context, task_provider)
     assert result.content == "test response"  # Should still work with empty content
@@ -272,7 +277,7 @@ def test_invalid_task_context(
     def get_failing_loader(*args: Any) -> Any:
         return FailingContextLoader()
 
-    executor.context_registry.get_loader = get_failing_loader
+    executor.context_registry.get_loader = get_failing_loader  # type: ignore
 
     text_ctx = TextContext(type="text", description="invalid ctx", content="some content")
     task_ctx = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
@@ -304,7 +309,7 @@ async def test_error_chaining(
                 msg = "Loader failed"
                 raise exceptions.LoaderError(msg) from e
 
-    executor.context_registry.get_loader = lambda x: ChainTestLoader()
+    executor.context_registry.get_loader = lambda x: ChainTestLoader()  # type: ignore
     text_ctx = TextContext(type="text", description="test", content="test content")
     valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
 
@@ -343,7 +348,7 @@ async def test_simple_error_chain(
             msg = "Direct loader error"
             raise exceptions.LoaderError(msg)
 
-    executor.context_registry.get_loader = lambda x: SimpleErrorLoader()
+    executor.context_registry.get_loader = lambda x: SimpleErrorLoader()  # type: ignore
     text_ctx = TextContext(type="text", description="test", content="test content")
     valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
 
@@ -385,9 +390,8 @@ async def test_custom_provider_settings(
 
 def test_prepare_messages(executor: TaskExecutor) -> None:
     """Test message preparation logic."""
+    # Test with string content
     content = "Test user content"
-
-    # Test with system prompt
     system_prompt = "You are a test assistant"
     messages = executor._prepare_messages(content, system_prompt)
 
@@ -397,9 +401,22 @@ def test_prepare_messages(executor: TaskExecutor) -> None:
     assert messages[1].role == "user"
     assert messages[1].content == content
 
+    # Test with LoadedContext
+    loaded_context = LoadedContext(
+        content="Test loaded content",
+        source_type="test",
+        metadata={},
+    )
+    messages = executor._prepare_messages(loaded_context, system_prompt)
+
+    assert len(messages) == 2  # noqa: PLR2004
+    assert messages[0].role == "system"
+    assert messages[0].content == system_prompt
+    assert messages[1].role == "user"
+    assert messages[1].content == "Test loaded content"
+
     # Test without system prompt
     messages = executor._prepare_messages(content, None)
-
     assert len(messages) == 1
     assert messages[0].role == "user"
     assert messages[0].content == content

@@ -330,30 +330,19 @@ class TaskExecutor:
                 )
             )
 
-        # Handle both LoadedContext and direct string input
+        # Extract content for user message
         if isinstance(loaded_context, str):
-            messages.append(
-                Message(
-                    role="user",
-                    content=loaded_context,
-                )
-            )
-        # If context has content_items, use them directly
-        elif loaded_context.content_items:
-            messages.append(
-                Message(
-                    role="user",
-                    content_items=loaded_context.content_items,
-                )
-            )
+            content = loaded_context
         else:
-            # Backward compatibility: use plain content
-            messages.append(
-                Message(
-                    role="user",
-                    content=loaded_context.content,
-                )
+            content = loaded_context.content
+
+        # Add user message with content
+        messages.append(
+            Message(
+                role="user",
+                content=content,
             )
+        )
 
         return messages
 
