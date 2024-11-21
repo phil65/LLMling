@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 from diskcache import Cache
@@ -132,6 +133,12 @@ class LiteLLMProvider(LLMProvider):
             for k, v in config_dict.items()
             if k not in exclude_fields and v is not None
         })
+
+        # Add tools configuration
+        if self.config.tools:
+            kwargs["tools"] = self.config.tools
+            kwargs["tool_choice"] = self.config.tool_choice or "auto"
+
         # Add additional kwargs (highest priority)
         # Filter out empty tools array
         filtered_kwargs = {
@@ -140,6 +147,10 @@ class LiteLLMProvider(LLMProvider):
             if v is not None and not (k == "tools" and not v)
         }
         kwargs.update(filtered_kwargs)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Final request kwargs: %s", json.dumps(kwargs, indent=2))
+
         return kwargs
 
     async def complete(
