@@ -42,7 +42,24 @@ OpenAIParam = Literal[
 Mode = Literal["chat", "completion"]
 
 Provider = Literal[
-    "openai", "anthropic", "google", "bedrock", "ollama", "azure", "cohere"
+    "openai",
+    "anthropic",
+    "google",
+    "bedrock",
+    "ollama",
+    "azure",
+    "cohere",
+    "groq",
+    "databricks",
+    "cloudflare",
+    "voyage",
+    "azure_ai",
+    "codestral",
+    "friendliai",
+    "palm",
+    "anyscale",
+    "cerebras",
+    "openrouter",
 ]
 
 
@@ -55,7 +72,7 @@ class Capabilities(BaseModel):
     key: str | None = None
     """Model identifier"""
 
-    litellm_provider: Provider | None = None
+    litellm_provider: Provider | str | None = None
     """Provider (e.g., 'ollama', 'openai')"""
 
     mode: Mode | None = None
