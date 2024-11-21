@@ -1,28 +1,35 @@
 tools:
   browser:
     import_path: "llmling.tools.browser.BrowserTool"
-    description: "Control a web browser"
+    description: "Browser automation tool for web research. Requires 'action' parameter for every call."
 
 llm_providers:
   llama:
-    name: "Local Llama"
+    name: "GPT-3.5 Turbo"
     model: "openai/gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 1000
+    tools:
+      browser: {} # This format is important
 
 contexts:
   research_prompt:
     type: "text"
     content: |
-      You are a web research assistant. Use the browser tool to find information.
-      Current task: Go to python.org and tell me the latest news.
+      Your task: {{ query }}
 
-      Use the browser tool with these steps:
-      1. Use browser action "open" with url="https://python.org"
-      2. Use browser action "read" to get the content
-      3. Summarize what you find.
+      IMPORTANT: Always use the browser tool with these exact formats:
+      1. First call: {"action": "open", "url": "https://www.python.org"}
+      2. Then call: {"action": "read"}
+
+      Never omit parameters or modify this format.
 
 task_templates:
   web_research:
     provider: llama
     context: research_prompt
-    tools:
-      - browser
+    inherit_tools: true
+    tools: ["browser"]
+    settings:
+      temperature: 0.7
+      max_tokens: 1000
