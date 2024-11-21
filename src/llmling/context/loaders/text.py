@@ -38,10 +38,15 @@ class TextContextLoader(ContextLoader[TextContext]):
         Raises:
             LoaderError: If loading fails or context type is invalid
         """
-        try:
-            content = context.content
+        # Use provided context or stored context
+        context_to_use = context or self.context
+        if not context_to_use:
+            msg = "No context provided"
+            raise exceptions.LoaderError(msg)
 
-            if procs := context.processors:
+        content = context_to_use.content
+        try:
+            if procs := context_to_use.processors:
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
             meta = {"type": "text", "size": len(content)}

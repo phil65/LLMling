@@ -11,9 +11,7 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import (
-        Context,
-    )
+    from llmling.config.models import Context
     from llmling.context.models import LoadedContext
     from llmling.processors.registry import ProcessorRegistry
 
@@ -28,11 +26,19 @@ class ContextLoader[TContext](ABC):
 
     context_class: type[TContext]
 
+    def __init__(self, context: TContext | None = None) -> None:
+        """Initialize loader with optional context.
+
+        Args:
+            context: Optional pre-configured context
+        """
+        self.context = context
+
     @classproperty  # type: ignore
     def context_type(self) -> str:
         """Infer context type from context class."""
         fields = self.context_class.model_fields  # type: ignore
-        return fields["context_type"].default  #  type: ignore
+        return fields["context_type"].default  # type: ignore
 
     @abstractmethod
     async def load(

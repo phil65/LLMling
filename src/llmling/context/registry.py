@@ -34,15 +34,11 @@ class ContextLoaderRegistry(BaseRegistry[str, ContextLoader[Any]]):
             case str() if "\n" in item:  # Multiline string -> TextContext
                 from llmling.context.loaders.text import TextContextLoader
 
-                loader = TextContextLoader()
-                loader.context = TextContext(content=item)
-                return loader
+                return TextContextLoader(TextContext(content=item))
             case str() | os.PathLike() if upath.UPath(item).exists():
                 from llmling.context.loaders.path import PathContextLoader
 
-                loader = PathContextLoader()
-                loader.context = PathContext(path=item)
-                return loader
+                return PathContextLoader(PathContext(path=str(item)))
             case type() as cls if issubclass(cls, ContextLoader):
                 return cls()
             case ContextLoader():
