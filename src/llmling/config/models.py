@@ -31,6 +31,8 @@ class LLMProviderConfig(BaseModel):
     tools: dict[str, dict[str, Any]] | list[str] | None = None  # Optional tools
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
+    max_image_size: int | None = None
+
     model_config = ConfigDict(frozen=True)
 
     @field_validator("tools", mode="before")
@@ -161,7 +163,33 @@ class CallableContext(BaseContext):
         return self
 
 
-Context = PathContext | TextContext | CLIContext | SourceContext | CallableContext
+class ImageContext(BaseContext):
+    """Context for image input."""
+
+    type: Literal["image"]
+    path: str  # Local path or URL
+    alt_text: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_path(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Validate that path is not empty."""
+        if isinstance(data, dict) and not data.get("path"):
+            msg = "Path cannot be empty for image context"
+            raise ValueError(msg)
+        return data
+
+
+Context = (
+    PathContext
+    | TextContext
+    | CLIContext
+    | SourceContext
+    | CallableContext
+    | ImageContext
+)
 
 
 class TaskTemplate(BaseModel):

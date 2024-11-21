@@ -11,6 +11,9 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 
 
+PROCESSOR_TYPES = Literal["function", "template", "image"]
+
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -37,7 +40,7 @@ class TemplateProcessorConfig(TypedDict, total=False):
 class ProcessorConfig(BaseModel):
     """Configuration for text processors."""
 
-    type: Literal["function", "template"]
+    type: PROCESSOR_TYPES
     name: str | None = None
     description: str | None = None
 

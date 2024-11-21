@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from llmling.config.manager import ConfigManager
     from llmling.context import ContextLoaderRegistry
+    from llmling.context.models import LoadedContext
     from llmling.llm.registry import ProviderRegistry
     from llmling.processors.registry import ProcessorRegistry
 
@@ -139,8 +140,8 @@ class TaskExecutor:
             # Load and process context
             context_result = await self._load_context(task_context)
 
-            # Prepare messages
-            messages = self._prepare_messages(context_result.content, system_prompt)
+            # Prepare messages with new content structure support
+            messages = self._prepare_messages(context_result, system_prompt)
 
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider)
@@ -148,6 +149,7 @@ class TaskExecutor:
                 task_provider.name,
                 llm_config,
             )
+
             # Get completion with potential tool calls
             while True:
                 completion = await provider.complete(messages, **kwargs)
@@ -156,8 +158,11 @@ class TaskExecutor:
                 if completion.tool_calls:
                     tool_results = []
                     for tool_call in completion.tool_calls:
-                        msg = "Executing tool call: %s with params: %s"
-                        logger.debug(msg, tool_call.name, tool_call.parameters)
+                        logger.debug(
+                            "Executing tool call: %s with params: %s",
+                            tool_call.name,
+                            tool_call.parameters,
+                        )
                         result = await self.tool_registry.execute(
                             tool_call.name,
                             **tool_call.parameters,
@@ -212,8 +217,8 @@ class TaskExecutor:
             # Load and process context
             context_result = await self._load_context(task_context)
 
-            # Prepare messages
-            messages = self._prepare_messages(context_result.content, system_prompt)
+            # Prepare messages with new content structure support
+            messages = self._prepare_messages(context_result, system_prompt)
 
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider, streaming=True)
@@ -231,7 +236,8 @@ class TaskExecutor:
                 )
 
         except Exception as exc:
-            msg = "Task streaming failed"
+            logger.exception("Task streaming failed")
+            msg = f"Task streaming failed: {exc}"
             raise exceptions.TaskError(msg) from exc
 
     async def _load_context(self, task_context: TaskContext) -> Any:
@@ -262,13 +268,13 @@ class TaskExecutor:
 
     def _prepare_messages(
         self,
-        content: str,
+        loaded_context: LoadedContext | str,  # for bw compat
         system_prompt: str | None,
     ) -> list[Message]:
         """Prepare messages for LLM completion.
 
         Args:
-            content: Context content
+            loaded_context: Loaded and processed context
             system_prompt: Optional system prompt
 
         Returns:
@@ -277,9 +283,26 @@ class TaskExecutor:
         messages: list[Message] = []
 
         if system_prompt:
-            messages.append(Message(role="system", content=system_prompt))
+            messages.append(
+                Message(
+                    role="system",
+                    content=system_prompt,
+                )
+            )
 
-        messages.append(Message(role="user", content=content))
+        # If context has content_items, use them directly
+        if isinstance(loaded_context, str):
+            # Backward compatibility: use plain content
+            messages.append(Message(role="user", content=loaded_context))
+
+        elif loaded_context.content_items:
+            messages.append(
+                Message(role="user", content_items=loaded_context.content_items)
+            )
+        else:
+            # Backward compatibility: use plain content
+            messages.append(Message(role="user", content=loaded_context.content))
+
         return messages
 
     def _create_llm_config(

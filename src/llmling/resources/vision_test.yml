@@ -1,0 +1,40 @@
+llm_providers:
+  gpt4-vision:
+    name: "GPT-4 Vision"
+    model: "openai/gpt-4-vision-preview"
+    max_tokens: 4096
+    max_image_size: 2048
+
+contexts:
+  test_image:
+    type: "image"
+    path: "resources/test_image.jpg"
+    alt_text: "A test image for vision capabilities"
+
+  web_image:
+    type: "image"
+    path: "https://example.com/image.jpg"
+    alt_text: "A test image from the web"
+
+  multi_image:
+    type: "text"
+    content: "Compare these images and describe their differences:"
+    processors:
+      - name: "append_images"
+        kwargs:
+          images: ["resources/image1.jpg", "resources/image2.jpg"]
+
+task_templates:
+  analyze_image:
+    provider: gpt4-vision
+    context: test_image
+    settings:
+      temperature: 0.7
+      max_tokens: 1000
+
+  compare_images:
+    provider: gpt4-vision
+    context: multi_image
+    settings:
+      temperature: 0.7
+      max_tokens: 2000

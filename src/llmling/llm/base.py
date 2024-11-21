@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -34,6 +34,8 @@ class LLMConfig(BaseModel):
     streaming: bool = False
     tools: list[dict[str, Any]] | None = None
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+
+    max_image_size: int | None = None  # Maximum image size in pixels
 
     # LiteLLM settings
     api_base: str | None = None
@@ -72,16 +74,43 @@ class ToolCall(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+ContentType = Literal["text", "image_url", "image_base64"]
+
+
+class MessageContent(BaseModel):
+    """Content item in a message."""
+
+    type: ContentType = "text"  # Default to text for backward compatibility
+    content: str
+    alt_text: str | None = None  # For image descriptions
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Message(BaseModel):
     """A chat message."""
 
     role: MessageRole
-    content: str
-    name: str | None = None  # For tool messages
-    tool_calls: list[ToolCall] | None = None  # For assistant messages
-    tool_call_id: str | None = None  # For tool response messages
+    content: str = ""  # Keep for backward compatibility
+    content_items: list[MessageContent] = Field(default_factory=list)
+    name: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
 
     model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_content_items(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Ensure content_items is populated from content if empty."""
+        if isinstance(data, dict):  # Type check for static analysis
+            content = data.get("content", "")
+            content_items = data.get("content_items", [])
+            if content and not content_items:
+                data["content_items"] = [
+                    MessageContent(type="text", content=content).model_dump()
+                ]
+        return data
 
 
 class CompletionResult(BaseModel):

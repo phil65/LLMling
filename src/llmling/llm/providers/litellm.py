@@ -74,6 +74,42 @@ class LiteLLMProvider(LLMProvider):
         except Exception:  # noqa: BLE001
             return "unknown"
 
+    def _prepare_content(self, msg: Message) -> str | list[dict[str, Any]]:
+        """Prepare message content for LiteLLM.
+
+        Handles both text and image content, converting to the format
+        expected by the API.
+        """
+        if not msg.content_items:
+            return msg.content
+
+        content: list[Any] = []
+        for i in msg.content_items:
+            match i.type:
+                case "text":
+                    content.append({"type": "text", "text": i.content})
+                case "image_url":
+                    content.append({"type": "image_url", "image_url": {"url": i.content}})
+                case "image_base64":
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{i.content}"},
+                    })
+
+        # For better compatibility, if only text and single item, return just the text
+        if len(content) == 1 and content[0]["type"] == "text":
+            return content[0]["text"]
+
+        return content
+
+    def _check_vision_support(self, messages: list[Message]) -> None:
+        """Check if model supports vision when image content is present."""
+        types = ("image_url", "image_base64")
+        has_images = any(i.type in types for msg in messages for i in msg.content_items)
+        if has_images and not self.model_info.supports_vision:
+            msg = f"Model {self.config.model} does not support vision inputs"
+            raise exceptions.LLMError(msg)
+
     def _prepare_request_kwargs(self, **additional_kwargs: Any) -> dict[str, Any]:
         """Prepare request kwargs from config and additional kwargs."""
         # Start with essential settings preserved from initialization
@@ -113,29 +149,25 @@ class LiteLLMProvider(LLMProvider):
     ) -> CompletionResult:
         """Implement completion using LiteLLM."""
         try:
+            # Check vision support if needed
+            self._check_vision_support(messages)
+
             # Convert messages to dict format
-            messages_dict = [
+            messages_list: list[dict[str, Any]] = [
                 {
                     "role": msg.role,
-                    "content": msg.content,
                     **({"name": msg.name} if msg.name else {}),
+                    "content": self._prepare_content(msg),
                 }
                 for msg in messages
             ]
-
             # Clean up kwargs
-            # Remove empty tools array and related settings
-            if "tools" in kwargs and not kwargs["tools"]:
-                kwargs.pop("tools")
-                kwargs.pop("tool_choice", None)
-
-            # Prepare request kwargs
             request_kwargs = self._prepare_request_kwargs(**kwargs)
 
             # Execute completion
             response = await litellm.acompletion(
                 model=self.config.model,
-                messages=messages_dict,
+                messages=messages_list,
                 **request_kwargs,
             )
 
@@ -152,27 +184,18 @@ class LiteLLMProvider(LLMProvider):
     ) -> AsyncIterator[CompletionResult]:
         """Implement streaming completion using LiteLLM."""
         try:
+            # Check vision support if needed
+            self._check_vision_support(messages)
+
             # Convert messages to dict format
-            messages_dict = [
+            messages_dict: list[dict[str, Any]] = [
                 {
                     "role": msg.role,
-                    "content": msg.content,
                     **({"name": msg.name} if msg.name else {}),
+                    "content": self._prepare_content(msg),
                 }
                 for msg in messages
             ]
-
-            # Clean up kwargs
-            # Remove empty tools array and related settings
-            if "tools" in kwargs and not kwargs["tools"]:
-                kwargs.pop("tools")
-                kwargs.pop("tool_choice", None)
-
-            # Remove tool-related kwargs if model doesn't support them
-            if not self.model_info.supports_function_calling:
-                kwargs.pop("tools", None)
-                kwargs.pop("tool_choice", None)
-
             # Prepare kwargs with streaming enabled
             request_kwargs = self._prepare_request_kwargs(stream=True, **kwargs)
 
@@ -201,9 +224,9 @@ class LiteLLMProvider(LLMProvider):
 
     def _process_response(self, response: Any) -> CompletionResult:
         """Process LiteLLM response into CompletionResult."""
+        tool_calls = None
         try:
             # Handle tool calls if present
-            tool_calls = None
             if hasattr(response.choices[0].message, "tool_calls"):
                 tc = response.choices[0].message.tool_calls
                 logger.debug("Received tool calls from LLM: %s", tc)
