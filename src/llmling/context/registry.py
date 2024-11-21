@@ -46,8 +46,8 @@ class ContextLoaderRegistry:
             LoaderError: If no loader is registered for the context type
         """
         try:
-            loader_cls = self._loaders[context.type]
+            loader_cls = self._loaders[context.context_type]
             return loader_cls()
         except KeyError as exc:
-            msg = f"No loader registered for context type: {context.type}"
+            msg = f"No loader registered for context type: {context.context_type}"
             raise exceptions.LoaderError(msg) from exc

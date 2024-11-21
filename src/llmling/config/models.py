@@ -11,6 +11,9 @@ from llmling.core.typedefs import ProcessingStep  # noqa: TCH001
 from llmling.processors.base import ProcessorConfig  # noqa: TCH001
 
 
+ContextType = Literal["path", "text", "cli", "source", "callable", "image"]
+
+
 class GlobalSettings(BaseModel):
     """Global settings that apply to all components."""
 
@@ -67,7 +70,7 @@ class TaskSettings(BaseModel):
 class BaseContext(BaseModel):
     """Base class for all context types."""
 
-    type: str
+    context_type: ContextType = Field(...)
     description: str = ""  # Made optional with empty default
     processors: list[ProcessingStep] = Field(
         default_factory=list
@@ -78,7 +81,7 @@ class BaseContext(BaseModel):
 class PathContext(BaseContext):
     """Context loaded from a file or URL."""
 
-    type: Literal["path"]
+    context_type: Literal["path"] = "path"
     path: str
 
     @model_validator(mode="after")
@@ -93,7 +96,7 @@ class PathContext(BaseContext):
 class TextContext(BaseContext):
     """Raw text context."""
 
-    type: Literal["text"]
+    context_type: Literal["text"] = "text"
     content: str
 
     @model_validator(mode="after")
@@ -108,7 +111,7 @@ class TextContext(BaseContext):
 class CLIContext(BaseContext):
     """Context from CLI command execution."""
 
-    type: Literal["cli"]
+    context_type: Literal["cli"] = "cli"
     command: str | TypingSequence[str]
     shell: bool = False
     cwd: str | None = None
@@ -133,7 +136,7 @@ class CLIContext(BaseContext):
 class SourceContext(BaseContext):
     """Context from Python source code."""
 
-    type: Literal["source"]
+    context_type: Literal["source"] = "source"
     import_path: str
     recursive: bool = False
     include_tests: bool = False
@@ -150,7 +153,7 @@ class SourceContext(BaseContext):
 class CallableContext(BaseContext):
     """Context from executing a Python callable."""
 
-    type: Literal["callable"]
+    context_type: Literal["callable"] = "callable"
     import_path: str
     keyword_args: dict[str, Any] = Field(default_factory=dict)
 
@@ -166,7 +169,7 @@ class CallableContext(BaseContext):
 class ImageContext(BaseContext):
     """Context for image input."""
 
-    type: Literal["image"]
+    context_type: Literal["image"] = "image"
     path: str  # Local path or URL
     alt_text: str | None = None
 
