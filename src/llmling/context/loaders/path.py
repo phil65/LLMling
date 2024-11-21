@@ -23,6 +23,8 @@ logger = get_logger(__name__)
 class PathContextLoader(ContextLoader):
     """Loads context from files or URLs."""
 
+    context_type = "path"
+
     @logfire.instrument("Loading context from path {context.path}")
     async def load(
         self,

@@ -25,6 +25,8 @@ logger = get_logger(__name__)
 class CLIContextLoader(ContextLoader):
     """Loads context from CLI command execution."""
 
+    context_type = "cli"
+
     @logfire.instrument("Executing CLI command {context.command}")
     async def load(
         self,

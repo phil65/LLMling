@@ -25,6 +25,8 @@ logger = get_logger(__name__)
 class ImageContextLoader(ContextLoader):
     """Loads image content from files or URLs."""
 
+    context_type = "image"
+
     async def load(
         self,
         context: Context,

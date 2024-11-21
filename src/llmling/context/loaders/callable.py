@@ -21,6 +21,8 @@ logger = get_logger(__name__)
 class CallableContextLoader(ContextLoader):
     """Loads context from Python callable execution."""
 
+    context_type = "callable"
+
     async def load(
         self,
         context: Context,

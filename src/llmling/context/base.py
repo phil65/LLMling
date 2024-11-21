@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
+    from llmling.config.models import Context, ContextType
     from llmling.context.models import LoadedContext
     from llmling.processors.registry import ProcessorRegistry
 
@@ -20,6 +20,8 @@ logger = get_logger(__name__)
 
 class ContextLoader(ABC):
     """Base class for context loaders."""
+
+    context_type: ClassVar[ContextType]
 
     @abstractmethod
     async def load(

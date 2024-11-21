@@ -20,6 +20,8 @@ logger = get_logger(__name__)
 class TextContextLoader(ContextLoader):
     """Loads context from raw text."""
 
+    context_type = "text"
+
     async def load(
         self,
         context: Context,

@@ -23,6 +23,8 @@ logger = get_logger(__name__)
 class SourceContextLoader(ContextLoader):
     """Loads context from Python source code."""
 
+    context_type = "source"
+
     @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(
         self,
