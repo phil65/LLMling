@@ -39,7 +39,13 @@ OpenAIParam = Literal[
     "user",
 ]
 
-Mode = Literal["chat", "completion"]
+Mode = Literal[
+    "completion",
+    "embedding",
+    "image_generation",
+    "chat",
+    "audio_transcription",
+]
 
 Provider = Literal[
     "openai",
