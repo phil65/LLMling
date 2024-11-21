@@ -17,14 +17,14 @@ async def register_providers(config_manager: ConfigManager) -> None:
     # First register all direct providers
     for provider_key in config_manager.config.llm_providers:
         # Register with the provider key (e.g., 'local-llama'), not the display name
-        llm_registry.register_provider(provider_key, "litellm")
+        llm_registry["litellm"] = provider_key
         print(f"Registered provider {provider_key} with implementation litellm")
 
     # Then register provider groups
     for group_name, providers in config_manager.config.provider_groups.items():
         if providers:  # Ensure the group has at least one provider
             # Register group using first provider's implementation
-            llm_registry.register_provider(group_name, "litellm")
+            llm_registry["litellm"] = group_name
             print(f"Registered provider group {group_name} with implementation litellm")
 
 

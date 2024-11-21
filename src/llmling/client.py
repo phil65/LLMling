@@ -323,6 +323,7 @@ class LLMLingClient:
             "processor": cast(Registerable, self._processor_registry),
             "context": cast(Registerable, context_registry),
             "provider": cast(Registerable, llm_registry),
+            "tool": cast(Registerable, self.tool_registry),
         }
 
         for component_type, items in self.components.items():
@@ -348,7 +349,7 @@ class LLMLingClient:
         try:
             # Register direct providers
             for provider_key in self.config_manager.config.llm_providers:
-                llm_registry.register_provider(provider_key, "litellm")
+                llm_registry[provider_key] = "litellm"
                 logger.debug("Registered provider: %s", provider_key)
 
             # Register provider groups
@@ -357,7 +358,7 @@ class LLMLingClient:
                 providers,
             ) in self.config_manager.config.provider_groups.items():
                 if providers:
-                    llm_registry.register_provider(group_name, "litellm")
+                    llm_registry[group_name] = "litellm"
                     logger.debug("Registered provider group: %s", group_name)
         except Exception as exc:
             msg = "Failed to register providers"

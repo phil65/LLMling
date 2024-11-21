@@ -84,23 +84,25 @@ def mock_provider():
     with mock.patch("llmling.llm.registry.ProviderRegistry.create_provider") as m:
         provider = mock.AsyncMock()
 
-        async def mock_complete(*args, tools=None, tool_choice=None, **kwargs):
+        async def mock_complete(*args, **kwargs):
             return MOCK_RESPONSE
 
         provider.complete = mock_complete
 
-        async def mock_stream(*args, tools=None, tool_choice=None, **kwargs):
+        async def mock_stream(*args, **kwargs):
             yield MOCK_RESPONSE
 
         provider.complete_stream = mock_stream
-
         provider.model = MOCK_RESPONSE.model
         m.return_value = provider
 
+        # Important: Set up the registry properly
         from llmling.llm.registry import default_registry
 
         default_registry.reset()
-        default_registry.register_provider("local-llama", "litellm")
+        default_registry["gpt-35-turbo"] = (
+            "litellm"  # Map the provider to litellm implementation
+        )
 
         yield provider
 

@@ -57,19 +57,6 @@ class ProcessorRegistry(BaseRegistry[BaseProcessor, str]):
             msg = f"Failed to create processor for config {config}"
             raise exceptions.ProcessorError(msg) from exc
 
-    async def _initialize_item(self, item: BaseProcessor) -> None:
-        """Initialize processor during startup."""
-        await item.startup()
-
-    async def _cleanup_item(self, item: BaseProcessor) -> None:
-        """Clean up processor during shutdown."""
-        await item.shutdown()
-
-    # Backward compatibility methods
-    def register(self, key: str, item: ProcessorConfig) -> None:  # type: ignore
-        """Register a new processor configuration."""
-        super().register(key, item)
-
     async def get_processor(self, name: str) -> BaseProcessor:
         """Get a processor by name (backward compatibility)."""
         processor = self.get(name)

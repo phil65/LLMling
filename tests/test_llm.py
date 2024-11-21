@@ -134,17 +134,21 @@ class TestProviderRegistry:
 
     def test_register_provider(self, registry: ProviderRegistry) -> None:
         """Test basic provider registration."""
-        registry.register_provider("test", "litellm")
+        # Register a provider with litellm implementation
+        registry["test"] = "litellm"
+
+        # Create a provider instance
         provider = registry.create_provider("test", TEST_CONFIG)
         assert isinstance(provider, LiteLLMProvider)
 
     def test_register_duplicate(self, registry: ProviderRegistry) -> None:
         """Test registering same provider twice."""
-        registry.register_provider("test", "litellm")
-        registry.register_provider("test", "litellm")
+        # First registration
+        registry["test"] = "litellm"
 
+        # Second registration of same name should fail
         with pytest.raises(exceptions.LLMError):
-            registry.register_provider("test", "different")
+            registry["test"] = "litellm"
 
     def test_create_unregistered(self, registry: ProviderRegistry) -> None:
         """Test creating unregistered provider."""

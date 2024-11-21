@@ -14,7 +14,6 @@ from llmling.llm.providers.litellm import LiteLLMProvider
 if TYPE_CHECKING:
     from llmling.llm.base import LLMConfig
 
-
 logger = get_logger(__name__)
 
 
@@ -24,50 +23,45 @@ class ProviderRegistry(BaseRegistry[type[LLMProvider], str]):
     def __init__(self) -> None:
         """Initialize an empty registry."""
         super().__init__()
+        # Store actual implementations
         self._implementations: dict[str, type[LLMProvider]] = {
             "litellm": LiteLLMProvider,
         }
+        # Store provider to implementation mappings
+        self._provider_impl: dict[str, str] = {}
 
     @property
     def _error_class(self) -> type[exceptions.LLMError]:
         return exceptions.LLMError
 
-    def _validate_item(self, item: Any) -> type[LLMProvider]:
+    def _validate_item(self, item: Any) -> str:
         """Validate and possibly transform item before registration."""
-        if isinstance(item, type) and issubclass(item, LLMProvider):
-            return item
-        msg = f"Invalid provider type: {type(item)}"
-        raise exceptions.LLMError(msg)
+        match item:
+            case str() if item in self._implementations:
+                return item
+            case type() if issubclass(item, LLMProvider):
+                return item.__name__
+            case str():  # Accept any string since we're mapping providers
+                return "litellm"  # Default to litellm implementation
+            case _:
+                msg = f"Invalid provider type: {type(item)}"
+                raise exceptions.LLMError(msg)
 
-    # Backward compatibility methods
-    def register_provider(self, name: str, implementation: str) -> None:
-        """Register a provider configuration with an implementation."""
-        if name in self._items:
-            if implementation not in self._implementations:
-                msg = f"Implementation {implementation} not found"
-                raise exceptions.LLMError(msg)
-            if self._items[name] != self._implementations[implementation]:
-                msg = (
-                    f"Provider {name} already registered with a different implementation"
-                )
-                raise exceptions.LLMError(msg)
-            return  # Already registered with the same implementation
-        if implementation not in self._implementations:
-            msg = f"Implementation {implementation} not found"
-            raise exceptions.LLMError(msg)
-        super().register(name, self._implementations[implementation])
+    def __setitem__(self, key: str, value: str | type[LLMProvider]) -> None:
+        """Map provider to implementation."""
+        impl_name = self._validate_item(value)
+        self._provider_impl[key] = impl_name
+        super().__setitem__(key, impl_name)
 
     def create_provider(self, name: str, config: LLMConfig) -> LLMProvider:
         """Create a provider instance."""
-        provider_class = self.get(name)
-        return provider_class(config)
-
-    def reset(self) -> None:
-        """Reset the registry to its initial state."""
-        super().reset()
-        self._implementations = {
-            "litellm": LiteLLMProvider,
-        }
+        try:
+            impl_name = self._provider_impl[name]
+            impl_class = self._implementations[impl_name]
+            return impl_class(config)
+        except KeyError as exc:
+            msg = f"Provider not found: {name}"
+            raise exceptions.LLMError(msg) from exc
 
 
 # Global registry instance

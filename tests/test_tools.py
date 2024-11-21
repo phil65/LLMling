@@ -23,7 +23,7 @@ async def test_tool_registration_and_execution():
     registry = ToolRegistry()
 
     # Register a simple tool
-    registry.register_path(import_path=EXAMPLE_IMPORT, name="test_tool")
+    registry["test_tool"] = EXAMPLE_IMPORT
 
     # Verify tool is registered
     assert "test_tool" in registry.list_items()
@@ -42,15 +42,15 @@ async def test_tool_registry_errors():
         await registry.execute("non_existent_tool")
 
     # Test duplicate registration
-    registry.register_path(EXAMPLE_IMPORT, "test_tool")
+    registry["test_tool"] = EXAMPLE_IMPORT
     with pytest.raises(ToolError):
-        registry.register_path(EXAMPLE_IMPORT, "test_tool")
+        registry["test_tool"] = EXAMPLE_IMPORT
 
 
 async def test_tool_execution_with_invalid_params():
     """Test tool execution with invalid parameters."""
     registry = ToolRegistry()
-    registry.register_path(EXAMPLE_IMPORT, "test_tool")
+    registry["test_tool"] = EXAMPLE_IMPORT
 
     # Test with missing required parameter and parameter with wrong type
     with pytest.raises(ValueError, match="Error executing"):  # noqa: PT012
@@ -61,7 +61,7 @@ async def test_tool_execution_with_invalid_params():
 async def test_failing_tool():
     """Test handling of a tool that raises an exception."""
     registry = ToolRegistry()
-    registry.register_path(FAILING_IMPORT, "failing_tool")
+    registry["failing_tool"] = FAILING_IMPORT
 
     with pytest.raises(ValueError, match="failing"):
         await registry.execute("failing_tool", text="any input")
@@ -116,14 +116,14 @@ class TestDynamicTool:
 class TestToolRegistry:
     def test_register_path(self, registry: ToolRegistry) -> None:
         """Test registering a tool by import path."""
-        registry.register_path(EXAMPLE_IMPORT, name="custom_tool")
+        registry["custom_tool"] = EXAMPLE_IMPORT
         assert "custom_tool" in registry.list_items()
 
     def test_register_duplicate(self, registry: ToolRegistry) -> None:
         """Test registering duplicate tool names."""
-        registry.register_path(EXAMPLE_IMPORT, name="tool1")
+        registry["tool1"] = EXAMPLE_IMPORT
         with pytest.raises(ToolError):
-            registry.register_path(EXAMPLE_IMPORT, name="tool1")
+            registry["tool1"] = EXAMPLE_IMPORT
 
     def test_get_nonexistent(self, registry: ToolRegistry) -> None:
         """Test getting non-existent tool."""
@@ -132,8 +132,8 @@ class TestToolRegistry:
 
     def test_list_items(self, registry: ToolRegistry) -> None:
         """Test listing registered tools."""
-        registry.register_path(EXAMPLE_IMPORT, name="tool1")
-        registry.register_path(ANALYZE_IMPORT, name="tool2")
+        registry["tool1"] = EXAMPLE_IMPORT
+        registry["tool2"] = ANALYZE_IMPORT
         tools = registry.list_items()
         assert len(tools) == 2  # noqa: PLR2004
         assert "tool1" in tools
@@ -142,15 +142,14 @@ class TestToolRegistry:
     @pytest.mark.asyncio
     async def test_execute(self, registry: ToolRegistry) -> None:
         """Test executing a registered tool."""
-        registry.register_path(EXAMPLE_IMPORT)
+        registry["example_tool"] = EXAMPLE_IMPORT
         result = await registry.execute("example_tool", text="test", repeat=3)
         assert result == "testtesttest"
 
     @pytest.mark.asyncio
     async def test_execute_with_validation(self, registry: ToolRegistry) -> None:
         """Test tool execution with invalid parameters."""
-        registry.register_path(ANALYZE_IMPORT)
-
+        registry["analyze_ast"] = ANALYZE_IMPORT
         # Valid Python code
         code = "class Test: pass\ndef func(): pass"
         result = await registry.execute("analyze_ast", code=code)
@@ -163,13 +162,13 @@ class TestToolRegistry:
 
     def test_schema_generation(self, registry: ToolRegistry) -> None:
         """Test schema generation for registered tools."""
-        registry.register_path(ANALYZE_IMPORT, description="desc")
+        registry["analyze_ast"] = ANALYZE_IMPORT
         schema = registry.get_schema("analyze_ast")
 
         assert schema.type == "function"
         assert "code" in schema.function["parameters"]["properties"]
         assert schema.function["parameters"]["required"] == ["code"]
-        assert schema.function["description"] == "desc"
+        assert "Analyze Python code AST" in schema.function["description"]
 
 
 # Integration tests
@@ -178,7 +177,7 @@ async def test_tool_integration() -> None:
     """Test full tool workflow."""
     # Setup
     registry = ToolRegistry()
-    registry.register_path(ANALYZE_IMPORT, name="analyze", description="Analyze AST")
+    registry["analyze"] = ANALYZE_IMPORT
 
     # Get schema
     schema = registry.get_schema("analyze")

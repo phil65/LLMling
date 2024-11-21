@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
+import upath
+
+from llmling.config.models import PathContext, TextContext
 from llmling.context.base import ContextLoader
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
@@ -27,19 +31,26 @@ class ContextLoaderRegistry(BaseRegistry[ContextLoader[Any], str]):
     def _validate_item(self, item: Any) -> ContextLoader[Any]:
         """Validate and possibly transform item before registration."""
         match item:
+            case str() if "\n" in item:  # Multiline string -> TextContext
+                from llmling.context.loaders.text import TextContextLoader
+
+                loader = TextContextLoader()
+                loader.context = TextContext(content=item)
+                return loader
+            case str() | os.PathLike() if upath.UPath(item).exists():
+                from llmling.context.loaders.path import PathContextLoader
+
+                loader = PathContextLoader()
+                loader.context = PathContext(path=item)
+                return loader
             case type() as cls if issubclass(cls, ContextLoader):
                 return cls()
-            case _ if isinstance(item, ContextLoader):
+            case ContextLoader():
                 return item
             case _:
-                error_msg = f"Invalid context loader type: {type(item)}"
-                raise exceptions.LoaderError(error_msg)
-
-    # Backward compatibility methods
-    def register(self, loader_cls: type[ContextLoader[Any]]) -> None:  # type: ignore
-        """Register a loader using its inferred context_type."""
-        super().register(loader_cls.context_type, loader_cls)
+                msg = f"Invalid context loader type: {type(item)}"
+                raise exceptions.LoaderError(msg)
 
     def get_loader(self, context: Context) -> ContextLoader[Any]:
-        """Get a loader instance for a context."""
+        """Get a loader instance for a context type."""
         return self.get(context.context_type)

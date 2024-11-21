@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, MutableMapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ TItem = TypeVar("TItem")
 TKey = TypeVar("TKey", str, int)
 
 
-class BaseRegistry(MutableMapping[TKey, TItem], Generic[TItem, TKey], ABC):
+class BaseRegistry[TItem, TKey](MutableMapping[TKey, TItem], ABC):
     """Base class for component registries."""
 
     def __init__(self) -> None:
@@ -102,9 +102,13 @@ class BaseRegistry(MutableMapping[TKey, TItem], Generic[TItem, TKey], ABC):
 
     async def _initialize_item(self, item: TItem) -> None:
         """Initialize an item during startup."""
+        if hasattr(item, "startup") and callable(item.startup):
+            await item.startup()
 
     async def _cleanup_item(self, item: TItem) -> None:
         """Clean up an item during shutdown."""
+        if hasattr(item, "shutdown") and callable(item.shutdown):
+            await item.shutdown()
 
     # Implementing MutableMapping methods
     def __getitem__(self, key: TKey) -> TItem:
@@ -114,8 +118,13 @@ class BaseRegistry(MutableMapping[TKey, TItem], Generic[TItem, TKey], ABC):
             msg = f"Item not found: {key}"
             raise self._error_class(msg) from exc
 
-    def __setitem__(self, key: TKey, value: TItem) -> None:
+    def __setitem__(self, key: TKey, value: Any) -> None:
+        """Support dict-style assignment."""
         self.register(key, value)
+
+    def __contains__(self, key: object) -> bool:
+        """Support 'in' operator without raising exceptions."""
+        return key in self._items
 
     def __delitem__(self, key: TKey) -> None:
         if key in self._items:
@@ -126,6 +135,13 @@ class BaseRegistry(MutableMapping[TKey, TItem], Generic[TItem, TKey], ABC):
 
     def __iter__(self) -> Iterator[TKey]:
         return iter(self._items)
+
+    async def __aiter__(self):
+        """Async iterate over items, ensuring they're initialized."""
+        if not self._initialized:
+            await self.startup()
+        for key, item in self._items.items():
+            yield key, item
 
     def __len__(self) -> int:
         return len(self._items)

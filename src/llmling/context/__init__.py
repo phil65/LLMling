@@ -14,12 +14,12 @@ from llmling.context.loaders.image import ImageContextLoader
 
 # Create and populate the default registry
 default_registry = ContextLoaderRegistry()
-default_registry.register(ImageContextLoader)
-default_registry.register(PathContextLoader)
-default_registry.register(TextContextLoader)
-default_registry.register(CLIContextLoader)
-default_registry.register(SourceContextLoader)
-default_registry.register(CallableContextLoader)
+default_registry["image"] = ImageContextLoader
+default_registry["path"] = PathContextLoader
+default_registry["text"] = TextContextLoader
+default_registry["cli"] = CLIContextLoader
+default_registry["source"] = SourceContextLoader
+default_registry["callable"] = CallableContextLoader
 
 __all__ = [
     "ContextLoader",

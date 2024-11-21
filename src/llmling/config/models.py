@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence as TypingSequence  # noqa: TCH003
+import os  # noqa: TCH003
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -82,7 +83,7 @@ class PathContext(BaseContext):
     """Context loaded from a file or URL."""
 
     context_type: Literal["path"] = "path"
-    path: str
+    path: str | os.PathLike[str]
 
     @model_validator(mode="after")
     def validate_path(self) -> PathContext:

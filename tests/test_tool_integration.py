@@ -98,10 +98,13 @@ async def test_task_with_tools(
 
     # Register tools from config
     for tool_id, tool_cfg in tool_config.tools.items():
-        tool_registry.register_path(
-            import_path=tool_cfg.import_path,
-            name=tool_cfg.name or tool_id,
-            description=tool_cfg.description,
+        tool_registry.register(
+            tool_id,
+            {
+                "import_path": tool_cfg.import_path,
+                "name": tool_cfg.name or tool_id,
+                "description": tool_cfg.description,
+            },
         )
 
     executor = TaskExecutor(
@@ -115,9 +118,11 @@ async def test_task_with_tools(
     test_ctx = tool_config.contexts["test_ctx"]
 
     # Create and execute task
-    tools = ["analyze", "repeat_text"]
     task_ctx = TaskContext(
-        context=test_ctx, processors=[], tools=tools, tool_choice="auto"
+        context=test_ctx,
+        processors=[],
+        tools=["analyze", "repeat"],  # Use the actual registered tool IDs
+        tool_choice="auto",
     )
 
     task_provider = TaskProvider(
@@ -169,11 +174,7 @@ async def test_task_with_tools_streaming(
     # Setup
     tool_registry = ToolRegistry()
     for tool_id, tool_cfg in tool_config.tools.items():
-        tool_registry.register_path(
-            import_path=tool_cfg.import_path,
-            name=tool_cfg.name or tool_id,
-            description=tool_cfg.description,
-        )
+        tool_registry[tool_id] = tool_cfg
 
     executor = TaskExecutor(
         context_registry=mock_context_registry,

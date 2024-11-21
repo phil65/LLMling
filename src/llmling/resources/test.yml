@@ -30,7 +30,7 @@ tools:
 
 # LLM provider configurations
 llm_providers:
-  gpt4-turbo:
+  gpt-35-turbo:
     name: "GPT-4 Turbo"
     model: openai/gpt-4-1106-preview
     temperature: 0.8
@@ -62,14 +62,14 @@ llm_providers:
 # Provider groups
 provider_groups:
   code_review:
-    - gpt4-turbo
+    - gpt-35-turbo
     - claude2
 
   draft_content:
     - local-llama
 
   fallback_chain:
-    - gpt4-turbo
+    - gpt-35-turbo
     - claude2
     - local-llama
 

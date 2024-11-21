@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from llmling.core import exceptions
 from llmling.core.descriptors import classproperty
@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 TContext = TypeVar("TContext", bound="Context")
 
 
-class ContextLoader(Generic[TContext], ABC):
+class ContextLoader[TContext](ABC):
     """Base class for context loaders with associated context type."""
 
     context_class: type[TContext]

@@ -40,11 +40,11 @@ class TaskManager:
 
         for tool_id, tool_config in self.config.tools.items():
             logger.debug("Registering tool: %s with config: %s", tool_id, tool_config)
-            self.executor.tool_registry.register_path(
-                import_path=tool_config.import_path,
-                name=tool_config.name or tool_id,
-                description=tool_config.description,
-            )
+            self.executor.tool_registry[tool_id] = {
+                "import_path": tool_config.import_path,
+                "name": tool_config.name or tool_id,
+                "description": tool_config.description,
+            }
             logger.debug("Successfully registered tool: %s", tool_id)
 
     async def execute_template(

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 import py2openai
 from pydantic import BaseModel, ConfigDict, Field
 
+from llmling.config.models import ToolConfig
 from llmling.core.baseregistry import BaseRegistry
 from llmling.tools.exceptions import ToolError
 from llmling.utils import calling
@@ -150,28 +151,23 @@ class ToolRegistry(BaseRegistry[BaseTool | DynamicTool, str]):
                 return cls()
             case BaseTool() | DynamicTool():
                 return item
+            case str():  # Just an import path
+                return DynamicTool(import_path=item)
+            case dict() if "import_path" in item:
+                return DynamicTool(
+                    import_path=item["import_path"],
+                    name=item.get("name"),
+                    description=item.get("description"),
+                )
+            case ToolConfig():  # Add support for ToolConfig
+                return DynamicTool(
+                    import_path=item.import_path,
+                    name=item.name,
+                    description=item.description,
+                )
             case _:
                 msg = f"Invalid tool type: {type(item)}"
                 raise ToolError(msg)
-
-    # Backward compatibility methods
-    def register(self, tool: type[BaseTool] | BaseTool) -> None:  # type: ignore
-        """Register a tool class or instance."""
-        super().register(tool.name, tool)
-
-    def register_path(
-        self,
-        import_path: str,
-        name: str | None = None,
-        description: str | None = None,
-    ) -> None:
-        """Register a tool from import path."""
-        tool = DynamicTool(
-            import_path=import_path,
-            name=name,
-            description=description,
-        )
-        super().register(tool.name, tool)
 
     def get_schema(self, name: str) -> ToolSchema:
         """Get schema for a tool."""
