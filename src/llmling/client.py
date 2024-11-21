@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar, overload
 
 from llmling.config.loading import load_config
 from llmling.config.manager import ConfigManager
@@ -21,7 +21,9 @@ from llmling.tools.base import ToolRegistry
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
     import os
+    from types import TracebackType
 
+    from llmling.core.baseregistry import BaseRegistry
     from llmling.task.models import TaskResult
 
 logger = get_logger(__name__)
@@ -29,12 +31,6 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 
 ComponentType = Literal["processor", "context", "provider", "tool"]
-
-
-class Registerable(Protocol):
-    """Protocol for objects that can be registered."""
-
-    def register(self, name: str, item: Any) -> None: ...
 
 
 class LLMLingClient:
@@ -65,7 +61,7 @@ class LLMLingClient:
         self.tool_registry = ToolRegistry()
         # Components will be initialized in startup
         self.config_manager: ConfigManager | None = None
-        self._processor_registry: ProcessorRegistry | None = None
+        self._processor_registry = ProcessorRegistry()
         self._executor: TaskExecutor | None = None
         self._manager: TaskManager | None = None
         self._initialized = False
@@ -107,7 +103,6 @@ class LLMLingClient:
 
         try:
             # Initialize registries
-            self._processor_registry = ProcessorRegistry()
             llm_registry.reset()  # Ensure clean state
 
             # Load configuration
@@ -319,11 +314,11 @@ class LLMLingClient:
 
     async def _register_components(self) -> None:
         """Register all configured components."""
-        registries: dict[ComponentType, Registerable] = {
-            "processor": cast(Registerable, self._processor_registry),
-            "context": cast(Registerable, context_registry),
-            "provider": cast(Registerable, llm_registry),
-            "tool": cast(Registerable, self.tool_registry),
+        registries: dict[ComponentType, BaseRegistry[str, Any]] = {
+            "processor": self._processor_registry,
+            "context": context_registry,
+            "provider": llm_registry,
+            "tool": self.tool_registry,
         }
 
         for component_type, items in self.components.items():
@@ -404,13 +399,17 @@ class LLMLingClient:
                 loop.run_until_complete(self.startup())
                 return self
             finally:
-                loop.close()
                 asyncio.set_event_loop(None)
         except Exception as exc:
             msg = "Failed to enter context"
             raise exceptions.LLMLingError(msg) from exc
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Synchronous context manager exit."""
         try:
             loop = asyncio.new_event_loop()
