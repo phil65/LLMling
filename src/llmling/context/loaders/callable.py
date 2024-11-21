@@ -11,21 +11,20 @@ from llmling.utils import calling
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
 
-class CallableContextLoader(ContextLoader):
+class CallableContextLoader(ContextLoader[CallableContext]):
     """Loads context from Python callable execution."""
 
-    context_type = "callable"
+    context_class = CallableContext
 
     async def load(
         self,
-        context: Context,
+        context: CallableContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load content from callable execution.
@@ -40,10 +39,6 @@ class CallableContextLoader(ContextLoader):
         Raises:
             LoaderError: If callable execution fails or context type is invalid
         """
-        if not isinstance(context, CallableContext):
-            msg = f"Expected CallableContext, got {type(context).__name__}"
-            raise exceptions.LoaderError(msg)
-
         try:
             content = await calling.execute_callable(
                 context.import_path, **context.keyword_args

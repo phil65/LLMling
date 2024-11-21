@@ -12,6 +12,7 @@ from llmling.llm.base import MessageContent
 class BaseContext(BaseModel):
     """Base class for all context types."""
 
+    context_type: type | None = None
     content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
 

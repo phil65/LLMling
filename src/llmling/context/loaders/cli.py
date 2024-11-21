@@ -15,22 +15,21 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
 
-class CLIContextLoader(ContextLoader):
+class CLIContextLoader(ContextLoader[CLIContext]):
     """Loads context from CLI command execution."""
 
-    context_type = "cli"
+    context_class = CLIContext
 
     @logfire.instrument("Executing CLI command {context.command}")
     async def load(
         self,
-        context: Context,
+        context: CLIContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load content from CLI command execution.
@@ -45,10 +44,6 @@ class CLIContextLoader(ContextLoader):
         Raises:
             LoaderError: If command execution fails or context type is invalid
         """
-        if not isinstance(context, CLIContext):
-            msg = f"Expected CLIContext, got {type(context).__name__}"
-            raise exceptions.LoaderError(msg)
-
         try:
             cmd = (
                 context.command

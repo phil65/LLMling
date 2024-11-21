@@ -10,21 +10,20 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
 
-class TextContextLoader(ContextLoader):
+class TextContextLoader(ContextLoader[TextContext]):
     """Loads context from raw text."""
 
-    context_type = "text"
+    context_class = TextContext
 
     async def load(
         self,
-        context: Context,
+        context: TextContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load content from raw text.
@@ -39,10 +38,6 @@ class TextContextLoader(ContextLoader):
         Raises:
             LoaderError: If loading fails or context type is invalid
         """
-        if not isinstance(context, TextContext):
-            msg = f"Expected TextContext, got {type(context).__name__}"
-            raise exceptions.LoaderError(msg)
-
         try:
             content = context.content
 

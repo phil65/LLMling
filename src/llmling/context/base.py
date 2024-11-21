@@ -3,30 +3,41 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from llmling.core import exceptions
+from llmling.core.descriptors import classproperty
 from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context, ContextType
+    from llmling.config.models import (
+        Context,
+    )
     from llmling.context.models import LoadedContext
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
+TContext = TypeVar("TContext", bound="Context")
 
-class ContextLoader(ABC):
-    """Base class for context loaders."""
 
-    context_type: ClassVar[ContextType]
+class ContextLoader(Generic[TContext], ABC):
+    """Base class for context loaders with associated context type."""
+
+    context_class: type[TContext]
+
+    @classproperty  # type: ignore
+    def context_type(self) -> str:
+        """Infer context type from context class."""
+        fields = self.context_class.model_fields  # type: ignore
+        return fields["context_type"].default
 
     @abstractmethod
     async def load(
         self,
-        context: Context,
+        context: TContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load and process context content.

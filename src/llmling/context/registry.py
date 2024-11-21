@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -21,19 +21,33 @@ class ContextLoaderRegistry:
 
     def __init__(self) -> None:
         """Initialize an empty registry."""
-        self._loaders: dict[str, type[ContextLoader]] = {}
+        self._loaders: dict[str, type[ContextLoader[Any]]] = {}
 
-    def register(self, type_name: str, loader_cls: type[ContextLoader]) -> None:
-        """Register a loader for a context type.
+    def register(self, loader_cls: type[ContextLoader[Any]]) -> None:
+        """Register a loader using its inferred context_type.
 
         Args:
-            type_name: The context type name (e.g., "path", "text")
             loader_cls: The loader class to register
-        """
-        logger.debug("Registering loader %s for type %s", loader_cls.__name__, type_name)
-        self._loaders[type_name] = loader_cls
 
-    def get_loader(self, context: Context) -> ContextLoader:
+        Raises:
+            LoaderError: If loader is already registered
+        """
+        # Create instance to get context_type
+        loader = loader_cls()
+        context_type: str = loader.context_type
+
+        if context_type in self._loaders:
+            msg = f"Loader already registered for type: {context_type}"
+            raise exceptions.LoaderError(msg)
+
+        logger.debug(
+            "Registering loader %s for type %s",
+            loader_cls.__name__,
+            context_type,
+        )
+        self._loaders[context_type] = loader_cls
+
+    def get_loader(self, context: Context) -> ContextLoader[Any]:
         """Get a loader instance for a context.
 
         Args:

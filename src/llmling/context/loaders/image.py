@@ -16,20 +16,19 @@ from llmling.llm.base import MessageContent
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
 
 logger = get_logger(__name__)
 
 
-class ImageContextLoader(ContextLoader):
+class ImageContextLoader(ContextLoader[ImageContext]):
     """Loads image content from files or URLs."""
 
-    context_type = "image"
+    context_class = ImageContext
 
     async def load(
         self,
-        context: Context,
+        context: ImageContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load and process image content.
@@ -44,10 +43,6 @@ class ImageContextLoader(ContextLoader):
         Raises:
             LoaderError: If loading fails or context type is invalid
         """
-        if not isinstance(context, ImageContext):
-            msg = f"Expected ImageContext, got {type(context).__name__}"
-            raise exceptions.LoaderError(msg)
-
         try:
             # Use UPath to handle the path
             path_obj = upath.UPath(context.path)

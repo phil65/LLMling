@@ -1,3 +1,5 @@
+"""Path context loader implementation."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -13,22 +15,21 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
 
-class PathContextLoader(ContextLoader):
+class PathContextLoader(ContextLoader[PathContext]):
     """Loads context from files or URLs."""
 
-    context_type = "path"
+    context_class = PathContext
 
     @logfire.instrument("Loading context from path {context.path}")
     async def load(
         self,
-        context: Context,
+        context: PathContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load content from a file or URL.
@@ -41,12 +42,8 @@ class PathContextLoader(ContextLoader):
             Loaded and processed context
 
         Raises:
-            LoaderError: If loading fails or context type is invalid
+            LoaderError: If loading fails
         """
-        if not isinstance(context, PathContext):
-            msg = f"Expected PathContext, got {type(context).__name__}"
-            raise exceptions.LoaderError(msg)
-
         try:
             path = UPath(context.path)
             content = path.read_text("utf-8")

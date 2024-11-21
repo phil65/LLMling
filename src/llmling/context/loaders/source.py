@@ -13,22 +13,21 @@ from llmling.utils import importing
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
 
-class SourceContextLoader(ContextLoader):
+class SourceContextLoader(ContextLoader[SourceContext]):
     """Loads context from Python source code."""
 
-    context_type = "source"
+    context_class = SourceContext
 
     @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(
         self,
-        context: Context,
+        context: SourceContext,
         processor_registry: ProcessorRegistry,
     ) -> LoadedContext:
         """Load content from Python source.
@@ -43,10 +42,6 @@ class SourceContextLoader(ContextLoader):
         Raises:
             LoaderError: If source loading fails or context type is invalid
         """
-        if not isinstance(context, SourceContext):
-            msg = f"Expected SourceContext, got {type(context).__name__}"
-            raise exceptions.LoaderError(msg)
-
         try:
             content = importing.get_module_source(
                 context.import_path,
