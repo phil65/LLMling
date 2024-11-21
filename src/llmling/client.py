@@ -28,14 +28,13 @@ logger = get_logger(__name__)
 
 T = TypeVar("T")
 
+ComponentType = Literal["processor", "context", "provider", "tool"]
+
 
 class Registerable(Protocol):
     """Protocol for objects that can be registered."""
 
     def register(self, name: str, item: Any) -> None: ...
-
-
-ComponentType = Literal["processor", "context", "provider", "tool"]
 
 
 class LLMLingClient:
@@ -56,12 +55,6 @@ class LLMLingClient:
             log_level: Optional logging level
             validate_config: Whether to validate configuration on load
             components: Optional dictionary of components to register
-                Example:
-                {
-                    "processor": {"name": ProcessorConfig(...)},
-                    "context": {"name": ContextLoader(...)},
-                    "provider": {"name": LLMProvider(...)},
-                }
         """
         if log_level is not None:
             setup_logging(level=log_level)
@@ -92,21 +85,9 @@ class LLMLingClient:
         config_path: str | os.PathLike[str],
         **kwargs: Any,
     ) -> LLMLingClient:
-        """Create and initialize a client synchronously.
-
-        Args:
-            config_path: Path to configuration file
-            **kwargs: Additional arguments for initialization
-
-        Returns:
-            Initialized client instance
-
-        Raises:
-            LLMLingError: If initialization fails
-        """
+        """Create and initialize a client synchronously."""
         client = cls(config_path, **kwargs)
         try:
-            # Create new event loop for sync operations
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -116,7 +97,6 @@ class LLMLingClient:
                 loop.close()
                 asyncio.set_event_loop(None)
         except Exception as exc:
-            logger.exception("Failed to create client")
             msg = f"Failed to create client: {exc}"
             raise exceptions.LLMLingError(msg) from exc
 
@@ -151,7 +131,7 @@ class LLMLingClient:
                 context_registry=context_registry,
                 processor_registry=self._processor_registry,
                 provider_registry=llm_registry,
-                tool_registry=ToolRegistry(),  # Empty registry, TaskManager will populate
+                tool_registry=self.tool_registry,
                 config_manager=self.config_manager,
             )
 
@@ -167,12 +147,178 @@ class LLMLingClient:
             msg = f"Failed to initialize client: {exc}"
             raise exceptions.LLMLingError(msg) from exc
 
-    async def _register_components(self) -> None:
-        """Register all configured components.
+    def execute_sync(
+        self,
+        template: str,
+        *,  # Force keyword arguments
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        **llm_params: Any,
+    ) -> TaskResult:
+        """Execute a task template synchronously.
 
-        Raises:
-            LLMLingError: If component registration fails
+        Args:
+            template: Name of template to execute
+            context: Task-specific context variables
+            system_prompt: Optional system prompt
+            **llm_params: Additional parameters for LLM
         """
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(
+                    self.execute(
+                        template,
+                        context=context,
+                        system_prompt=system_prompt,
+                        llm_params=llm_params,
+                    )
+                )
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
+        except Exception as exc:
+            msg = f"Synchronous execution failed: {exc}"
+            raise exceptions.TaskError(msg) from exc
+
+    def execute_many_sync(
+        self,
+        templates: Sequence[str],
+        *,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        max_concurrent: int = 3,
+        **llm_params: Any,
+    ) -> list[TaskResult]:
+        """Execute multiple templates synchronously."""
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(
+                    self.execute_many(
+                        templates,
+                        context=context,
+                        system_prompt=system_prompt,
+                        max_concurrent=max_concurrent,
+                        llm_params=llm_params,
+                    )
+                )
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
+        except Exception as exc:
+            msg = f"Synchronous concurrent execution failed: {exc}"
+            raise exceptions.TaskError(msg) from exc
+
+    @overload
+    async def execute(
+        self,
+        template: str,
+        *,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        stream: Literal[True],
+        llm_params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[TaskResult]: ...
+
+    @overload
+    async def execute(
+        self,
+        template: str,
+        *,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        stream: Literal[False] = False,
+        llm_params: dict[str, Any] | None = None,
+    ) -> TaskResult: ...
+
+    async def execute(
+        self,
+        template: str,
+        *,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        stream: bool = False,
+        llm_params: dict[str, Any] | None = None,
+    ) -> TaskResult | AsyncIterator[TaskResult]:
+        """Execute a task template.
+
+        Args:
+            template: Name of template to execute
+            context: Task-specific context variables
+            system_prompt: Optional system prompt
+            stream: Whether to stream results
+            llm_params: Parameters for the LLM provider
+        """
+        self._ensure_initialized()
+        try:
+            if stream:
+                return self.manager.execute_template_stream(
+                    template,
+                    context=context,
+                    system_prompt=system_prompt,
+                    llm_params=llm_params or {},
+                )
+            return await self.manager.execute_template(
+                template,
+                context=context,
+                system_prompt=system_prompt,
+                llm_params=llm_params or {},
+            )
+        except Exception as exc:
+            msg = f"Failed to execute template {template}"
+            raise exceptions.TaskError(msg) from exc
+
+    async def execute_many(
+        self,
+        templates: Sequence[str],
+        *,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        max_concurrent: int = 3,
+        llm_params: dict[str, Any] | None = None,
+    ) -> list[TaskResult]:
+        """Execute multiple templates concurrently."""
+        self._ensure_initialized()
+        try:
+            return await execute_concurrent(
+                self.manager,
+                templates,
+                context=context,
+                system_prompt=system_prompt,
+                max_concurrent=max_concurrent,
+                llm_params=llm_params or {},
+            )
+        except Exception as exc:
+            msg = "Concurrent execution failed"
+            raise exceptions.TaskError(msg) from exc
+
+    async def stream(
+        self,
+        template: str,
+        *,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        llm_params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[TaskResult]:
+        """Stream results from a task template."""
+        self._ensure_initialized()
+        try:
+            async for result in self.manager.execute_template_stream(
+                template,
+                context=context,
+                system_prompt=system_prompt,
+                llm_params=llm_params or {},
+            ):
+                yield result
+        except Exception as exc:
+            msg = f"Failed to stream template {template}"
+            raise exceptions.TaskError(msg) from exc
+
+    async def _register_components(self) -> None:
+        """Register all configured components."""
         registries: dict[ComponentType, Registerable] = {
             "processor": cast(Registerable, self._processor_registry),
             "context": cast(Registerable, context_registry),
@@ -194,11 +340,7 @@ class LLMLingClient:
                     raise exceptions.LLMLingError(msg) from exc
 
     async def _register_providers(self) -> None:
-        """Register all providers from configuration.
-
-        Raises:
-            LLMLingError: If provider registration fails
-        """
+        """Register all providers from configuration."""
         if not self.config_manager:
             msg = "Configuration not loaded"
             raise exceptions.LLMLingError(msg)
@@ -220,205 +362,6 @@ class LLMLingClient:
         except Exception as exc:
             msg = "Failed to register providers"
             raise exceptions.LLMLingError(msg) from exc
-
-    def execute_sync(
-        self,
-        template: str,
-        *,
-        system_prompt: str | None = None,
-        **kwargs: Any,
-    ) -> TaskResult:
-        """Execute a task template synchronously.
-
-        Args:
-            template: Name of template to execute
-            system_prompt: Optional system prompt
-            **kwargs: Additional parameters for LLM
-
-        Returns:
-            Task result
-
-        Raises:
-            TaskError: If execution fails
-        """
-        try:
-            # Create new event loop for sync operation
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(
-                    self.execute(
-                        template,
-                        system_prompt=system_prompt,
-                        stream=False,
-                        **kwargs,
-                    )
-                )
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
-        except Exception as exc:
-            msg = f"Synchronous execution failed: {exc}"
-            raise exceptions.TaskError(msg) from exc
-
-    def execute_many_sync(
-        self,
-        templates: Sequence[str],
-        **kwargs: Any,
-    ) -> list[TaskResult]:
-        """Execute multiple templates synchronously.
-
-        Args:
-            templates: Template names to execute
-            **kwargs: Additional parameters passed to execute_many
-
-        Returns:
-            List of task results
-
-        Raises:
-            TaskError: If execution fails
-        """
-        try:
-            # Create new event loop for sync operation
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(self.execute_many(templates, **kwargs))
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
-        except Exception as exc:
-            msg = f"Synchronous concurrent execution failed: {exc}"
-            raise exceptions.TaskError(msg) from exc
-
-    @overload
-    async def execute(
-        self,
-        template: str,
-        *,
-        system_prompt: str | None = None,
-        stream: Literal[True],
-        **kwargs: Any,
-    ) -> AsyncIterator[TaskResult]: ...
-
-    @overload
-    async def execute(
-        self,
-        template: str,
-        *,
-        system_prompt: str | None = None,
-        stream: Literal[False] = False,
-        **kwargs: Any,
-    ) -> TaskResult: ...
-
-    async def execute(
-        self,
-        template: str,
-        *,
-        system_prompt: str | None = None,
-        stream: bool = False,
-        **kwargs: Any,
-    ) -> TaskResult | AsyncIterator[TaskResult]:
-        """Execute a task template.
-
-        Args:
-            template: Name of template to execute
-            system_prompt: Optional system prompt
-            stream: Whether to stream results
-            **kwargs: Additional parameters for LLM
-
-        Returns:
-            Task result or async iterator of results if streaming
-
-        Raises:
-            TaskError: If execution fails
-        """
-        self._ensure_initialized()
-        try:
-            if stream:
-                return self.manager.execute_template_stream(
-                    template,
-                    system_prompt=system_prompt,
-                    **kwargs,
-                )
-            return await self.manager.execute_template(
-                template,
-                system_prompt=system_prompt,
-                **kwargs,
-            )
-        except Exception as exc:
-            logger.exception("Task execution failed")
-            msg = f"Failed to execute template {template}: {exc}"
-            raise exceptions.TaskError(msg) from exc
-
-    async def execute_many(
-        self,
-        templates: Sequence[str],
-        *,
-        system_prompt: str | None = None,
-        max_concurrent: int = 3,
-        **kwargs: Any,
-    ) -> list[TaskResult]:
-        """Execute multiple templates concurrently.
-
-        Args:
-            templates: Template names to execute
-            system_prompt: Optional system prompt
-            max_concurrent: Maximum concurrent executions
-            **kwargs: Additional parameters for LLM
-
-        Returns:
-            List of task results
-
-        Raises:
-            TaskError: If execution fails
-        """
-        self._ensure_initialized()
-        try:
-            return await execute_concurrent(
-                self.manager,
-                templates,
-                system_prompt=system_prompt,
-                max_concurrent=max_concurrent,
-                **kwargs,
-            )
-        except Exception as exc:
-            logger.exception("Concurrent execution failed")
-            msg = f"Concurrent execution failed: {exc}"
-            raise exceptions.TaskError(msg) from exc
-
-    async def stream(
-        self,
-        template: str,
-        *,
-        system_prompt: str | None = None,
-        **kwargs: Any,
-    ) -> AsyncIterator[TaskResult]:
-        """Stream results from a task template.
-
-        Args:
-            template: Name of template to execute
-            system_prompt: Optional system prompt
-            **kwargs: Additional parameters for LLM
-
-        Yields:
-            Task results
-
-        Raises:
-            TaskError: If streaming fails
-        """
-        self._ensure_initialized()
-        try:
-            async for result in self.manager.execute_template_stream(
-                template,
-                system_prompt=system_prompt,
-                **kwargs,
-            ):
-                yield result
-        except Exception as exc:
-            logger.exception("Task streaming failed")
-            msg = f"Failed to stream template {template}: {exc}"
-            raise exceptions.TaskError(msg) from exc
 
     def _ensure_initialized(self) -> None:
         """Ensure client is initialized."""
@@ -454,7 +397,6 @@ class LLMLingClient:
     def __enter__(self) -> Self:
         """Synchronous context manager entry."""
         try:
-            # Create new event loop for sync operation
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -470,7 +412,6 @@ class LLMLingClient:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Synchronous context manager exit."""
         try:
-            # Create new event loop for sync operation
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -482,67 +423,3 @@ class LLMLingClient:
             logger.exception("Error during context exit")
             msg = "Failed to exit context"
             raise exceptions.LLMLingError(msg) from exc
-
-
-async def async_example() -> None:
-    """Example of async usage."""
-    async with LLMLingClient("src/llmling/resources/test.yml") as client:
-        # Single execution
-        result = await client.execute("quick_review")
-        print("\nSingle execution result:")
-        print("-" * 40)
-        print(result.content)
-
-        # Streaming execution
-        print("\nStreaming execution:")
-        print("-" * 40)
-        async for chunk in client.stream("quick_review"):
-            print(chunk.content, end="")
-
-        # Concurrent execution
-        print("\n\nConcurrent execution:")
-        print("-" * 40)
-        results = await client.execute_many(
-            ["quick_review", "detailed_review"],
-            max_concurrent=2,
-        )
-        for r in results:
-            print(f"\nResult from {r.model}:")
-            print(r.content)
-
-
-def sync_example() -> None:
-    """Example of synchronous usage."""
-    with LLMLingClient.create("src/llmling/resources/test.yml") as client:
-        # Single execution
-        result = client.execute_sync("quick_review")
-        print("\nSync execution result:")
-        print("-" * 40)
-        print(result.content)
-
-        # Concurrent execution
-        print("\nSync concurrent execution:")
-        print("-" * 40)
-        results = client.execute_many_sync(
-            ["quick_review", "detailed_review"],
-            max_concurrent=2,
-        )
-        for r in results:
-            print(f"\nResult from {r.model}:")
-            print(r.content)
-
-
-if __name__ == "__main__":
-    """Run both async and sync examples."""
-    # Reset the registry before running examples
-    llm_registry.reset()
-
-    print("\nRunning async example...")
-    print("=" * 50)
-    asyncio.run(async_example())
-
-    print("\nRunning sync example...")
-    print("=" * 50)
-    # Reset registry between examples
-    llm_registry.reset()
-    sync_example()

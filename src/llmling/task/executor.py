@@ -55,92 +55,45 @@ class TaskExecutor:
         self.processor_registry = processor_registry
         self.provider_registry = provider_registry
         self.tool_registry = tool_registry or ToolRegistry()
-        logger.debug(
-            "TaskExecutor initialized with tools: %s", self.tool_registry.list_items()
-        )
         self.config_manager = config_manager
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
+        logger.debug(
+            "TaskExecutor initialized with tools: %s", self.tool_registry.list_items()
+        )
 
-    @logfire.instrument("Preparing tool configuration for {task_provider.name}")
-    def _prepare_tool_config(
-        self,
-        task_context: TaskContext,
-        task_provider: TaskProvider,
-    ) -> dict[str, Any] | None:
-        """Prepare tool configuration if tools are enabled."""
-        if not self.tool_registry:
-            logger.debug("No tool registry available")
-            return None
-
-        available_tools = []
-
-        # Add inherited tools from provider if enabled
-        if (
-            task_context.inherit_tools
-            and task_provider.settings
-            and task_provider.settings.tools
-        ):
-            logger.debug(
-                "Inheriting tools from provider: %s", task_provider.settings.tools
-            )
-            available_tools.extend(task_provider.settings.tools)
-
-        # Add task-specific tools
-        if task_context.tools:
-            logger.debug("Adding task-specific tools: %s", task_context.tools)
-            available_tools.extend(task_context.tools)
-
-        if not available_tools:
-            logger.debug("No tools available")
-            return None
-
-        # Get complete tool schemas including type
-        tool_schemas = []
-        for tool_name in available_tools:
-            if tool_name not in self.tool_registry:
-                logger.warning("Tool not found in registry: %s", tool_name)
-                continue
-
-            schema = self.tool_registry.get_schema(tool_name)
-            # Include the complete schema, not just the function part
-            tool_schemas.append(schema.model_dump())
-
-        if not tool_schemas:
-            return None
-
-        return {
-            "tools": tool_schemas,
-            "tool_choice": (
-                task_context.tool_choice
-                or (
-                    task_provider.settings.tool_choice if task_provider.settings else None
-                )
-                or "auto"
-            ),
-        }
-
-    @logfire.instrument(
-        "Executing task with provider {task_provider.name}, model {task_provider.model}"
-    )
+    @logfire.instrument("Executing task with provider {task_provider.name}")
     async def execute(
         self,
         task_context: TaskContext,
         task_provider: TaskProvider,
+        *,
         system_prompt: str | None = None,
-        **kwargs: Any,
+        llm_params: dict[str, Any] | None = None,
     ) -> TaskResult:
-        """Execute a task."""
+        """Execute a task.
+
+        Args:
+            task_context: Context configuration
+            task_provider: Provider configuration
+            system_prompt: Optional system prompt
+            llm_params: Parameters for the LLM provider
+
+        Returns:
+            Task result
+
+        Raises:
+            TaskError: If execution fails
+        """
         try:
-            # Add tool configuration if available and non-empty
+            llm_params = llm_params or {}
+            # Add tool configuration if available
             tool_config = self._prepare_tool_config(task_context, task_provider)
-            if tool_config and tool_config.get("tools"):  # Only add if we have tools
-                kwargs.update(tool_config)
+            if tool_config and tool_config.get("tools"):
+                llm_params.update(tool_config)
 
             # Load and process context
             context_result = await self._load_context(task_context)
-
-            # Prepare messages with new content structure support
             messages = self._prepare_messages(context_result, system_prompt)
 
             # Configure and create provider
@@ -152,7 +105,7 @@ class TaskExecutor:
 
             # Get completion with potential tool calls
             while True:
-                completion = await provider.complete(messages, **kwargs)
+                completion = await provider.complete(messages, **llm_params)
 
                 # Handle tool calls if present
                 if completion.tool_calls:
@@ -189,6 +142,7 @@ class TaskExecutor:
                 )
 
         except Exception as exc:
+            logger.exception("Task execution failed")
             msg = "Task execution failed"
             raise exceptions.TaskError(msg) from exc
 
@@ -196,8 +150,9 @@ class TaskExecutor:
         self,
         task_context: TaskContext,
         task_provider: TaskProvider,
+        *,
         system_prompt: str | None = None,
-        **kwargs: Any,
+        llm_params: dict[str, Any] | None = None,
     ) -> AsyncIterator[TaskResult]:
         """Execute a task with streaming results.
 
@@ -205,29 +160,34 @@ class TaskExecutor:
             task_context: Context configuration
             task_provider: Provider configuration
             system_prompt: Optional system prompt
-            **kwargs: Additional parameters for LLM
+            llm_params: Parameters for the LLM provider
 
         Yields:
-            Streaming task results
+            Streaming results
 
         Raises:
             TaskError: If execution fails
         """
         try:
+            llm_params = llm_params or {}
+            # Add tool configuration if available
+            tool_config = self._prepare_tool_config(task_context, task_provider)
+            if tool_config and tool_config.get("tools"):
+                llm_params.update(tool_config)
+
             # Load and process context
             context_result = await self._load_context(task_context)
-
-            # Prepare messages with new content structure support
             messages = self._prepare_messages(context_result, system_prompt)
 
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider, streaming=True)
             provider = self.provider_registry.create_provider(
-                task_provider.name, llm_config
+                task_provider.name,
+                llm_config,
             )
 
             # Stream completions
-            async for completion in provider.complete_stream(messages, **kwargs):
+            async for completion in provider.complete_stream(messages, **llm_params):
                 yield TaskResult(
                     content=completion.content,
                     model=completion.model,
@@ -237,17 +197,82 @@ class TaskExecutor:
 
         except Exception as exc:
             logger.exception("Task streaming failed")
-            msg = f"Task streaming failed: {exc}"
+            msg = "Task streaming failed"
             raise exceptions.TaskError(msg) from exc
 
-    async def _load_context(self, task_context: TaskContext) -> Any:
+    @logfire.instrument("Preparing tool configuration for {task_provider.name}")
+    def _prepare_tool_config(
+        self,
+        task_context: TaskContext,
+        task_provider: TaskProvider,
+    ) -> dict[str, Any] | None:
+        """Prepare tool configuration if tools are enabled.
+
+        Args:
+            task_context: Context configuration
+            task_provider: Provider configuration
+
+        Returns:
+            Tool configuration or None if no tools enabled
+        """
+        if not self.tool_registry:
+            logger.debug("No tool registry available")
+            return None
+
+        available_tools = []
+
+        # Add inherited tools from provider if enabled
+        if (
+            task_context.inherit_tools
+            and task_provider.settings
+            and task_provider.settings.tools
+        ):
+            logger.debug(
+                "Inheriting tools from provider: %s", task_provider.settings.tools
+            )
+            available_tools.extend(task_provider.settings.tools)
+
+        # Add task-specific tools
+        if task_context.tools:
+            logger.debug("Adding task-specific tools: %s", task_context.tools)
+            available_tools.extend(task_context.tools)
+
+        if not available_tools:
+            logger.debug("No tools available")
+            return None
+
+        # Get complete tool schemas including type
+        tool_schemas = []
+        for tool_name in available_tools:
+            if tool_name not in self.tool_registry:
+                logger.warning("Tool not found in registry: %s", tool_name)
+                continue
+
+            schema = self.tool_registry.get_schema(tool_name)
+            tool_schemas.append(schema.model_dump())
+
+        if not tool_schemas:
+            return None
+
+        return {
+            "tools": tool_schemas,
+            "tool_choice": (
+                task_context.tool_choice
+                or (
+                    task_provider.settings.tool_choice if task_provider.settings else None
+                )
+                or "auto"
+            ),
+        }
+
+    async def _load_context(self, task_context: TaskContext) -> LoadedContext:
         """Load and process context.
 
         Args:
             task_context: Context configuration
 
         Returns:
-            Processed context result
+            Loaded and processed context
 
         Raises:
             TaskError: If context loading fails
@@ -256,29 +281,44 @@ class TaskExecutor:
             # Get appropriate loader
             loader = self.context_registry.get_loader(task_context.context)
 
-            # Load and process content
-            return await loader.load(
+            # Load base context
+            loaded_context = await loader.load(
                 task_context.context,
                 self.processor_registry,
             )
 
+            # Apply runtime context if available
+            if task_context.runtime_context:
+                if isinstance(loaded_context.content, str):
+                    try:
+                        loaded_context.content = loaded_context.content.format(
+                            **task_context.runtime_context
+                        )
+                    except KeyError as exc:
+                        logger.warning(
+                            "Failed to format content with runtime context: %s", exc
+                        )
+                loaded_context.metadata["runtime_context"] = task_context.runtime_context
+
         except Exception as exc:
             msg = "Context loading failed"
             raise exceptions.TaskError(msg) from exc
+        else:
+            return loaded_context
 
     def _prepare_messages(
         self,
-        loaded_context: LoadedContext | str,  # for bw compat
+        loaded_context: LoadedContext | str,
         system_prompt: str | None,
     ) -> list[Message]:
         """Prepare messages for LLM completion.
 
         Args:
-            loaded_context: Loaded and processed context
+            loaded_context: Loaded context or direct string content
             system_prompt: Optional system prompt
 
         Returns:
-            List of messages
+            List of messages for the LLM
         """
         messages: list[Message] = []
 
@@ -290,18 +330,30 @@ class TaskExecutor:
                 )
             )
 
-        # If context has content_items, use them directly
+        # Handle both LoadedContext and direct string input
         if isinstance(loaded_context, str):
-            # Backward compatibility: use plain content
-            messages.append(Message(role="user", content=loaded_context))
-
+            messages.append(
+                Message(
+                    role="user",
+                    content=loaded_context,
+                )
+            )
+        # If context has content_items, use them directly
         elif loaded_context.content_items:
             messages.append(
-                Message(role="user", content_items=loaded_context.content_items)
+                Message(
+                    role="user",
+                    content_items=loaded_context.content_items,
+                )
             )
         else:
             # Backward compatibility: use plain content
-            messages.append(Message(role="user", content=loaded_context.content))
+            messages.append(
+                Message(
+                    role="user",
+                    content=loaded_context.content,
+                )
+            )
 
         return messages
 
@@ -311,7 +363,15 @@ class TaskExecutor:
         *,
         streaming: bool = False,
     ) -> LLMConfig:
-        """Create LLM configuration from provider settings."""
+        """Create LLM configuration from provider settings.
+
+        Args:
+            provider: Provider configuration
+            streaming: Whether to enable streaming
+
+        Returns:
+            LLM configuration
+        """
         provider_settings = (
             provider.settings.model_dump(exclude_none=True)
             if provider.settings is not None
