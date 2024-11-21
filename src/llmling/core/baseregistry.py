@@ -16,7 +16,7 @@ TItem = TypeVar("TItem")
 TKey = TypeVar("TKey", str, int)
 
 
-class BaseRegistry[TItem, TKey](MutableMapping[TKey, TItem], ABC):
+class BaseRegistry[TKey, TItem](MutableMapping[TKey, TItem], ABC):
     """Base class for component registries."""
 
     def __init__(self) -> None:

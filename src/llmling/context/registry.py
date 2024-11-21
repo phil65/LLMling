@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ContextLoaderRegistry(BaseRegistry[ContextLoader[Any], str]):
+class ContextLoaderRegistry(BaseRegistry[str, ContextLoader[Any]]):
     """Registry for context loaders."""
 
     @property

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ProcessorRegistry(BaseRegistry[BaseProcessor, str]):
+class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
     """Registry and execution manager for processors."""
 
     @property

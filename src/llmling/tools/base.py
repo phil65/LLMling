@@ -137,7 +137,7 @@ class DynamicTool:
         return await self._instance.execute(**params)
 
 
-class ToolRegistry(BaseRegistry[BaseTool | DynamicTool, str]):
+class ToolRegistry(BaseRegistry[str, BaseTool | DynamicTool]):
     """Registry for available tools."""
 
     @property

@@ -17,48 +17,56 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ProviderRegistry(BaseRegistry[type[LLMProvider], str]):
-    """Registry for LLM providers."""
+class ProviderFactory:
+    """Factory to create configured provider instances."""
+
+    def __init__(self, provider_class: type[LLMProvider]) -> None:
+        """Initialize with provider class."""
+        self.provider_class = provider_class
+
+    def create(self, config: LLMConfig) -> LLMProvider:
+        """Create new provider instance with config."""
+        return self.provider_class(config)
+
+
+class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
+    """Registry for LLM provider factories."""
 
     def __init__(self) -> None:
-        """Initialize an empty registry."""
+        """Initialize registry."""
         super().__init__()
-        # Store actual implementations
-        self._implementations: dict[str, type[LLMProvider]] = {
-            "litellm": LiteLLMProvider,
-        }
-        # Store provider to implementation mappings
-        self._provider_impl: dict[str, str] = {}
+        # Register default implementation
+        self.register("litellm", ProviderFactory(LiteLLMProvider))
 
     @property
     def _error_class(self) -> type[exceptions.LLMError]:
         return exceptions.LLMError
 
-    def _validate_item(self, item: Any) -> str:
-        """Validate and possibly transform item before registration."""
-        match item:
-            case str() if item in self._implementations:
-                return item
-            case type() if issubclass(item, LLMProvider):
-                return item.__name__
-            case str():  # Accept any string since we're mapping providers
-                return "litellm"  # Default to litellm implementation
-            case _:
-                msg = f"Invalid provider type: {type(item)}"
-                raise exceptions.LLMError(msg)
-
-    def __setitem__(self, key: str, value: str | type[LLMProvider]) -> None:
-        """Map provider to implementation."""
-        impl_name = self._validate_item(value)
-        self._provider_impl[key] = impl_name
-        super().__setitem__(key, impl_name)
+    def _validate_item(self, item: Any) -> ProviderFactory:
+        """Validate and create factory from input."""
+        try:
+            match item:
+                # Handle direct provider class
+                case type() if issubclass(item, LLMProvider):
+                    return ProviderFactory(item)
+                # Handle factory instance
+                case ProviderFactory():
+                    return item
+                # Handle string reference to litellm
+                case str():
+                    return ProviderFactory(LiteLLMProvider)
+                case _:
+                    msg = f"Invalid provider type: {type(item)}"
+                    raise exceptions.LLMError(msg)
+        except TypeError as exc:
+            msg = f"Invalid provider: {exc}"
+            raise exceptions.LLMError(msg) from exc
 
     def create_provider(self, name: str, config: LLMConfig) -> LLMProvider:
-        """Create a provider instance."""
+        """Create a configured provider instance."""
         try:
-            impl_name = self._provider_impl[name]
-            impl_class = self._implementations[impl_name]
-            return impl_class(config)
+            factory = self.get(name)
+            return factory.create(config)
         except KeyError as exc:
             msg = f"Provider not found: {name}"
             raise exceptions.LLMError(msg) from exc
