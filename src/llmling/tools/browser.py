@@ -146,8 +146,8 @@ if __name__ == "__main__":
         async with LLMLingClient(
             "src/llmling/resources/web_research.yml", log_level="DEBUG"
         ) as client:
-            print("\nAvailable tools:", client.tool_registry.list_tools())
-            print("Tool registry contents:", client.tool_registry._tools)
+            print("\nAvailable tools:", client.tool_registry.list_items())
+            print("Tool registry contents:", client.tool_registry._items)
 
             result = await client.execute("web_research")
             print(result.content)

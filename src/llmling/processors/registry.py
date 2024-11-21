@@ -1,27 +1,22 @@
-"""Processor registry and execution management."""
+"""Registry for content processors."""
 
 from __future__ import annotations
 
-import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import logfire
 
 from llmling.context.models import ProcessingContext
 from llmling.core import exceptions
+from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
-from llmling.processors.base import (
-    BaseProcessor,
-    ProcessorConfig,
-    ProcessorResult,
-)
+from llmling.processors.base import BaseProcessor, ProcessorConfig, ProcessorResult
 from llmling.processors.implementations.function import FunctionProcessor
 from llmling.processors.implementations.template import TemplateProcessor
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-    from typing import Any
 
     from llmling.core.typedefs import ProcessingStep
 
@@ -29,39 +24,23 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ProcessorRegistry:
+class ProcessorRegistry(BaseRegistry[BaseProcessor, str]):
     """Registry and execution manager for processors."""
 
-    def __init__(self) -> None:
-        """Initialize an empty registry."""
-        self._processors: dict[str, BaseProcessor] = {}
-        self._configs: dict[str, ProcessorConfig] = {}
-        self._active = False
-        self._lock = asyncio.Lock()
+    @property
+    def _error_class(self) -> type[exceptions.ProcessorError]:
+        return exceptions.ProcessorError
 
-    async def startup(self) -> None:
-        """Initialize all registered processors."""
-        if self._active:
-            return
-
-        async with self._lock:
-            if self._active:
-                return
-
-            try:
-                for name, config in self._configs.items():
-                    processor = self._create_processor(config)
-                    await processor.startup()
-                    self._processors[name] = processor
-
-                self._active = True
-                logger.info("Processor registry started successfully")
-
-            except Exception as exc:
-                logger.exception("Failed to start processor registry")
-                await self.shutdown()
-                msg = "Registry startup failed"
-                raise exceptions.ProcessorError(msg) from exc
+    def _validate_item(self, item: Any) -> BaseProcessor:
+        """Validate processor configuration and create instance."""
+        match item:
+            case ProcessorConfig():
+                return self._create_processor(item)
+            case BaseProcessor():
+                return item
+            case _:
+                msg = f"Invalid processor type: {type(item)}"
+                raise exceptions.ProcessorError(msg)
 
     def _create_processor(self, config: ProcessorConfig) -> BaseProcessor:
         """Create processor instance from configuration."""
@@ -71,26 +50,33 @@ class ProcessorRegistry:
                     return FunctionProcessor(config)
                 case "template":
                     return TemplateProcessor(config)
+                case _:
+                    msg = f"Unknown processor type: {config.type}"
+                    raise exceptions.ProcessorError(msg)  # noqa: TRY301
         except Exception as exc:
             msg = f"Failed to create processor for config {config}"
             raise exceptions.ProcessorError(msg) from exc
-        msg = f"Unknown processor type: {config.type}"
-        raise exceptions.ProcessorError(msg)
 
-    def register(self, name: str, config: ProcessorConfig) -> None:
+    async def _initialize_item(self, item: BaseProcessor) -> None:
+        """Initialize processor during startup."""
+        await item.startup()
+
+    async def _cleanup_item(self, item: BaseProcessor) -> None:
+        """Clean up processor during shutdown."""
+        await item.shutdown()
+
+    # Backward compatibility methods
+    def register(self, key: str, item: ProcessorConfig) -> None:  # type: ignore
         """Register a new processor configuration."""
-        if name in self._configs:
-            msg = f"Processor {name} already registered"
-            raise exceptions.ProcessorError(msg)
+        super().register(key, item)
 
-        self._configs[name] = config
-
-        # If registry is already active, create and initialize the processor immediately
-        if self._active:
-            processor = self._create_processor(config)
-            # We can't await here since this is a sync method,
-            # so we'll initialize in get_processor instead
-            self._processors[name] = processor
+    async def get_processor(self, name: str) -> BaseProcessor:
+        """Get a processor by name (backward compatibility)."""
+        processor = self.get(name)
+        if not getattr(processor, "_initialized", False):
+            await processor.startup()
+            processor._initialized = True  # type: ignore
+        return processor
 
     @logfire.instrument("Processing content")
     async def process(
@@ -100,7 +86,7 @@ class ProcessorRegistry:
         metadata: dict[str, Any] | None = None,
     ) -> ProcessorResult:
         """Process content through steps."""
-        if not self._active:
+        if not self._initialized:
             await self.startup()
 
         current_context = ProcessingContext(
@@ -178,50 +164,6 @@ class ProcessorRegistry:
             )
         )
 
-    async def shutdown(self) -> None:
-        """Shutdown all processors."""
-        if not self._active:
-            return
-
-        async with self._lock:
-            if not self._active:
-                return
-
-            logger.info("Shutting down processor registry")
-            errors: list[tuple[str, Exception]] = []
-
-            for name, processor in self._processors.items():
-                try:
-                    await processor.shutdown()
-                except Exception as exc:
-                    logger.exception("Error shutting down processor %s", name)
-                    errors.append((name, exc))
-
-            self._processors.clear()
-            self._active = False
-
-            if errors:
-                error_msgs = [f"{name}: {exc}" for name, exc in errors]
-                msg = f"Errors during shutdown: {', '.join(error_msgs)}"
-                raise exceptions.ProcessorError(msg)
-
-    async def get_processor(self, name: str) -> BaseProcessor:
-        """Get a processor by name."""
-        if not self._active:
-            await self.startup()
-
-        try:
-            processor = self._processors[name]
-        except KeyError as exc:
-            msg = f"Processor not found: {name}"
-            raise exceptions.ProcessorError(msg) from exc
-        else:
-            # Initialize if not already initialized
-            if not getattr(processor, "_initialized", False):
-                await processor.startup()
-                processor._initialized = True
-            return processor
-
     async def process_stream(
         self,
         content: str,
@@ -229,7 +171,7 @@ class ProcessorRegistry:
         metadata: dict[str, Any] | None = None,
     ) -> AsyncIterator[ProcessorResult]:
         """Process content through steps, yielding intermediate results."""
-        if not self._active:
+        if not self._initialized:
             await self.startup()
 
         current_context = ProcessingContext(
@@ -268,76 +210,13 @@ class ProcessorRegistry:
                 msg = f"Step {step.name} failed"
                 raise exceptions.ProcessorError(msg) from exc
 
-    def _group_parallel_steps(
-        self,
-        steps: list[ProcessingStep],
-    ) -> list[list[ProcessingStep]]:
-        """Group steps by parallel execution.
-
-        Args:
-            steps: Steps to group
-
-        Returns:
-            List of step groups for parallel execution
-        """
-        groups: list[list[ProcessingStep]] = []
-        current_group: list[ProcessingStep] = []
-
-        for step in steps:
-            if step.parallel and current_group:
-                current_group.append(step)
-            else:
-                if current_group:
-                    groups.append(current_group)
-                current_group = [step]
-
-        if current_group:
-            groups.append(current_group)
-
-        return groups
-
-    async def _process_step(
-        self,
-        step: ProcessingStep,
-        context: ProcessingContext,
-    ) -> ProcessingContext:
-        """Process a single step.
-
-        Args:
-            step: Step to process
-            context: Current processing context
-
-        Returns:
-            Updated context
-
-        Raises:
-            ProcessorError: If processing fails
-        """
-        try:
-            processor = await self.get_processor(step.name)
-            context.kwargs = step.kwargs
-            result = await processor.process(context)
-
-            return ProcessingContext(
-                original_content=context.original_content,
-                current_content=result.content,
-                metadata={**context.metadata, **result.metadata},
-            )
-
-        except Exception as exc:
-            if step.required:
-                msg = f"Step {step.name} failed"
-                raise exceptions.ProcessorError(msg) from exc
-            logger.warning("Optional step %s failed: %s", step.name, exc)
-            return context
-
     async def process_parallel_steps(
         self,
         steps: list[ProcessingStep],
         context: ProcessingContext,
     ) -> ProcessorResult:
         """Process steps in parallel."""
-        results = []
+        results: list[ProcessorResult] = []
 
         for step in steps:
             step_context = ProcessingContext(
@@ -370,7 +249,7 @@ class ProcessorRegistry:
 
         # Combine successful results
         combined_content = "\n".join(r.content for r in results)
-        combined_metadata = {}
+        combined_metadata: dict[str, Any] = {}
         for result in results:
             combined_metadata.update(result.metadata)
 

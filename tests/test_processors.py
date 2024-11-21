@@ -256,9 +256,9 @@ async def test_registry_lifecycle(registry: ProcessorRegistry) -> None:
 
     registry.register("reverse", config)
     await registry.startup()
-    assert registry._active
+    assert registry._initialized
     await registry.shutdown()
-    assert not registry._active
+    assert not registry._initialized
 
 
 @pytest.mark.asyncio

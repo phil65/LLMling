@@ -32,7 +32,7 @@ class ContextLoader(Generic[TContext], ABC):
     def context_type(self) -> str:
         """Infer context type from context class."""
         fields = self.context_class.model_fields  # type: ignore
-        return fields["context_type"].default
+        return fields["context_type"].default  #  type: ignore
 
     @abstractmethod
     async def load(

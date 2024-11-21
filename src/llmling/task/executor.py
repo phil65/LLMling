@@ -56,7 +56,7 @@ class TaskExecutor:
         self.provider_registry = provider_registry
         self.tool_registry = tool_registry or ToolRegistry()
         logger.debug(
-            "TaskExecutor initialized with tools: %s", self.tool_registry.list_tools()
+            "TaskExecutor initialized with tools: %s", self.tool_registry.list_items()
         )
         self.config_manager = config_manager
         self.default_timeout = default_timeout
@@ -98,7 +98,7 @@ class TaskExecutor:
         # Get complete tool schemas including type
         tool_schemas = []
         for tool_name in available_tools:
-            if not self.tool_registry.has_tool(tool_name):
+            if tool_name not in self.tool_registry:
                 logger.warning("Tool not found in registry: %s", tool_name)
                 continue
 

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 import py2openai
 from pydantic import BaseModel, ConfigDict, Field
 
+from llmling.core.baseregistry import BaseRegistry
 from llmling.tools.exceptions import ToolError
 from llmling.utils import calling
 
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+    from llmling.tools import exceptions
 
 
 class ToolSchema(BaseModel):
@@ -133,28 +136,28 @@ class DynamicTool:
         return await self._instance.execute(**params)
 
 
-class ToolRegistry:
+class ToolRegistry(BaseRegistry[BaseTool | DynamicTool, str]):
     """Registry for available tools."""
 
-    def __init__(self) -> None:
-        """Initialize an empty registry."""
-        self._tools: dict[str, BaseTool | DynamicTool] = {}
+    @property
+    def _error_class(self) -> type[exceptions.ToolError]:
+        return ToolError
 
-    def has_tool(self, name: str) -> bool:
-        """Check if a tool is registered."""
-        return name in self._tools
+    def _validate_item(self, item: Any) -> BaseTool | DynamicTool:
+        """Validate and possibly transform item before registration."""
+        match item:
+            case type() as cls if issubclass(cls, BaseTool):
+                return cls()
+            case BaseTool() | DynamicTool():
+                return item
+            case _:
+                msg = f"Invalid tool type: {type(item)}"
+                raise ToolError(msg)
 
-    def is_empty(self) -> bool:
-        """Check if registry has any tools."""
-        return not bool(self._tools)
-
-    def register(self, tool: type[BaseTool] | BaseTool) -> None:
+    # Backward compatibility methods
+    def register(self, tool: type[BaseTool] | BaseTool) -> None:  # type: ignore
         """Register a tool class or instance."""
-        if isinstance(tool, type):
-            instance = tool()
-            self._tools[tool.name] = instance
-        else:
-            self._tools[tool.name] = tool
+        super().register(tool.name, tool)
 
     def register_path(
         self,
@@ -168,30 +171,15 @@ class ToolRegistry:
             name=name,
             description=description,
         )
-        if tool.name in self._tools:
-            msg = f"Tool already registered: {tool.name}"
-            raise ToolError(msg)
-        self._tools[tool.name] = tool
-
-    def get_tool(self, name: str) -> DynamicTool | BaseTool:
-        """Get a tool by name."""
-        try:
-            return self._tools[name]
-        except KeyError as exc:
-            msg = f"Tool not found: {name}"
-            raise ToolError(msg) from exc
+        super().register(tool.name, tool)
 
     def get_schema(self, name: str) -> ToolSchema:
         """Get schema for a tool."""
-        tool = self.get_tool(name)
+        tool = self.get(name)
         return tool.get_schema()
-
-    def list_tools(self) -> list[str]:
-        """List all registered tool names."""
-        return list(self._tools.keys())
 
     async def execute(self, name: str, **params: Any) -> Any:
         """Execute a tool by name."""
-        logger.debug("Attempting to execute tool: %s", name)  # Add this
-        tool = self.get_tool(name)
+        logger.debug("Attempting to execute tool: %s", name)
+        tool = self.get(name)
         return await tool.execute(**params)

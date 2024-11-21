@@ -2,75 +2,72 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from llmling.core import exceptions
+from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
+from llmling.llm.base import LLMProvider
 from llmling.llm.providers.litellm import LiteLLMProvider
 
 
 if TYPE_CHECKING:
-    from llmling.llm.base import LLMConfig, LLMProvider
+    from llmling.llm.base import LLMConfig
 
 
 logger = get_logger(__name__)
 
 
-class ProviderRegistry:
+class ProviderRegistry(BaseRegistry[type[LLMProvider], str]):
     """Registry for LLM providers."""
 
     def __init__(self) -> None:
         """Initialize an empty registry."""
+        super().__init__()
         self._implementations: dict[str, type[LLMProvider]] = {
             "litellm": LiteLLMProvider,
         }
-        self._providers: dict[str, str] = {}
 
-    def register_provider(
-        self,
-        name: str,
-        implementation: str,
-    ) -> None:
-        """Register a provider configuration with an implementation.
+    @property
+    def _error_class(self) -> type[exceptions.LLMError]:
+        return exceptions.LLMError
 
-        If the provider is already registered with the same implementation,
-        this is a no-op. If it's registered with a different implementation,
-        an error is raised.
-        """
-        if name in self._providers:
-            if self._providers[name] != implementation:
-                msg = f"Provider {name} already registered with different implementation"
+    def _validate_item(self, item: Any) -> type[LLMProvider]:
+        """Validate and possibly transform item before registration."""
+        if isinstance(item, type) and issubclass(item, LLMProvider):
+            return item
+        msg = f"Invalid provider type: {type(item)}"
+        raise exceptions.LLMError(msg)
+
+    # Backward compatibility methods
+    def register_provider(self, name: str, implementation: str) -> None:
+        """Register a provider configuration with an implementation."""
+        if name in self._items:
+            if implementation not in self._implementations:
+                msg = f"Implementation {implementation} not found"
                 raise exceptions.LLMError(msg)
-            return  # Already registered with same implementation
-
+            if self._items[name] != self._implementations[implementation]:
+                msg = (
+                    f"Provider {name} already registered with a different implementation"
+                )
+                raise exceptions.LLMError(msg)
+            return  # Already registered with the same implementation
         if implementation not in self._implementations:
             msg = f"Implementation {implementation} not found"
             raise exceptions.LLMError(msg)
+        super().register(name, self._implementations[implementation])
 
-        logger.debug("Registering LLM provider %s using %s", name, implementation)
-        self._providers[name] = implementation
-
-    def create_provider(
-        self,
-        name: str,
-        config: LLMConfig,
-    ) -> LLMProvider:
+    def create_provider(self, name: str, config: LLMConfig) -> LLMProvider:
         """Create a provider instance."""
-        try:
-            if not (implementation := self._providers.get(name)):
-                msg = f"Provider not found: {name}"
-                raise exceptions.LLMError(msg)
-
-            provider_class = self._implementations[implementation]
-            return provider_class(config)
-
-        except KeyError as exc:
-            msg = f"Provider or implementation not found: {name}"
-            raise exceptions.LLMError(msg) from exc
+        provider_class = self.get(name)
+        return provider_class(config)
 
     def reset(self) -> None:
         """Reset the registry to its initial state."""
-        self._providers.clear()
+        super().reset()
+        self._implementations = {
+            "litellm": LiteLLMProvider,
+        }
 
 
 # Global registry instance

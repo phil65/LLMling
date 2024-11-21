@@ -26,7 +26,7 @@ async def test_tool_registration_and_execution():
     registry.register_path(import_path=EXAMPLE_IMPORT, name="test_tool")
 
     # Verify tool is registered
-    assert "test_tool" in registry.list_tools()
+    assert "test_tool" in registry.list_items()
 
     # Execute tool and verify result
     result = await registry.execute("test_tool", text="hello", repeat=2)
@@ -117,7 +117,7 @@ class TestToolRegistry:
     def test_register_path(self, registry: ToolRegistry) -> None:
         """Test registering a tool by import path."""
         registry.register_path(EXAMPLE_IMPORT, name="custom_tool")
-        assert "custom_tool" in registry.list_tools()
+        assert "custom_tool" in registry.list_items()
 
     def test_register_duplicate(self, registry: ToolRegistry) -> None:
         """Test registering duplicate tool names."""
@@ -128,13 +128,13 @@ class TestToolRegistry:
     def test_get_nonexistent(self, registry: ToolRegistry) -> None:
         """Test getting non-existent tool."""
         with pytest.raises(ToolError):
-            registry.get_tool("nonexistent")
+            registry.get("nonexistent")
 
-    def test_list_tools(self, registry: ToolRegistry) -> None:
+    def test_list_items(self, registry: ToolRegistry) -> None:
         """Test listing registered tools."""
         registry.register_path(EXAMPLE_IMPORT, name="tool1")
         registry.register_path(ANALYZE_IMPORT, name="tool2")
-        tools = registry.list_tools()
+        tools = registry.list_items()
         assert len(tools) == 2  # noqa: PLR2004
         assert "tool1" in tools
         assert "tool2" in tools
