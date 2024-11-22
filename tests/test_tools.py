@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from llmling.tools.base import DynamicTool, ToolRegistry
+from llmling.tools.base import DynamicTool
 from llmling.tools.exceptions import ToolError
+from llmling.tools.registry import ToolRegistry
 
 
 EXAMPLE_IMPORT = "llmling.testing.tools.example_tool"

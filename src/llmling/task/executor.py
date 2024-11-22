@@ -10,7 +10,7 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.llm.base import LLMConfig, Message
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
-from llmling.tools.base import ToolRegistry
+from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:

@@ -15,7 +15,7 @@ from llmling.processors.registry import ProcessorRegistry
 from llmling.task.concurrent import execute_concurrent
 from llmling.task.executor import TaskExecutor
 from llmling.task.manager import TaskManager
-from llmling.tools.base import ToolRegistry
+from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:

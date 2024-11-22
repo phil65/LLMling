@@ -15,7 +15,7 @@ from llmling.context.models import LoadedContext
 from llmling.llm.base import CompletionResult
 from llmling.task.executor import TaskExecutor
 from llmling.task.models import TaskContext, TaskProvider
-from llmling.tools.base import ToolRegistry
+from llmling.tools.registry import ToolRegistry
 
 
 ANALYZE_IMPORT = "llmling.testing.tools.analyze_ast"
