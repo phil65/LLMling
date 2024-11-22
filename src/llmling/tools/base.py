@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import py2openai
-from pydantic import BaseModel, ConfigDict, Field
 
 from llmling.utils import calling
 
@@ -14,24 +13,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-
-
-class ToolSchema(BaseModel):
-    """OpenAPI-compatible schema for a tool."""
-
-    # Make type a required field with a default value
-    type: Literal["function"] = Field(
-        default="function",
-        # Ensure it's always included in output
-        exclude=False,
-    )
-    function: dict[str, Any]
-
-    model_config = ConfigDict(
-        frozen=True,
-        # Ensure type is always included even when using exclude_unset
-        populate_by_name=True,
-    )
 
 
 class BaseTool(ABC):
@@ -43,17 +24,9 @@ class BaseTool(ABC):
     parameters_schema: ClassVar[dict[str, Any]]
 
     @classmethod
-    def get_schema(cls) -> ToolSchema:
+    def get_schema(cls) -> py2openai.ToolSchema:
         """Get the tool's schema for LLM function calling."""
-        schema = py2openai.create_schema(cls.execute).model_dump_openai()
-        return ToolSchema(
-            type="function",
-            function={
-                "name": cls.name,
-                "description": cls.description,
-                **schema,
-            },
-        )
+        return py2openai.create_schema(cls.execute).model_dump_openai()
 
     @abstractmethod
     async def execute(self, **params: Any) -> Any | Awaitable[Any]:
@@ -99,20 +72,13 @@ class DynamicTool:
             self._func = calling.import_callable(self.import_path)
         return self._func
 
-    def get_schema(self) -> ToolSchema:
+    def get_schema(self) -> py2openai.ToolSchema:
         """Generate schema from function signature."""
-        func_schema = py2openai.create_schema(self.func)
-        schema_dict = func_schema.model_dump_openai()
-
+        schema_dict = py2openai.create_schema(self.func).model_dump_openai()
         # Override name and description
-        schema_dict["name"] = self.name  # Use the tool's name, not the class name
-        if self._description:
-            schema_dict["description"] = self._description
-
-        return ToolSchema(
-            type="function",
-            function=schema_dict,
-        )
+        schema_dict["name"] = self.name or schema_dict["name"]
+        schema_dict["description"] = self._description or schema_dict["description"]
+        return schema_dict
 
     async def execute(self, **params: Any) -> Any:
         """Execute the function."""

@@ -5,13 +5,15 @@ from typing import TYPE_CHECKING, Any
 
 from llmling.config.models import ToolConfig
 from llmling.core.baseregistry import BaseRegistry
-from llmling.tools.base import BaseTool, DynamicTool, ToolSchema
+from llmling.tools.base import BaseTool, DynamicTool
 from llmling.tools.exceptions import ToolError
 
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from py2openai import ToolSchema
+
     from llmling.tools import exceptions
 
 

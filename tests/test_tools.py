@@ -92,11 +92,10 @@ class TestDynamicTool:
         tool = DynamicTool(EXAMPLE_IMPORT)
         schema = tool.get_schema()
 
-        assert schema.type == "function"
-        assert schema.function["name"] == "example_tool"
-        assert "text" in schema.function["parameters"]["properties"]
-        assert "repeat" in schema.function["parameters"]["properties"]
-        assert schema.function["parameters"]["required"] == ["text"]
+        assert schema["name"] == "example_tool"
+        assert "text" in schema["parameters"]["properties"]
+        assert "repeat" in schema["parameters"]["properties"]
+        assert schema["parameters"]["required"] == ["text"]
 
     @pytest.mark.asyncio
     async def test_execution(self) -> None:
@@ -166,10 +165,9 @@ class TestToolRegistry:
         registry["analyze_ast"] = ANALYZE_IMPORT
         schema = registry.get_schema("analyze_ast")
 
-        assert schema.type == "function"
-        assert "code" in schema.function["parameters"]["properties"]
-        assert schema.function["parameters"]["required"] == ["code"]
-        assert "Analyze Python code AST" in schema.function["description"]
+        assert "code" in schema["parameters"]["properties"]
+        assert schema["parameters"]["required"] == ["code"]
+        assert "Analyze Python code AST" in schema["description"]
 
 
 # Integration tests
@@ -182,8 +180,7 @@ async def test_tool_integration() -> None:
 
     # Get schema
     schema = registry.get_schema("analyze")
-    assert schema.type == "function"
-
+    assert schema["name"] == "analyze_ast"
     # Execute tool
     code = """
 class TestClass:

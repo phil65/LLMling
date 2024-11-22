@@ -16,6 +16,8 @@ from llmling.tools.registry import ToolRegistry
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    import py2openai
+
     from llmling.config.manager import ConfigManager
     from llmling.context import ContextLoaderRegistry
     from llmling.context.models import LoadedContext
@@ -219,7 +221,7 @@ class TaskExecutor:
             logger.debug("No tool registry available")
             return None
 
-        available_tools = []
+        available_tools: list[str] = []
 
         # Add inherited tools from provider if enabled
         if (
@@ -242,14 +244,14 @@ class TaskExecutor:
             return None
 
         # Get complete tool schemas including type
-        tool_schemas = []
+        tool_schemas: list[py2openai.ToolSchema] = []
         for tool_name in available_tools:
             if tool_name not in self.tool_registry:
                 logger.warning("Tool not found in registry: %s", tool_name)
                 continue
 
             schema = self.tool_registry.get_schema(tool_name)
-            tool_schemas.append(schema.model_dump())
+            tool_schemas.append(schema)
 
         if not tool_schemas:
             return None
