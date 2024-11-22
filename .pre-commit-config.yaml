@@ -35,13 +35,13 @@ repos:
         additional_dependencies: [orjson, pydantic]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.7.2
+    rev: v0.8.0
     hooks:
       - id: ruff
       - id: ruff-format
 
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.30.0
+    rev: v3.31.0
     hooks:
       - id: commitizen
         stages: [commit-msg]
