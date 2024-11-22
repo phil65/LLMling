@@ -12,7 +12,7 @@ from llmling.tools.exceptions import ToolError
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from py2openai import ToolSchema
+    from py2openai import OpenAIFunctionTool
 
     from llmling.tools import exceptions
 
@@ -49,7 +49,7 @@ class ToolRegistry(BaseRegistry[str, BaseTool | DynamicTool]):
                 msg = f"Invalid tool type: {type(item)}"
                 raise ToolError(msg)
 
-    def get_schema(self, name: str) -> ToolSchema:
+    def get_schema(self, name: str) -> OpenAIFunctionTool:
         """Get schema for a tool."""
         tool = self.get(name)
         return tool.get_schema()

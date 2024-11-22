@@ -24,7 +24,7 @@ class BaseTool(ABC):
     parameters_schema: ClassVar[dict[str, Any]]
 
     @classmethod
-    def get_schema(cls) -> py2openai.ToolSchema:
+    def get_schema(cls) -> py2openai.OpenAIFunctionTool:
         """Get the tool's schema for LLM function calling."""
         return py2openai.create_schema(cls.execute).model_dump_openai()
 
@@ -72,12 +72,14 @@ class DynamicTool:
             self._func = calling.import_callable(self.import_path)
         return self._func
 
-    def get_schema(self) -> py2openai.ToolSchema:
+    def get_schema(self) -> py2openai.OpenAIFunctionTool:
         """Generate schema from function signature."""
         schema_dict = py2openai.create_schema(self.func).model_dump_openai()
         # Override name and description
-        schema_dict["name"] = self.name or schema_dict["name"]
-        schema_dict["description"] = self._description or schema_dict["description"]
+        schema_dict["function"]["name"] = self.name or schema_dict["function"]["name"]
+        schema_dict["function"]["description"] = (
+            self._description or schema_dict["function"]["description"]
+        )
         return schema_dict
 
     async def execute(self, **params: Any) -> Any:
