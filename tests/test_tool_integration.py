@@ -33,9 +33,7 @@ def tool_config() -> Config:
             "test_provider": LLMProviderConfig(name="ABC", model="test/model"),
         },
         contexts={
-            "test_ctx": TextContext(
-                type="text", content="Test content", description="Test context"
-            ),
+            "test_ctx": TextContext(content="Test content", description="Test context"),
         },
         task_templates={},
         tools={

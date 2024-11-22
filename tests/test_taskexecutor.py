@@ -143,13 +143,8 @@ def executor(
 @pytest.fixture
 def task_context() -> TaskContext:
     """Sample task context fixture."""
-    return TaskContext(
-        context=TextContext(
-            type="text", description="test context", content="test content"
-        ),
-        processors=[],
-        inherit_tools=True,
-    )
+    text = TextContext(description="test context", content="test content")
+    return TaskContext(context=text, processors=[], inherit_tools=True)
 
 
 @pytest.fixture
@@ -279,7 +274,7 @@ def test_invalid_task_context(
 
     executor.context_registry.get_loader = get_failing_loader  # type: ignore
 
-    text_ctx = TextContext(type="text", description="invalid ctx", content="some content")
+    text_ctx = TextContext(description="invalid ctx", content="some content")
     task_ctx = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
     with pytest.raises(exceptions.TaskError):
         asyncio.run(executor.execute(task_ctx, task_provider))
@@ -290,7 +285,7 @@ def test_validation_errors() -> None:
     """Test that validation errors are caught properly."""
     with pytest.raises(ValueError, match="text"):
         # Empty content should raise a validation error
-        TextContext(type="text", description="test", content="")
+        TextContext(description="test", content="")
 
 
 # And a test for proper error chaining
@@ -310,7 +305,7 @@ async def test_error_chaining(
                 raise exceptions.LoaderError(msg) from e
 
     executor.context_registry.get_loader = lambda x: ChainTestLoader()  # type: ignore
-    text_ctx = TextContext(type="text", description="test", content="test content")
+    text_ctx = TextContext(description="test", content="test content")
     valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
 
     with pytest.raises(exceptions.TaskError) as exc_info:
@@ -349,7 +344,7 @@ async def test_simple_error_chain(
             raise exceptions.LoaderError(msg)
 
     executor.context_registry.get_loader = lambda x: SimpleErrorLoader()  # type: ignore
-    text_ctx = TextContext(type="text", description="test", content="test content")
+    text_ctx = TextContext(description="test", content="test content")
     valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
 
     with pytest.raises(exceptions.TaskError) as exc_info:
