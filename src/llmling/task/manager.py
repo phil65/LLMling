@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import upath
+
+from llmling.config.models import ImageContext, PathContext, SourceContext, TextContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
@@ -11,8 +14,11 @@ from llmling.task.models import TaskContext, TaskProvider, TaskResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    import os
 
     from llmling.config import Config, Context, LLMProviderConfig, TaskTemplate
+    from llmling.context.models import LoadedContext
+    from llmling.core.typedefs import ProcessingStep
     from llmling.task.executor import TaskExecutor
 
 logger = get_logger(__name__)
@@ -245,3 +251,89 @@ class TaskManager:
                 f"Provider {template.provider} not found in providers or provider groups"
             )
             raise exceptions.TaskError(msg)
+
+    async def load_context(
+        self,
+        source: str | os.PathLike[str],
+        *,
+        context_type: str | None = None,
+        processors: list[ProcessingStep] | None = None,
+    ) -> LoadedContext:
+        """Load context from a source.
+
+        Args:
+            source: Path or URL to load context from
+            context_type: Optional context type (will be inferred if not provided)
+            processors: Optional list of processors to apply
+
+        Returns:
+            Loaded and processed context
+
+        Raises:
+            ContextError: If loading fails
+        """
+        try:
+            # Infer context type if not provided
+            if context_type is None:
+                path = upath.UPath(source)
+                if path.suffix in {".py"}:
+                    context_type = "source"
+                elif path.suffix in {".jpg", ".png", ".jpeg", ".gif"}:
+                    context_type = "image"
+                else:
+                    context_type = "path"
+
+            # Create appropriate context based on type
+            context = self._create_context(
+                source,
+                context_type,
+                processors or [],
+            )
+
+            # Get loader
+            loader = self.executor.context_registry.get_loader(context)
+
+            # Load and process
+            return await loader.load(context, self.executor.processor_registry)
+
+        except Exception as exc:
+            msg = f"Failed to load context from {source}"
+            raise exceptions.ContextError(msg) from exc
+
+    def _create_context(
+        self,
+        source: str | os.PathLike[str],
+        context_type: str,
+        processors: list[ProcessingStep],
+    ) -> PathContext | SourceContext | TextContext | ImageContext:
+        """Create appropriate context instance based on type.
+
+        Args:
+            source: Source path or content
+            context_type: Type of context to create
+            processors: List of processors to apply
+
+        Returns:
+            Context instance of appropriate type
+
+        Raises:
+            ContextError: If context type is invalid
+        """
+        try:
+            match context_type:
+                case "path":
+                    return PathContext(path=str(source), processors=processors)
+                case "source":
+                    return SourceContext(import_path=str(source), processors=processors)
+                case "text":
+                    return TextContext(content=str(source), processors=processors)
+                case "image":
+                    return ImageContext(path=str(source), processors=processors)
+        except Exception as exc:
+            if isinstance(exc, exceptions.ContextError):
+                raise
+            msg = f"Failed to create context of type {context_type}"
+            raise exceptions.ContextError(msg) from exc
+        else:
+            msg = f"Invalid context type: {context_type}"
+            raise exceptions.ContextError(msg)
