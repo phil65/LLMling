@@ -23,7 +23,7 @@ class LLMConfig(BaseModel):
 
     # Core identification
     model: str
-    provider_name: str  # Key used for provider lookup
+    provider_name: str | None = None  # Key used for provider lookup
     display_name: str = ""  # Human-readable name
 
     # LLM parameters
