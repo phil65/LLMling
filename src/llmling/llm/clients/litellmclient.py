@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import logging
 from typing import TYPE_CHECKING, Any
 
 from diskcache import Cache
@@ -14,9 +15,10 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import Unpack
 
-    from llmling.llm.clients.protocol import LiteLLMCompletionParams
+    from llmling.llm.clients.protocol import CompletionUsage, LiteLLMCompletionParams
 
 
+logger = logging.getLogger(__name__)
 # Initialize cache with 1 day TTL for API responses
 _cache = Cache(".model_cache")
 _CACHE_TTL = timedelta(days=1).total_seconds()
@@ -89,3 +91,37 @@ async def stream(
         **request_kwargs,
     ):
         yield chunk
+
+
+def get_completion_cost(response: Any) -> CompletionUsage:
+    """Get token counts and cost for completion."""
+    import litellm
+
+    try:
+        usage = response.usage.model_dump()
+        cost = litellm.completion_cost(completion_response=response)
+        return {
+            "prompt_tokens": usage.get("prompt_tokens", 0),
+            "completion_tokens": usage.get("completion_tokens", 0),
+            "total_tokens": usage.get("total_tokens", 0),
+            "total_cost": cost,
+        }
+    except Exception:  # noqa: BLE001
+        logger.warning("Failed to calculate completion cost", exc_info=True)
+        return {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "total_cost": 0.0,
+        }
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        messages = [{"content": "Hello", "role": "user"}]
+        response = await complete("openai/gpt-3.5-turbo", messages)
+        print(response)
+
+    asyncio.run(main())

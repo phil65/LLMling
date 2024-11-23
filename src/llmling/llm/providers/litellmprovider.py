@@ -119,14 +119,19 @@ class LiteLLMProvider(LLMProvider):
                 messages_dict,
                 **kwargs,
             )
+
+            usage = litellmclient.get_completion_cost(response)
             return CompletionResult(
                 content=response.choices[0].message.content or "",
                 model=response.model,
                 tool_calls=self._process_tool_calls(response),
                 metadata={
                     "provider": "litellm",
-                    "usage": response.usage.model_dump(),
+                    "usage": usage,
                 },
+                prompt_tokens=usage.get("prompt_tokens"),
+                completion_tokens=usage.get("completion_tokens"),
+                total_cost=usage.get("total_cost"),
             )
         except Exception as exc:
             msg = f"LiteLLM completion failed: {exc}"
@@ -135,6 +140,7 @@ class LiteLLMProvider(LLMProvider):
     async def complete_stream(
         self,
         messages: list[Message],
+        *,
         chunk_size: int | None = None,
         **kwargs: Unpack[LiteLLMCompletionParams],
     ) -> AsyncIterator[CompletionResult]:

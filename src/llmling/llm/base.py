@@ -150,6 +150,10 @@ class CompletionResult(BaseModel):
     finish_reason: str | None = None
     tool_calls: list[ToolCall] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # cost information
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_cost: float | None = None
 
     model_config = ConfigDict(frozen=True)
 

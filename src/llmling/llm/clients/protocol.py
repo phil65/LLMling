@@ -76,3 +76,12 @@ class LiteLLMCompletionParams(CompletionParams, APIParams):
     max_image_size: NotRequired[int]
     cache: NotRequired[bool]
     metadata: NotRequired[dict[str, Any]]
+
+
+class CompletionUsage(TypedDict, total=False):
+    """Usage information from completion."""
+
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    total_cost: float
