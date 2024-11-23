@@ -34,6 +34,10 @@ class ContextLoader[TContext](ABC):
         """
         self.context = context
 
+    def __repr__(self) -> str:
+        """Show loader type and context."""
+        return f"{self.__class__.__name__}(context_type={self.context_type!r})"
+
     @classproperty  # type: ignore
     def context_type(self) -> str:
         """Infer context type from context class."""

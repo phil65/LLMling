@@ -66,6 +66,11 @@ class LLMLingClient:
         self._manager: TaskManager | None = None
         self._initialized = False
 
+    def __repr__(self) -> str:
+        """Show client configuration."""
+        status = "initialized" if self._initialized else "not initialized"
+        return f"LLMLingClient(config={self.config_path!r}, status={status!r})"
+
     @property
     def manager(self) -> TaskManager:
         """Get the task manager, raising if not initialized."""

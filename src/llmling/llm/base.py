@@ -169,6 +169,10 @@ class LLMProvider(ABC):
         """
         self.config = config
 
+    def __repr__(self) -> str:
+        """Show provider name and model."""
+        return f"{self.__class__.__name__}(model={self.config.model!r})"
+
     @abstractmethod
     async def complete(
         self,

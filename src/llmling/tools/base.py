@@ -27,6 +27,10 @@ class LLMCallableTool(ABC):
     description: ClassVar[str]
     _import_path: str | None = None  # For dynamic tools
 
+    def __repr__(self) -> str:
+        """Show tool name and import path."""
+        return f"{self.__class__.__name__}(name={self.name!r}, path={self.import_path!r})"
+
     @classproperty  # type: ignore
     def import_path(cls) -> str:  # noqa: N805
         """Get the import path of the tool.
