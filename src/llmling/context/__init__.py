@@ -22,13 +22,13 @@ default_registry["source"] = SourceContextLoader
 default_registry["callable"] = CallableContextLoader
 
 __all__ = [
-    "ContextLoader",
-    "LoadedContext",
-    "ContextLoaderRegistry",
-    "default_registry",
-    "CallableContextLoader",
     "CLIContextLoader",
+    "CallableContextLoader",
+    "ContextLoader",
+    "ContextLoaderRegistry",
+    "LoadedContext",
     "PathContextLoader",
     "SourceContextLoader",
     "TextContextLoader",
+    "default_registry",
 ]

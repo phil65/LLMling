@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence as TypingSequence  # noqa: TCH003
-import os  # noqa: TCH003
+from collections.abc import Sequence as TypingSequence  # noqa: TC003
+import os  # noqa: TC003
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from llmling.core.typedefs import ProcessingStep  # noqa: TCH001
-from llmling.processors.base import ProcessorConfig  # noqa: TCH001
+from llmling.core.typedefs import ProcessingStep  # noqa: TC001
+from llmling.processors.base import ProcessorConfig  # noqa: TC001
 
 
 ContextType = Literal["path", "text", "cli", "source", "callable", "image"]

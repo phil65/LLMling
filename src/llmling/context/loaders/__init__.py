@@ -7,8 +7,8 @@ from llmling.context.loaders.source import SourceContextLoader
 from llmling.context.loaders.text import TextContextLoader
 
 __all__ = [
-    "CallableContextLoader",
     "CLIContextLoader",
+    "CallableContextLoader",
     "PathContextLoader",
     "SourceContextLoader",
     "TextContextLoader",

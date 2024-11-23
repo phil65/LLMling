@@ -107,7 +107,7 @@ def create_mock_litellm_stream_chunk(
 
 
 @pytest.fixture
-def reset_litellm() -> Generator[None, None, None]:  # noqa: PT004
+def reset_litellm() -> Generator[None, None, None]:
     """Reset LiteLLM global settings before each test."""
     original_api_base = getattr(litellm, "api_base", None)
     original_api_key = getattr(litellm, "api_key", None)
