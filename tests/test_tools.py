@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from llmling.tools.base import DynamicTool
+from llmling.tools.base import LLMCallableTool
 from llmling.tools.exceptions import ToolError
 from llmling.tools.registry import ToolRegistry
 
@@ -54,8 +54,9 @@ async def test_tool_execution_with_invalid_params():
     registry["test_tool"] = EXAMPLE_IMPORT
 
     # Test with missing required parameter and parameter with wrong type
-    with pytest.raises(ValueError, match="Error executing"):  # noqa: PT012
+    with pytest.raises(TypeError, match="missing 1 required positional argument"):
         await registry.execute("test_tool")
+    with pytest.raises(TypeError, match="unsupported operand type"):
         await registry.execute("test_tool", text=None)
 
 
@@ -64,7 +65,7 @@ async def test_failing_tool():
     registry = ToolRegistry()
     registry["failing_tool"] = FAILING_IMPORT
 
-    with pytest.raises(ValueError, match="failing"):
+    with pytest.raises(ValueError, match="Intentional failure"):
         await registry.execute("failing_tool", text="any input")
 
 
@@ -72,24 +73,26 @@ async def test_failing_tool():
 class TestDynamicTool:
     def test_init(self) -> None:
         """Test tool initialization."""
-        tool = DynamicTool(import_path=EXAMPLE_IMPORT, name="name", description="desc")
+        tool = LLMCallableTool.from_callable(
+            EXAMPLE_IMPORT, name_override="name", description_override="desc"
+        )
         assert tool.name == "name"
         assert tool.description == "desc"
         assert tool.import_path == EXAMPLE_IMPORT
 
     def test_default_name(self) -> None:
         """Test default name from import path."""
-        tool = DynamicTool(EXAMPLE_IMPORT)
+        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
         assert tool.name == "example_tool"
 
     def test_default_description(self) -> None:
         """Test default description from docstring."""
-        tool = DynamicTool(EXAMPLE_IMPORT)
+        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
         assert "repeats text" in tool.description.lower()
 
     def test_schema_generation(self) -> None:
         """Test schema generation from function signature."""
-        tool = DynamicTool(EXAMPLE_IMPORT)
+        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
         schema = tool.get_schema()
 
         assert schema["function"]["name"] == "example_tool"
@@ -100,15 +103,15 @@ class TestDynamicTool:
     @pytest.mark.asyncio
     async def test_execution(self) -> None:
         """Test tool execution."""
-        tool = DynamicTool(EXAMPLE_IMPORT)
+        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
         result = await tool.execute(text="test", repeat=2)
         assert result == "testtest"
 
     @pytest.mark.asyncio
     async def test_execution_failure(self) -> None:
         """Test tool execution failure."""
-        tool = DynamicTool(FAILING_IMPORT)
-        with pytest.raises(Exception, match="test"):
+        tool = LLMCallableTool.from_callable(FAILING_IMPORT)
+        with pytest.raises(Exception, match="Intentional"):
             await tool.execute(text="test")
 
 

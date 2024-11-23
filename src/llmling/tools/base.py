@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import py2openai
 
 from llmling.utils import calling
 
+
+T = TypeVar("T", bound="LLMCallableTool")
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +17,38 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 
-class BaseTool(ABC):
+class LLMCallableTool(ABC):
     """Base class for implementing complex tools that need state or custom logic."""
 
     # Class-level schema definition
     name: ClassVar[str]
     description: ClassVar[str]
+    _import_path: str | None = None  # For dynamic tools
+
+    @property
+    def import_path(self) -> str:
+        """Get the import path of the tool.
+
+        For class-based tools, returns the actual class import path.
+        For dynamic tools, returns the stored import path.
+        """
+        if self._import_path is not None:
+            return self._import_path
+        # For class-based tools, get the actual class import path
+        klass = self.__class__
+        return f"{klass.__module__}.{klass.__qualname__}"
 
     @classmethod
     def get_schema(cls) -> py2openai.OpenAIFunctionTool:
         """Get the tool's schema for LLM function calling."""
+        # For dynamic tools, we want to use the original callable's schema
+        if hasattr(cls, "_original_callable"):
+            schema = py2openai.create_schema(cls._original_callable).model_dump_openai()
+            schema["function"]["name"] = cls.name
+            schema["function"]["description"] = cls.description
+            return schema
+
+        # For regular tools, use the execute method
         schema = py2openai.create_schema(cls.execute).model_dump_openai()
         schema["function"]["name"] = cls.name
         return schema
@@ -33,69 +57,84 @@ class BaseTool(ABC):
     async def execute(self, **params: Any) -> Any | Awaitable[Any]:
         """Execute the tool with given parameters."""
 
+    @classmethod
+    def from_callable(
+        cls,
+        fn: Callable[..., Any] | str,
+        *,
+        name_override: str | None = None,
+        description_override: str | None = None,
+    ) -> LLMCallableTool:
+        """Create a tool instance from a callable or import path.
 
-class DynamicTool:
-    """Tool created from a function import path."""
+        Args:
+            fn: Function or import path to create tool from
+            name_override: Optional override for tool name
+            description_override: Optional override for tool description
 
-    def __init__(
-        self,
-        import_path: str,
-        name: str | None = None,
-        description: str | None = None,
-    ) -> None:
-        """Initialize tool from import path."""
-        self.import_path = import_path
-        self._func: Callable[..., Any] | None = None
-        self._name = name
-        self._description = description
-        self._instance: BaseTool | None = None
+        Returns:
+            Tool instance
 
-    @property
-    def name(self) -> str:
-        """Get tool name."""
-        if self._name:
-            return self._name
-        return self.import_path.split(".")[-1]
+        Raises:
+            ValueError: If callable cannot be imported or is invalid
+        """
+        # If string provided, import the callable
+        if isinstance(fn, str):
+            try:
+                callable_obj = calling.import_callable(fn)
+            except Exception as exc:
+                msg = f"Failed to import callable from {fn}"
+                raise ValueError(msg) from exc
+        else:
+            callable_obj = fn
 
-    @property
-    def description(self) -> str:
-        """Get tool description."""
-        if self._description:
-            return self._description
-        if self.func.__doc__:
-            return self.func.__doc__.strip()
-        return f"Tool imported from {self.import_path}"
+        # Create dynamic subclass
+        class DynamicTool(LLMCallableTool):
+            # Store original callable for schema generation
+            _original_callable = staticmethod(callable_obj)
 
-    @property
-    def func(self) -> Callable[..., Any]:
-        """Get the imported function."""
-        if self._func is None:
-            self._func = calling.import_callable(self.import_path)
-        return self._func
+            # Use provided name/description or derive from callable
+            name = name_override or callable_obj.__name__
+            description = (
+                description_override
+                or callable_obj.__doc__
+                or f"Tool from {callable_obj.__name__}"
+            )
+            import inspect
 
-    def get_schema(self) -> py2openai.OpenAIFunctionTool:
-        """Generate schema from function signature."""
-        schema_dict = py2openai.create_schema(self.func).model_dump_openai()
-        # Override name and description
-        schema_dict["function"]["name"] = self.name or schema_dict["function"]["name"]
-        schema_dict["function"]["description"] = (
-            self._description or schema_dict["function"]["description"]
-        )
-        return schema_dict
+            module = inspect.getmodule(callable_obj)
+            if not module:
+                msg = f"Failed to get module for {callable_obj}"
+                raise ImportError(msg)
+            _import_path = f"{module.__name__}.{callable_obj.__qualname__}"
 
-    async def execute(self, **params: Any) -> Any:
-        """Execute the function."""
-        if self._instance is None:
-            # Import the class and create an instance
-            cls = calling.import_callable(self.import_path)
-            if isinstance(cls, type) and issubclass(cls, BaseTool):
-                self._instance = cls()
-                # Initialize the tool if needed
-                if hasattr(self._instance, "startup"):
-                    await self._instance.startup()
-            else:
-                # For regular functions, keep the old behavior
-                return await calling.execute_callable(self.import_path, **params)
+            async def execute(self, **params: Any) -> Any:
+                """Execute the imported callable."""
+                if calling.is_async_callable(callable_obj):
+                    return await callable_obj(**params)
+                return callable_obj(**params)
 
-        # Execute using the tool instance
-        return await self._instance.execute(**params)
+        return DynamicTool()
+
+
+if __name__ == "__main__":
+
+    def test(input_str: str, times: int = 2) -> str:
+        """Multiply input string.
+
+        Args:
+            input_str: String to multiply
+            times: Number of times to multiply (default: 2)
+
+        Returns:
+            Multiplied string
+        """
+        return input_str * times
+
+    tool = LLMCallableTool.from_callable(test, name_override="Example Tool")
+    print(f"Name: {tool.name}")
+    print(f"Description: {tool.description}")
+    print("\nSchema:")
+    import json
+
+    print(json.dumps(tool.get_schema(), indent=2))

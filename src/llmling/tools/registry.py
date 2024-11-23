@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from llmling.config.models import ToolConfig
 from llmling.core.baseregistry import BaseRegistry
-from llmling.tools.base import BaseTool, DynamicTool
+from llmling.tools.base import LLMCallableTool
 from llmling.tools.exceptions import ToolError
 
 
@@ -17,33 +17,33 @@ if TYPE_CHECKING:
     from llmling.tools import exceptions
 
 
-class ToolRegistry(BaseRegistry[str, BaseTool | DynamicTool]):
+class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
     """Registry for available tools."""
 
     @property
     def _error_class(self) -> type[exceptions.ToolError]:
         return ToolError
 
-    def _validate_item(self, item: Any) -> BaseTool | DynamicTool:
+    def _validate_item(self, item: Any) -> LLMCallableTool:
         """Validate and possibly transform item before registration."""
         match item:
-            case type() as cls if issubclass(cls, BaseTool):
+            case type() as cls if issubclass(cls, LLMCallableTool):
                 return cls()
-            case BaseTool() | DynamicTool():
+            case LLMCallableTool():
                 return item
             case str():  # Just an import path
-                return DynamicTool(import_path=item)
+                return LLMCallableTool.from_callable(item)
             case dict() if "import_path" in item:
-                return DynamicTool(
-                    import_path=item["import_path"],
-                    name=item.get("name"),
-                    description=item.get("description"),
+                return LLMCallableTool.from_callable(
+                    item["import_path"],
+                    name_override=item.get("name"),
+                    description_override=item.get("description"),
                 )
             case ToolConfig():  # Add support for ToolConfig
-                return DynamicTool(
-                    import_path=item.import_path,
-                    name=item.name,
-                    description=item.description,
+                return LLMCallableTool.from_callable(
+                    item.import_path,
+                    name_override=item.name,
+                    description_override=item.description,
                 )
             case _:
                 msg = f"Invalid tool type: {type(item)}"

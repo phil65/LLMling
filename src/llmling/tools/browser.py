@@ -5,10 +5,10 @@ from typing import Any, Literal
 import playwright.async_api as pw
 
 from llmling.tools.actions import ImmediateAction
-from llmling.tools.base import BaseTool
+from llmling.tools.base import LLMCallableTool
 
 
-class BrowserTool(BaseTool):
+class BrowserTool(LLMCallableTool):
     """Tool for browser automation."""
 
     name = "browser"

@@ -18,15 +18,9 @@ context_processors:
 
 # Global tools definitions
 tools:
-  analyze_code:
-    import_path: "llmling.tools.code.analyze_complexity"
-    description: "Analyze Python code complexity metrics"
   analyze_ast:
     import_path: "llmling.testing.tools.analyze_ast"
     description: "Analyze Python code structure"
-  format_code:
-    import_path: "llmling.tools.code.format_code"
-    name: "format_python"
 
 # LLM provider configurations
 llm_providers:
@@ -38,9 +32,7 @@ llm_providers:
     top_p: 0.95
     # Can now use either format:
     tools:
-      - analyze_code # Simple string reference
       - analyze_ast
-      - format_code
     # Or with settings:
     # tools:
     #   analyze_code: {}
