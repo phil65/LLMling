@@ -44,7 +44,6 @@ dependencies = [
     "py2openai",
     "playwright>=1.48.0",
     "diskcache>=5.6.3",
-    "llm>=0.18",
 ]
 
 license = { file = "LICENSE" }
