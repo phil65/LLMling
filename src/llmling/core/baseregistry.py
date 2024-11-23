@@ -34,9 +34,9 @@ class BaseRegistry[TKey, TItem](MutableMapping[TKey, TItem], ABC):
         """Check if an item is registered."""
         return key in self._items
 
-    def register(self, key: TKey, item: TItem | Any) -> None:
+    def register(self, key: TKey, item: TItem | Any, replace: bool = False) -> None:
         """Register an item."""
-        if key in self._items:
+        if key in self._items and not replace:
             msg = f"Item already registered: {key}"
             raise self._error_class(msg)
 
