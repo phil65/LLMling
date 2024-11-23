@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import py2openai
 
+from llmling.core.descriptors import classproperty
 from llmling.utils import calling
 
 
@@ -25,8 +26,8 @@ class LLMCallableTool(ABC):
     description: ClassVar[str]
     _import_path: str | None = None  # For dynamic tools
 
-    @property
-    def import_path(self) -> str:
+    @classproperty
+    def import_path(self) -> str:  # type: ignore[misc]
         """Get the import path of the tool.
 
         For class-based tools, returns the actual class import path.
@@ -35,8 +36,7 @@ class LLMCallableTool(ABC):
         if self._import_path is not None:
             return self._import_path
         # For class-based tools, get the actual class import path
-        klass = self.__class__
-        return f"{klass.__module__}.{klass.__qualname__}"
+        return f"{self.__module__}.{self.__qualname__}"
 
     @classmethod
     def get_schema(cls) -> py2openai.OpenAIFunctionTool:
