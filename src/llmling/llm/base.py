@@ -52,7 +52,7 @@ class LLMParameters(BaseModel):
     cache_key: str | None = None
 
     # Advanced features
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
     mock_response: str | None = None
     fallbacks: list[str] | None = None
     context_window_fallbacks: list[str] | None = None
