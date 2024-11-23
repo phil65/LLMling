@@ -14,7 +14,7 @@ from llmling.core.log import get_logger
 if TYPE_CHECKING:
     import os
 
-    from llmling.config.models import Config
+    from llmling.config.models import Config, Context, LLMProviderConfig, TaskTemplate
 
 
 logger = get_logger(__name__)
@@ -30,6 +30,45 @@ class ConfigManager:
             config: Application configuration
         """
         self.config = config
+
+    def register_context(
+        self,
+        name: str,
+        context: Context,
+        *,
+        replace: bool = False,
+    ) -> None:
+        """Register a new context."""
+        if name in self.config.contexts and not replace:
+            msg = f"Context already exists: {name}"
+            raise exceptions.ConfigError(msg)
+        self.config.contexts[name] = context
+
+    def register_template(
+        self,
+        name: str,
+        template: TaskTemplate,
+        *,
+        replace: bool = False,
+    ) -> None:
+        """Register a new task template."""
+        if name in self.config.task_templates and not replace:
+            msg = f"Template already exists: {name}"
+            raise exceptions.ConfigError(msg)
+        self.config.task_templates[name] = template
+
+    def register_provider(
+        self,
+        name: str,
+        provider_config: LLMProviderConfig,
+        *,
+        replace: bool = False,
+    ) -> None:
+        """Register a new provider configuration."""
+        if name in self.config.llm_providers and not replace:
+            msg = f"Provider already exists: {name}"
+            raise exceptions.ConfigError(msg)
+        self.config.llm_providers[name] = provider_config
 
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> ConfigManager:
