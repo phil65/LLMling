@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import inspect
 import logging
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
@@ -26,17 +27,17 @@ class LLMCallableTool(ABC):
     description: ClassVar[str]
     _import_path: str | None = None  # For dynamic tools
 
-    @classproperty
-    def import_path(self) -> str:  # type: ignore[misc]
+    @classproperty  # type: ignore
+    def import_path(cls) -> str:  # noqa: N805
         """Get the import path of the tool.
 
         For class-based tools, returns the actual class import path.
         For dynamic tools, returns the stored import path.
         """
-        if self._import_path is not None:
-            return self._import_path
+        if cls._import_path is not None:
+            return cls._import_path
         # For class-based tools, get the actual class import path
-        return f"{self.__module__}.{self.__qualname__}"
+        return f"{cls.__module__}.{cls.__qualname__}"  # type: ignore
 
     @classmethod
     def get_schema(cls) -> py2openai.OpenAIFunctionTool:
@@ -79,19 +80,17 @@ class LLMCallableTool(ABC):
             ValueError: If callable cannot be imported or is invalid
         """
         # If string provided, import the callable
-        if isinstance(fn, str):
-            try:
-                callable_obj = calling.import_callable(fn)
-            except Exception as exc:
-                msg = f"Failed to import callable from {fn}"
-                raise ValueError(msg) from exc
-        else:
-            callable_obj = fn
+        callable_obj = calling.import_callable(fn) if isinstance(fn, str) else fn
+        module = inspect.getmodule(callable_obj)
+        if not module:
+            msg = f"Could not find module for callable: {callable_obj}"
+            raise ImportError(msg)
 
         # Create dynamic subclass
         class DynamicTool(LLMCallableTool):
             # Store original callable for schema generation
             _original_callable = staticmethod(callable_obj)
+            _import_path = f"{module.__name__}.{callable_obj.__qualname__}"  # type: ignore
 
             # Use provided name/description or derive from callable
             name = name_override or callable_obj.__name__
@@ -100,13 +99,6 @@ class LLMCallableTool(ABC):
                 or callable_obj.__doc__
                 or f"Tool from {callable_obj.__name__}"
             )
-            import inspect
-
-            module = inspect.getmodule(callable_obj)
-            if not module:
-                msg = f"Failed to get module for {callable_obj}"
-                raise ImportError(msg)
-            _import_path = f"{module.__name__}.{callable_obj.__qualname__}"
 
             async def execute(self, **params: Any) -> Any:
                 """Execute the imported callable."""
@@ -125,16 +117,8 @@ if __name__ == "__main__":
         Args:
             input_str: String to multiply
             times: Number of times to multiply (default: 2)
-
-        Returns:
-            Multiplied string
         """
         return input_str * times
 
     tool = LLMCallableTool.from_callable(test, name_override="Example Tool")
-    print(f"Name: {tool.name}")
-    print(f"Description: {tool.description}")
-    print("\nSchema:")
-    import json
-
-    print(json.dumps(tool.get_schema(), indent=2))
+    print(tool.get_schema())

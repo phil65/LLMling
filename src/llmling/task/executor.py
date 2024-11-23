@@ -244,7 +244,7 @@ class TaskExecutor:
             return None
 
         # Get complete tool schemas including type
-        tool_schemas: list[py2openai.ToolSchema] = []
+        tool_schemas: list[py2openai.OpenAIFunctionTool] = []
         for tool_name in available_tools:
             if tool_name not in self.tool_registry:
                 logger.warning("Tool not found in registry: %s", tool_name)

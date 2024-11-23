@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal
 
+import py2openai  # noqa: TC002
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llmling.core import exceptions
@@ -32,7 +33,7 @@ class LLMConfig(BaseModel):
     top_p: float | None = None
     timeout: int = 30
     streaming: bool = False
-    tools: list[dict[str, Any]] | None = None
+    tools: list[py2openai.OpenAIFunctionTool] | None = None
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
     max_image_size: int | None = None  # Maximum image size in pixels
