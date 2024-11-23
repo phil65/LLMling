@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class LLMCallableTool(ABC):
-    """Base class for implementing complex tools that need state or custom logic."""
+    """Base class for implementing tools callable by an LLM via tool calling."""
 
     # Class-level schema definition
     name: ClassVar[str]
