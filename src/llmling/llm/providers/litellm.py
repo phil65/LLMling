@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 
 from diskcache import Cache
 import litellm
-from pydantic import BaseModel, ConfigDict
 
 from llmling.core import capabilities, exceptions
 from llmling.core.log import get_logger
@@ -26,25 +25,6 @@ logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-
-
-class LiteLLMFunction(BaseModel):
-    """Function definition for LiteLLM tool calls."""
-
-    name: str
-    description: str
-    parameters: dict[str, Any]
-
-    model_config = ConfigDict(frozen=True)
-
-
-class LiteLLMTool(BaseModel):
-    """Tool definition for LiteLLM."""
-
-    type: str = "function"
-    function: LiteLLMFunction
-
-    model_config = ConfigDict(frozen=True)
 
 
 class LiteLLMProvider(LLMProvider):
