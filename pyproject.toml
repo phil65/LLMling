@@ -44,6 +44,7 @@ dependencies = [
     "py2openai",
     "playwright>=1.48.0",
     "diskcache>=5.6.3",
+    "llm>=0.18",
 ]
 
 license = { file = "LICENSE" }
@@ -246,6 +247,7 @@ reportAny = false
 reportImplicitOverride = false
 reportUnusedFunction = false
 reportImplicitStringConcatenation = false
+reportExplicitAny = false
 
 [tool.logfire]
 ignore_no_config = true
