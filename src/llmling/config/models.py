@@ -29,6 +29,7 @@ class LLMProviderConfig(BaseModel):
 
     name: str
     model: str
+    provider: Literal["litellm", "llm"] = "litellm"  # default to litellm
     temperature: float | None = None
     max_tokens: int | None = None
     top_p: float | None = None
