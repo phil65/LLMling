@@ -8,7 +8,7 @@ from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
 from llmling.llm.base import LLMProvider
-from llmling.llm.providers.litellm import LiteLLMProvider
+from llmling.llm.providers.litellmprovider import LiteLLMProvider
 
 
 if TYPE_CHECKING:

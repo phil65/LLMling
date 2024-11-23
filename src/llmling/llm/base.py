@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Unpack
 
 import py2openai  # noqa: TC002
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -14,6 +14,8 @@ from llmling.core.log import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    from llmling.llm.clients.protocol import CompletionParams
 
 
 logger = get_logger(__name__)
@@ -167,7 +169,7 @@ class LLMProvider(ABC):
     async def complete(
         self,
         messages: list[Message],
-        **kwargs: Any,
+        **kwargs: Unpack[CompletionParams],  # Use TypeVar or Any
     ) -> CompletionResult:
         """Generate a completion for the messages.
 
@@ -186,12 +188,15 @@ class LLMProvider(ABC):
     async def complete_stream(
         self,
         messages: list[Message],
-        **kwargs: Any,
+        *,
+        chunk_size: int | None = None,
+        **kwargs: Unpack[CompletionParams],  # Use TypeVar or Any
     ) -> AsyncIterator[CompletionResult]:
         """Generate a streaming completion for the messages.
 
         Args:
             messages: List of messages for chat completion
+            chunk_size: Streaming chunk size
             **kwargs: Additional provider-specific parameters
 
         Yields:
