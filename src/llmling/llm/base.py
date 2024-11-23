@@ -19,15 +19,10 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class LLMConfig(BaseModel):
-    """Configuration for LLM providers."""
+class LLMParameters(BaseModel):
+    """Base parameters containing LLM params for API calls (LiteLLM based right now)."""
 
-    # Core identification
-    model: str
-    provider_name: str | None = None  # Key used for provider lookup
-    display_name: str = ""  # Human-readable name
-
-    # LLM parameters
+    # Core LLM parameters
     temperature: float = 0.7
     max_tokens: int | None = None
     top_p: float | None = None
@@ -36,27 +31,48 @@ class LLMConfig(BaseModel):
     tools: list[py2openai.OpenAIFunctionTool] | None = None
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
 
-    max_image_size: int | None = None  # Maximum image size in pixels
+    # Vision support
+    max_image_size: int | None = None
 
-    # LiteLLM settings
+    # API configuration
     api_base: str | None = None
     api_key: str | None = None
+    api_version: str | None = None
+    bearer_token: str | None = None
+
+    # Retry and timeout settings
     num_retries: int | None = None
     request_timeout: float | None = None
-    metadata: dict[str, Any] | None = None
-    mock_response: str | None = None
+    force_timeout: float | None = None
+
+    # Caching
     cache: bool | None = None
     cache_key: str | None = None
+
+    # Advanced features
+    metadata: dict[str, Any] | None = None
+    mock_response: str | None = None
     fallbacks: list[str] | None = None
     context_window_fallbacks: list[str] | None = None
-    bearer_token: str | None = None
     model_list: list[str] | None = None
     drop_params: bool = False
     add_function_to_prompt: bool = False
-    force_timeout: float | None = None
     proxy_url: str | None = None
-    api_version: str | None = None
     use_queue: bool = False
+
+    model_config = ConfigDict(frozen=True)
+
+
+class LLMConfig(LLMParameters):
+    """Configuration for LLM providers.
+
+    Extends LiteLLM parameters with additional application-specific configuration.
+    """
+
+    # Core identification (application specific)
+    model: str
+    provider_name: str | None = None
+    display_name: str = ""
 
     model_config = ConfigDict(frozen=True)
 

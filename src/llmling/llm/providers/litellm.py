@@ -5,26 +5,27 @@ from __future__ import annotations
 from datetime import timedelta
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from diskcache import Cache
 import litellm
+import logfire
 
 from llmling.core import capabilities, exceptions
 from llmling.core.log import get_logger
-from llmling.llm.base import (
-    CompletionResult,
-    LLMConfig,
-    LLMProvider,
-    Message,
-    ToolCall,
-)
+from llmling.llm.base import CompletionResult, LLMConfig, LLMProvider, Message, ToolCall
 
-
-logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    import py2openai
+
+logger = get_logger(__name__)
+
+# Initialize capability cache with 1 day TTL
+_cache = Cache(".model_cache")
+_CACHE_TTL = timedelta(days=1).total_seconds()
 
 
 class LiteLLMProvider(LLMProvider):
@@ -41,40 +42,25 @@ class LiteLLMProvider(LLMProvider):
             if k in {"api_base", "api_key"} and v is not None
         }
 
-    def _get_model_name_without_provider(self) -> str:
-        """Extract model name without provider prefix."""
-        try:
-            return self.config.model.split("/")[1]
-        except IndexError:
-            return self.config.model
-
-    def _get_provider_from_model(self) -> str:
-        """Extract provider name from model string."""
-        try:
-            return self.config.model.split("/")[0]
-        except Exception:  # noqa: BLE001
-            return "unknown"
-
-    def _prepare_content(self, msg: Message) -> str | list[dict[str, Any]]:
-        """Prepare message content for LiteLLM.
-
-        Handles both text and image content, converting to the format
-        expected by the API.
-        """
+    def _prepare_messages(self, msg: Message) -> str | list[dict[str, Any]]:
+        """Prepare message content for LiteLLM."""
         if not msg.content_items:
             return msg.content
 
-        content: list[Any] = []
-        for i in msg.content_items:
-            match i.type:
+        content: list[dict[str, Any]] = []
+        for item in msg.content_items:
+            match item.type:
                 case "text":
-                    content.append({"type": "text", "text": i.content})
+                    content.append({"type": "text", "text": item.content})
                 case "image_url":
-                    content.append({"type": "image_url", "image_url": {"url": i.content}})
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": item.content},
+                    })
                 case "image_base64":
                     content.append({
                         "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{i.content}"},
+                        "image_url": {"url": f"data:image/jpeg;base64,{item.content}"},
                     })
 
         # For better compatibility, if only text and single item, return just the text
@@ -91,71 +77,81 @@ class LiteLLMProvider(LLMProvider):
             msg = f"Model {self.config.model} does not support vision inputs"
             raise exceptions.LLMError(msg)
 
-    def _prepare_request_kwargs(self, **additional_kwargs: Any) -> dict[str, Any]:
-        """Prepare request kwargs from config and additional kwargs."""
-        # Start with essential settings preserved from initialization
-        kwargs = self._base_settings.copy()
+    def _prepare_kwargs(self, **kwargs: Any) -> dict[str, Any]:
+        """Prepare request kwargs from config and runtime parameters."""
+        final_kwargs = self._base_settings.copy()
 
-        # Get all fields that were explicitly set
-        config_dict = self.config.model_dump(exclude_unset=True)
-
-        # Fields we don't want to pass to litellm
+        # Add config values, excluding model and other special fields
         exclude_fields = {
+            "model",  # Will be passed directly
             "provider_name",
             "display_name",
             "streaming",
-            "model",  # Exclude model as it's passed explicitly
         }
 
-        # Add all config values except excluded fields and None values
-        kwargs.update({
-            k: v
-            for k, v in config_dict.items()
-            if k not in exclude_fields and v is not None
-        })
+        config_dict = self.config.model_dump(
+            exclude=exclude_fields,
+            exclude_none=True,
+            exclude_unset=True,  # Exclude fields not explicitly set
+        )
+        final_kwargs.update(config_dict)
 
-        # Add tools configuration
-        if self.config.tools:
-            kwargs["tools"] = self.config.tools
-            kwargs["tool_choice"] = self.config.tool_choice or "auto"
-
-        # Add additional kwargs (highest priority)
-        # Filter out empty tools array
-        filtered_kwargs = {
-            k: v
-            for k, v in additional_kwargs.items()
-            if v is not None and not (k == "tools" and not v)
-        }
-        kwargs.update(filtered_kwargs)
-
+        # Add runtime parameters
+        final_kwargs.update({k: v for k, v in kwargs.items() if v is not None})
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Final request kwargs: %s", json.dumps(kwargs, indent=2))
+            logger.debug("Final request kwargs: %s", json.dumps(final_kwargs, indent=2))
 
-        return kwargs
+        return final_kwargs
 
+    @logfire.instrument("LiteLLM completion")
     async def complete(
         self,
         messages: list[Message],
-        **kwargs: Any,
+        *,  # Force keyword arguments
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        timeout: int | None = None,
+        tools: list[py2openai.OpenAIFunctionTool] | None = None,
+        tool_choice: Literal["none", "auto"] | str | None = None,  # noqa: PYI051
+        max_image_size: int | None = None,
+        api_base: str | None = None,
+        api_key: str | None = None,
+        api_version: str | None = None,
+        num_retries: int | None = None,
+        request_timeout: float | None = None,
+        cache: bool | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> CompletionResult:
         """Implement completion using LiteLLM."""
         try:
-            # Check vision support if needed
             self._check_vision_support(messages)
-
-            # Convert messages to dict format
-            messages_list: list[dict[str, Any]] = [
+            messages_list = [
                 {
                     "role": msg.role,
                     **({"name": msg.name} if msg.name else {}),
-                    "content": self._prepare_content(msg),
+                    "content": self._prepare_messages(msg),
                 }
                 for msg in messages
             ]
-            # Clean up kwargs
-            request_kwargs = self._prepare_request_kwargs(**kwargs)
 
-            # Execute completion
+            # Convert parameters to a dict, filtering out None values
+            request_kwargs = self._prepare_kwargs(
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                timeout=timeout,
+                tools=tools,
+                tool_choice=tool_choice,
+                max_image_size=max_image_size,
+                api_base=api_base,
+                api_key=api_key,
+                api_version=api_version,
+                num_retries=num_retries,
+                request_timeout=request_timeout,
+                cache=cache,
+                metadata=metadata,
+            )
             response = await litellm.acompletion(
                 model=self.config.model,
                 messages=messages_list,
@@ -171,29 +167,55 @@ class LiteLLMProvider(LLMProvider):
     async def complete_stream(
         self,
         messages: list[Message],
-        **kwargs: Any,
+        *,  # Force keyword arguments
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        timeout: int | None = None,
+        tools: list[py2openai.OpenAIFunctionTool] | None = None,
+        tool_choice: Literal["none", "auto"] | str | None = None,  # noqa: PYI051
+        max_image_size: int | None = None,
+        api_base: str | None = None,
+        api_key: str | None = None,
+        api_version: str | None = None,
+        num_retries: int | None = None,
+        request_timeout: float | None = None,
+        cache: bool | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> AsyncIterator[CompletionResult]:
-        """Implement streaming completion using LiteLLM."""
+        """Stream response chunks."""
         try:
-            # Check vision support if needed
             self._check_vision_support(messages)
-
-            # Convert messages to dict format
-            messages_dict: list[dict[str, Any]] = [
+            messages_list = [
                 {
                     "role": msg.role,
                     **({"name": msg.name} if msg.name else {}),
-                    "content": self._prepare_content(msg),
+                    "content": self._prepare_messages(msg),
                 }
                 for msg in messages
             ]
-            # Prepare kwargs with streaming enabled
-            request_kwargs = self._prepare_request_kwargs(stream=True, **kwargs)
 
-            # Execute streaming completion
+            # Explicitly collect non-None parameters
+            request_kwargs = self._prepare_kwargs(
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                timeout=timeout,
+                tools=tools,
+                tool_choice=tool_choice,
+                max_image_size=max_image_size,
+                api_base=api_base,
+                api_key=api_key,
+                api_version=api_version,
+                num_retries=num_retries,
+                request_timeout=request_timeout,
+                cache=cache,
+                metadata=metadata,
+                stream=True,  # Always True for streaming
+            )
             stream = await litellm.acompletion(
                 model=self.config.model,
-                messages=messages_dict,
+                messages=messages_list,
                 **request_kwargs,
             )
 
@@ -259,11 +281,6 @@ class LiteLLMProvider(LLMProvider):
         except Exception as exc:
             msg = f"Failed to process LiteLLM response: {exc}"
             raise exceptions.LLMError(msg) from exc
-
-
-# Initialize disk cache with 1 day TTL
-_cache = Cache(".model_cache")
-_CACHE_TTL = timedelta(days=1).total_seconds()
 
 
 def get_model_capabilities(
