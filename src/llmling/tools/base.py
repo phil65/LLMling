@@ -21,12 +21,13 @@ class BaseTool(ABC):
     # Class-level schema definition
     name: ClassVar[str]
     description: ClassVar[str]
-    parameters_schema: ClassVar[dict[str, Any]]
 
     @classmethod
     def get_schema(cls) -> py2openai.OpenAIFunctionTool:
         """Get the tool's schema for LLM function calling."""
-        return py2openai.create_schema(cls.execute).model_dump_openai()
+        schema = py2openai.create_schema(cls.execute).model_dump_openai()
+        schema["function"]["name"] = cls.name
+        return schema
 
     @abstractmethod
     async def execute(self, **params: Any) -> Any | Awaitable[Any]:
