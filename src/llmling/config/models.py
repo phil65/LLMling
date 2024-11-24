@@ -28,18 +28,37 @@ class LLMProviderConfig(BaseModel):
     """LLM provider configuration."""
 
     name: str
+    """Display name of the provider"""
+
     model: str
-    provider: Literal["litellm", "llm"] | str = (  # noqa: PYI051
-        "litellm"  # default to litellm
-    )
+    """Model identifier (e.g. 'gpt-4-1106-preview' or 'anthropic/claude-2')"""
+
+    provider: Literal["litellm", "llm"] | str = "litellm"  # noqa: PYI051
+    """Provider type - which implementation to use"""
+
     temperature: float | None = None
+    """Sampling temperature between 0 and 1 (higher means more random)"""
+
     max_tokens: int | None = None
+    """Maximum number of tokens to generate"""
+
     top_p: float | None = None
-    tools: dict[str, dict[str, Any]] | list[str] | None = None  # Optional tools
+    """Nucleus sampling parameter between 0 and 1"""
+
+    tools: dict[str, dict[str, Any]] | list[str] | None = None
+    """Available tools for function calling. Can be list of names or dict with settings"""
+
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+    """How to handle tool selection - 'none', 'auto' or specific tool name"""
 
     max_image_size: int | None = None
+    """Maximum image size in pixels for vision models"""
 
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Provider-specific configuration options",
+    )
+    """Additional provider-specific configuration options and settings"""
     model_config = ConfigDict(frozen=True)
 
     @field_validator("tools", mode="before")
