@@ -32,6 +32,14 @@ class LLMCallableTool(ABC):
         """Show tool name and import path."""
         return f"{self.__class__.__name__}(name={self.name!r}, path={self.import_path!r})"
 
+    @property
+    def system_prompt(self) -> str:
+        """Get the system prompt for this tool.
+
+        Override this to provide tool-specific instructions.
+        """
+        return ""
+
     @classproperty  # type: ignore
     def import_path(cls) -> str:  # noqa: N805
         """Get the import path of the tool.
