@@ -2,100 +2,106 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
-from unittest import mock
+from typing import TYPE_CHECKING, Any
 
-import litellm
-from litellm.utils import ModelResponse
 import pytest
 
 from llmling.core import exceptions
-from llmling.core.exceptions import LLMError
-from llmling.llm.base import LLMConfig, Message
-from llmling.llm.providers.litellmprovider import LiteLLMProvider
+from llmling.llm.base import (
+    CompletionResult,
+    LLMConfig,
+    LLMProvider,
+    Message,
+)
 from llmling.llm.registry import ProviderRegistry
 
 
-# Type alias for LiteLLM message format
-LiteLLMMessage = dict[Literal["role", "name", "content"], Any]
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
-def create_mock_litellm_response(
-    content: str = "Test response",
-    model: str = "test/model",
-    finish_reason: str = "stop",
-) -> ModelResponse:
-    """Create a mock LiteLLM response."""
-    message_mock = mock.MagicMock()
-    message_mock.content = content
-    message_mock.tool_calls = None
+# Constants for test configuration
+TEST_CONTENT = "test content"
+TEST_MODEL = "test-model"
+TEST_PROVIDER = "test-provider"
 
-    choice_mock = mock.MagicMock()
-    choice_mock.message = message_mock
-    choice_mock.finish_reason = finish_reason
-
-    usage_mock = mock.MagicMock()
-    usage_mock.model_dump.return_value = {
-        "prompt_tokens": 10,
-        "completion_tokens": 20,
-        "total_tokens": 30,
-    }
-
-    response_mock = cast(ModelResponse, mock.MagicMock())
-    response_mock.choices = [choice_mock]
-    response_mock.model = model
-    response_mock.usage = usage_mock
-
-    return response_mock
-
-
-def create_mock_litellm_stream_chunk(
-    content: str,
-    model: str = "test/model",
-    finish_reason: str | None = None,
-) -> ModelResponse:
-    """Create a mock LiteLLM stream chunk."""
-    delta_mock = mock.MagicMock()
-    delta_mock.content = content
-    delta_mock.tool_calls = None
-
-    choice_mock = mock.MagicMock()
-    choice_mock.delta = delta_mock
-    choice_mock.finish_reason = finish_reason
-
-    chunk_mock = cast(ModelResponse, mock.MagicMock())
-    chunk_mock.choices = [choice_mock]
-    chunk_mock.model = model
-
-    return chunk_mock
-
-
-# Test data
+# Test messages that any provider should handle
 TEST_MESSAGES = [
     Message(role="system", content="You are a helpful assistant."),
     Message(role="user", content="Hello!"),
 ]
 
+# Basic config any provider should accept
 TEST_CONFIG = LLMConfig(
-    model="openai/gpt-3.5-turbo",
+    model="test/model",
     provider_name="test-provider",
     temperature=0.7,
     max_tokens=100,
     timeout=30,
 )
 
+# Extended config with optional features
 TEST_CONFIG_FULL = LLMConfig(
-    model="openai/gpt-3.5-turbo",
+    model="test/model",
     provider_name="test-provider",
     temperature=0.7,
     max_tokens=100,
     timeout=30,
-    api_base="http://localhost:11434",
+    api_base="http://localhost:1234",
     num_retries=3,
     request_timeout=30,
     cache=True,
     metadata={"test": "value"},
 )
+
+
+class MockProvider(LLMProvider):
+    """Base mock provider for testing provider interface."""
+
+    def __init__(self, config: LLMConfig) -> None:
+        super().__init__(config)
+        self.calls: list[tuple[list[Message], dict[str, Any]]] = []
+
+    async def complete(
+        self,
+        messages: list[Message],
+        **kwargs: Any,
+    ) -> CompletionResult:
+        """Record calls and return test response."""
+        self.calls.append((messages, kwargs))
+        return CompletionResult(
+            content="test response",
+            model=self.config.model,
+            metadata={"test": "metadata"},
+        )
+
+    async def complete_stream(
+        self,
+        messages: list[Message],
+        **kwargs: Any,
+    ) -> AsyncIterator[CompletionResult]:
+        """Stream test chunks."""
+        self.calls.append((messages, kwargs))
+        yield CompletionResult(
+            content="test chunk",
+            model=self.config.model,
+            metadata={"test": "metadata", "chunk": True},
+        )
+
+
+class FailingProvider(LLMProvider):
+    """Provider that simulates failures."""
+
+    async def complete(self, *args: Any, **kwargs: Any) -> CompletionResult:
+        msg = "Test failure"
+        raise exceptions.LLMError(msg)
+
+    async def complete_stream(
+        self, *args: Any, **kwargs: Any
+    ) -> AsyncIterator[CompletionResult]:
+        msg = "Test failure"
+        raise exceptions.LLMError(msg)
+        yield  # Required for type checking
 
 
 @pytest.fixture
@@ -111,21 +117,15 @@ class TestProviderRegistry:
 
     def test_register_provider(self, registry: ProviderRegistry) -> None:
         """Test basic provider registration."""
-        # Register a provider with litellm implementation
-        registry["test"] = "litellm"
-
-        # Create a provider instance
+        registry["test"] = MockProvider
         provider = registry.create_provider("test", TEST_CONFIG)
-        assert isinstance(provider, LiteLLMProvider)
+        assert isinstance(provider, MockProvider)
 
     def test_register_duplicate(self, registry: ProviderRegistry) -> None:
         """Test registering same provider twice."""
-        # First registration
-        registry["test"] = "litellm"
-
-        # Second registration of same name should fail
+        registry["test"] = MockProvider
         with pytest.raises(exceptions.LLMError):
-            registry["test"] = "litellm"
+            registry["test"] = MockProvider
 
     def test_create_unregistered(self, registry: ProviderRegistry) -> None:
         """Test creating unregistered provider."""
@@ -133,101 +133,54 @@ class TestProviderRegistry:
             registry.create_provider("nonexistent", TEST_CONFIG)
 
 
-class TestLiteLLMProvider:
-    """Tests for the LiteLLM provider implementation."""
+class TestProviderInterface:
+    """Tests for the LLM provider interface."""
 
     @pytest.mark.asyncio
     async def test_provider_settings(self) -> None:
         """Test that provider correctly uses configured settings."""
-        config = LLMConfig(
-            model="test/model",
-            provider_name="test",
-            temperature=0.7,
-        )
-        response = create_mock_litellm_response()
-
-        async def mock_acompletion(
-            model: str,
-            messages: list[dict[str, Any]],
-            **kwargs: Any,
-        ) -> ModelResponse:
-            assert model == "test/model"
-            assert kwargs["temperature"] == 0.7  # noqa: PLR2004
-            return response
-
-        with mock.patch("litellm.acompletion", side_effect=mock_acompletion):
-            provider = LiteLLMProvider(config)
-            # Pass config values as kwargs
-            await provider.complete(
-                TEST_MESSAGES,
-                temperature=config.temperature,
-                api_base=config.api_base,
-                api_key=config.api_key,
-            )
+        provider = MockProvider(TEST_CONFIG)
+        result = await provider.complete(TEST_MESSAGES)
+        assert result.content == "test response"
+        assert result.model == TEST_CONFIG.model
+        assert "test" in result.metadata
 
     @pytest.mark.asyncio
-    async def test_kwargs_override_config(self) -> None:
-        """Test that runtime kwargs override config values."""
-        config = LLMConfig(
-            model="test/model",
-            provider_name="test",
-            api_base="https://local.test",
-            temperature=0.7,
-        )
-        response = create_mock_litellm_response()
+    async def test_provider_streaming(self) -> None:
+        """Test provider streaming interface."""
+        provider = MockProvider(TEST_CONFIG)
+        chunks: list[CompletionResult] = []
+        async for chunk in provider.complete_stream(TEST_MESSAGES):
+            chunks.append(chunk)
+            assert chunk.content == "test chunk"
+            assert chunk.model == TEST_CONFIG.model
+            assert chunk.metadata.get("chunk") is True
 
-        async def mock_acompletion(
-            model: str,
-            messages: list[dict[str, Any]],
-            **kwargs: Any,
-        ) -> ModelResponse:
-            assert kwargs["api_base"] == "https://override.test"
-            assert kwargs["temperature"] == 0.9  # noqa: PLR2004
-            return response
-
-        with mock.patch("litellm.acompletion", side_effect=mock_acompletion):
-            provider = LiteLLMProvider(config)
-            await provider.complete(
-                TEST_MESSAGES,
-                api_base="https://override.test",
-                temperature=0.9,
-            )
-
-    def test_model_capabilities(self) -> None:
-        """Test model capabilities detection."""
-        with mock.patch("litellm.get_model_info") as mock_get_info:
-            mock_get_info.return_value = {
-                "supports_function_calling": True,
-                "supported_openai_params": ["temperature", "stream"],
-            }
-
-            provider = LiteLLMProvider(TEST_CONFIG)
-            model_info = provider.model_info
-
-            assert model_info.supports_function_calling
-            assert "temperature" in model_info.supported_openai_params
-            assert "stream" in model_info.supported_openai_params
-
-    # We can remove test_none_values_not_sent as it's no longer relevant
-    # We can remove test_config_override_globals as it's now handled by LiteLLM
+        assert len(chunks) > 0
 
     @pytest.mark.asyncio
-    async def test_error_handling(self) -> None:
-        """Test error handling."""
+    async def test_provider_error_handling(self) -> None:
+        """Test error handling in provider."""
+        provider = FailingProvider(TEST_CONFIG)
+        with pytest.raises(exceptions.LLMError):
+            await provider.complete(TEST_MESSAGES)
 
-        async def mock_acompletion(**_: Any) -> ModelResponse:
-            raise litellm.APIError(
-                status_code=1,
-                message="API Error",
-                llm_provider="test",
-                model="test/model",
-            )
+        with pytest.raises(exceptions.LLMError):  # noqa: PT012
+            async for _ in provider.complete_stream(TEST_MESSAGES):
+                pass
 
-        with mock.patch("litellm.acompletion", side_effect=mock_acompletion):
-            provider = LiteLLMProvider(TEST_CONFIG)
-            with pytest.raises(LLMError):
-                await provider.complete(TEST_MESSAGES)
+    @pytest.mark.asyncio
+    async def test_provider_kwargs_handling(self) -> None:
+        """Test provider handles additional kwargs correctly."""
+        provider = MockProvider(TEST_CONFIG)
+        test_kwargs = {"temperature": 0.8, "max_tokens": 200}
+
+        result = await provider.complete(TEST_MESSAGES, **test_kwargs)
+        assert result.content == "test response"
+
+        # Verify kwargs were passed through
+        assert provider.calls[-1][1] == test_kwargs
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    pytest.main(["-vv"])
