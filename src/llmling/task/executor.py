@@ -6,9 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 import logfire
 
+from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.llm.base import LLMConfig, Message
+from llmling.prompts import PromptManager
+from llmling.prompts.models import MessageContext, SystemPrompt
 from llmling.task.models import TaskContext, TaskProvider, TaskResult
 from llmling.tools.registry import ToolRegistry
 
@@ -16,11 +19,8 @@ from llmling.tools.registry import ToolRegistry
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    import py2openai
-
     from llmling.config.manager import ConfigManager
     from llmling.context import ContextLoaderRegistry
-    from llmling.context.models import LoadedContext
     from llmling.llm.registry import ProviderRegistry
     from llmling.processors.registry import ProcessorRegistry
 
@@ -60,6 +60,7 @@ class TaskExecutor:
         self.config_manager = config_manager
         self.default_timeout = default_timeout
         self.default_max_retries = default_max_retries
+        self._prompt_manager = PromptManager()
         logger.debug(
             "TaskExecutor initialized with tools: %s", self.tool_registry.list_items()
         )
@@ -89,9 +90,11 @@ class TaskExecutor:
         """
         try:
             llm_params = llm_params or {}
-            # Add tool configuration if available
-            tool_config = self._prepare_tool_config(task_context, task_provider)
-            if tool_config and tool_config.get("tools"):
+
+            # Get tool config from registry
+            if tool_config := self.tool_registry.get_tool_config(
+                task_context, task_provider
+            ):
                 llm_params.update(tool_config)
 
             # Load and process context
@@ -172,9 +175,11 @@ class TaskExecutor:
         """
         try:
             llm_params = llm_params or {}
-            # Add tool configuration if available
-            tool_config = self._prepare_tool_config(task_context, task_provider)
-            if tool_config and tool_config.get("tools"):
+
+            # Get tool config from registry
+            if tool_config := self.tool_registry.get_tool_config(
+                task_context, task_provider
+            ):
                 llm_params.update(tool_config)
 
             # Load and process context
@@ -201,71 +206,6 @@ class TaskExecutor:
             logger.exception("Task streaming failed")
             msg = "Task streaming failed"
             raise exceptions.TaskError(msg) from exc
-
-    @logfire.instrument("Preparing tool configuration for {task_provider.name}")
-    def _prepare_tool_config(
-        self,
-        task_context: TaskContext,
-        task_provider: TaskProvider,
-    ) -> dict[str, Any] | None:
-        """Prepare tool configuration if tools are enabled.
-
-        Args:
-            task_context: Context configuration
-            task_provider: Provider configuration
-
-        Returns:
-            Tool configuration or None if no tools enabled
-        """
-        if not self.tool_registry:
-            logger.debug("No tool registry available")
-            return None
-
-        available_tools: list[str] = []
-
-        # Add inherited tools from provider if enabled
-        if (
-            task_context.inherit_tools
-            and task_provider.settings
-            and task_provider.settings.tools
-        ):
-            logger.debug(
-                "Inheriting tools from provider: %s", task_provider.settings.tools
-            )
-            available_tools.extend(task_provider.settings.tools)
-
-        # Add task-specific tools
-        if task_context.tools:
-            logger.debug("Adding task-specific tools: %s", task_context.tools)
-            available_tools.extend(task_context.tools)
-
-        if not available_tools:
-            logger.debug("No tools available")
-            return None
-
-        # Get complete tool schemas including type
-        tool_schemas: list[py2openai.OpenAIFunctionTool] = []
-        for tool_name in available_tools:
-            if tool_name not in self.tool_registry:
-                logger.warning("Tool not found in registry: %s", tool_name)
-                continue
-
-            schema = self.tool_registry.get_schema(tool_name)
-            tool_schemas.append(schema)
-
-        if not tool_schemas:
-            return None
-
-        return {
-            "tools": tool_schemas,
-            "tool_choice": (
-                task_context.tool_choice
-                or (
-                    task_provider.settings.tool_choice if task_provider.settings else None
-                )
-                or "auto"
-            ),
-        }
 
     async def _load_context(self, task_context: TaskContext) -> LoadedContext:
         """Load and process context.
@@ -322,31 +262,18 @@ class TaskExecutor:
         Returns:
             List of messages for the LLM
         """
-        messages: list[Message] = []
-
-        if system_prompt:
-            messages.append(
-                Message(
-                    role="system",
-                    content=system_prompt,
-                )
-            )
-
-        # Extract content for user message
-        if isinstance(loaded_context, str):
-            content = loaded_context
-        else:
-            content = loaded_context.content
-
-        # Add user message with content
-        messages.append(
-            Message(
-                role="user",
-                content=content,
-            )
+        content = (
+            loaded_context.content
+            if isinstance(loaded_context, LoadedContext)
+            else loaded_context
         )
+        context = MessageContext(user_content=content)
 
-        return messages
+        # Add system prompt if provided
+        if system_prompt:
+            context.system_prompts.append(SystemPrompt(content=system_prompt))
+
+        return self._prompt_manager.create_messages(context)
 
     def _create_llm_config(
         self,
