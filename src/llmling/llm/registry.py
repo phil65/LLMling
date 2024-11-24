@@ -50,6 +50,15 @@ class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
         self.register("litellm", ProviderFactory(LiteLLMProvider))
         self._ep_registry = EntryPointRegistry[type[LLMProvider]]("llmling.providers")
 
+    def get_implementation(self, provider_type: str) -> type[LLMProvider]:
+        """Get provider implementation class."""
+        if provider_type in self.BUILTIN_PROVIDERS:
+            return self.BUILTIN_PROVIDERS[provider_type]
+        if provider_type in self._items:
+            return self._items[provider_type].provider_class
+        msg = f"Unknown provider type: {provider_type}"
+        raise KeyError(msg)
+
     @property
     def _error_class(self) -> type[exceptions.LLMError]:
         return exceptions.LLMError
