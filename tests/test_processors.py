@@ -160,10 +160,7 @@ async def test_processor_validation(function_config: ProcessorConfig) -> None:
 @pytest.mark.asyncio
 async def test_function_processor_sync() -> None:
     """Test synchronous function processor."""
-    config = ProcessorConfig(
-        type="function",
-        import_path=REVERSE_IMPORT,
-    )
+    config = ProcessorConfig(type="function", import_path=REVERSE_IMPORT)
     processor = FunctionProcessor(config)
 
     await processor.startup()
