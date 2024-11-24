@@ -85,3 +85,25 @@ class CompletionUsage(TypedDict, total=False):
     completion_tokens: int
     total_tokens: int
     total_cost: float
+
+
+class LiteLLMImageUrl(TypedDict):
+    """Image URL content in LiteLLM format."""
+
+    url: str
+
+
+class LiteLLMContent(TypedDict):
+    """Content item in LiteLLM message format."""
+
+    type: Literal["text", "image_url"]
+    text: str | None
+    image_url: LiteLLMImageUrl | None
+
+
+class LiteLLMMessage(TypedDict):
+    """Message in LiteLLM format."""
+
+    role: str
+    content: str | list[LiteLLMContent]
+    name: NotRequired[str | None]

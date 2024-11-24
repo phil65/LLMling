@@ -15,7 +15,11 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import Unpack
 
-    from llmling.llm.clients.protocol import CompletionUsage, LiteLLMCompletionParams
+    from llmling.llm.clients.protocol import (
+        CompletionUsage,
+        LiteLLMCompletionParams,
+        LiteLLMMessage,
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -24,14 +28,14 @@ _cache = Cache(".model_cache")
 _CACHE_TTL = timedelta(days=1).total_seconds()
 
 
-def _ensure_vision_support(model: str, messages: list[dict[str, Any]]) -> None:
+def _ensure_vision_support(model: str, messages: list[LiteLLMMessage]) -> None:
     """Check if model supports vision when image content present."""
     import litellm
 
     # Check if any message has image content
     has_images = any(
-        isinstance(msg.get("content"), list)
-        and any(item.get("type") == "image_url" for item in msg["content"])
+        isinstance(msg["content"], list)  # First check if it's a list
+        and any(item["type"] == "image_url" for item in msg["content"])
         for msg in messages
     )
     if not has_images:
@@ -61,7 +65,7 @@ def get_model_info(model: str) -> dict[str, Any]:
 
 async def complete(
     model: str,
-    messages: list[dict[str, Any]],
+    messages: list[LiteLLMMessage],
     **kwargs: Unpack[LiteLLMCompletionParams],
 ) -> Any:
     """Execute completion."""
@@ -73,7 +77,7 @@ async def complete(
 
 async def stream(
     model: str,
-    messages: list[dict[str, Any]],
+    messages: list[LiteLLMMessage],
     chunk_size: int | None = None,
     **kwargs: Unpack[LiteLLMCompletionParams],
 ) -> AsyncIterator[Any]:
@@ -120,7 +124,7 @@ if __name__ == "__main__":
     import asyncio
 
     async def main():
-        messages = [{"content": "Hello", "role": "user"}]
+        messages: list[LiteLLMMessage] = [{"content": "Hello", "role": "user"}]
         response = await complete("openai/gpt-3.5-turbo", messages)
         print(response)
 

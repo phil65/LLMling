@@ -22,7 +22,7 @@ from llmling.llm.clients import litellmclient
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from llmling.llm.clients.protocol import LiteLLMCompletionParams
+    from llmling.llm.clients.protocol import LiteLLMCompletionParams, LiteLLMMessage
 
 
 logger = get_logger(__name__)
@@ -38,7 +38,7 @@ class LiteLLMContent(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class LiteLLMMessage(BaseModel):
+class LiteLLMMessageModel(BaseModel):
     """Message in LiteLLM format."""
 
     role: str
@@ -85,10 +85,10 @@ class LiteLLMProvider(LLMProvider):
                 url = f"data:image/jpeg;base64,{item.content}"
                 return LiteLLMContent(type="image_url", image_url={"url": url})
 
-    def _to_litellm_dict(self, msg: Message) -> dict[str, Any]:
+    def _to_litellm_dict(self, msg: Message) -> LiteLLMMessage:
         """Convert a message to LiteLLM dict format."""
         if not msg.content_items:
-            return LiteLLMMessage(
+            return LiteLLMMessageModel(  # type: ignore # pyright: ignore
                 role=msg.role,
                 content=msg.content,
                 name=msg.name,
@@ -100,7 +100,7 @@ class LiteLLMProvider(LLMProvider):
             if len(contents) == 1 and contents[0].type == "text"
             else contents
         )
-        return LiteLLMMessage(
+        return LiteLLMMessageModel(  # type: ignore # pyright: ignore
             role=msg.role,
             content=content,
             name=msg.name,
