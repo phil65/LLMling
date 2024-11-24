@@ -44,6 +44,7 @@ dependencies = [
     "py2openai",
     "playwright>=1.48.0",
     "diskcache>=5.6.3",
+    "epregistry>=1.2.0",
 ]
 
 license = { file = "LICENSE" }
@@ -59,6 +60,7 @@ dev = [
     "devtools",
     # Only add below (Copier)
     "pytest-asyncio>=0.24.0",
+    "llmling-provider-llm",
 ]
 benchmark = ["pyinstrument"]
 lint = [

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from epregistry import EntryPointRegistry
+
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
@@ -24,6 +26,9 @@ class ProviderFactory:
         """Initialize with provider class."""
         self.provider_class = provider_class
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.provider_class.__name__})"
+
     def create(self, config: LLMConfig) -> LLMProvider:
         """Create new provider instance with config."""
         return self.provider_class(config)
@@ -37,6 +42,7 @@ class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
         super().__init__()
         # Register default implementation
         self.register("litellm", ProviderFactory(LiteLLMProvider))
+        self._ep_registry = EntryPointRegistry[type[LLMProvider]]("llmling.providers")
 
     @property
     def _error_class(self) -> type[exceptions.LLMError]:
@@ -62,6 +68,15 @@ class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
             msg = f"Invalid provider: {exc}"
             raise exceptions.LLMError(msg) from exc
 
+    def load_providers(self) -> None:
+        """Load all registered provider entry points."""
+        for name, provider_class in self._ep_registry.load_all().items():
+            try:
+                self.register(name, ProviderFactory(provider_class))
+                logger.debug("Loaded provider from entry point: %s", name)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to load provider %s: %s", name, exc)
+
     def create_provider(self, name: str, config: LLMConfig) -> LLMProvider:
         """Create a configured provider instance."""
         try:
@@ -74,3 +89,4 @@ class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
 
 # Global registry instance
 default_registry = ProviderRegistry()
+default_registry.load_providers()
