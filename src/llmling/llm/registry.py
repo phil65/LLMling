@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from epregistry import EntryPointRegistry
 
@@ -10,6 +10,7 @@ from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
 from llmling.llm.base import LLMProvider
+from llmling.llm.providers.dummy import DummyProvider
 from llmling.llm.providers.litellmprovider import LiteLLMProvider
 
 
@@ -37,6 +38,11 @@ class ProviderFactory:
 class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
     """Registry for LLM provider factories."""
 
+    BUILTIN_PROVIDERS: ClassVar[dict[str, type[LLMProvider]]] = {
+        "litellm": LiteLLMProvider,
+        "dummy": DummyProvider,
+    }
+
     def __init__(self) -> None:
         """Initialize registry."""
         super().__init__()
@@ -52,15 +58,12 @@ class ProviderRegistry(BaseRegistry[str, ProviderFactory]):
         """Validate and create factory from input."""
         try:
             match item:
-                # Handle direct provider class
                 case type() if issubclass(item, LLMProvider):
                     return ProviderFactory(item)
-                # Handle factory instance
                 case ProviderFactory():
                     return item
-                # Handle string reference to litellm
-                case str():
-                    return ProviderFactory(LiteLLMProvider)
+                case str() if item in self.BUILTIN_PROVIDERS:
+                    return ProviderFactory(self.BUILTIN_PROVIDERS[item])
                 case _:
                     msg = f"Invalid provider type: {type(item)}"
                     raise exceptions.LLMError(msg)
