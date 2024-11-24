@@ -6,11 +6,11 @@ import importlib
 import inspect
 from pathlib import Path
 import pkgutil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from types import ModuleType
 
 
@@ -67,3 +67,90 @@ def _should_include_file(path: Path, include_tests: bool) -> bool:
         if any(p.startswith("test") for p in parts):
             return False
     return path.suffix == ".py"
+
+
+def import_callable(path: str) -> Callable[..., Any]:
+    """Import a callable from a dotted path.
+
+    Supports both dot and colon notation:
+    - Dot notation: module.submodule.Class.method
+    - Colon notation: module.submodule:Class.method
+
+    Examples:
+        >>> import_callable("os.path.join")
+        >>> import_callable("llmling.testing:processors.failing_processor")
+        >>> import_callable("builtins.str.upper")
+        >>> import_callable("sqlalchemy.orm:Session.query")
+
+    Args:
+        path: Import path using dots and/or colon
+
+    Returns:
+        Imported callable
+
+    Raises:
+        ValueError: If path cannot be imported or result isn't callable
+    """
+    if not path:
+        msg = "Import path cannot be empty"
+        raise ValueError(msg)
+
+    # Normalize path - replace colon with dot if present
+    normalized_path = path.replace(":", ".")
+    parts = normalized_path.split(".")
+
+    # Try importing progressively smaller module paths
+    for i in range(len(parts), 0, -1):
+        try:
+            # Try current module path
+            module_path = ".".join(parts[:i])
+            module = importlib.import_module(module_path)
+
+            # Walk remaining parts as attributes
+            obj = module
+            for part in parts[i:]:
+                obj = getattr(obj, part)
+
+            # Check if we got a callable
+            if callable(obj):
+                return obj
+
+            msg = f"Found object at {path} but it isn't callable"
+            raise ValueError(msg)
+
+        except ImportError:
+            # Try next shorter path
+            continue
+        except AttributeError:
+            # Attribute not found - try next shorter path
+            continue
+
+    # If we get here, no import combination worked
+    msg = f"Could not import callable from path: {path}"
+    raise ValueError(msg)
+
+
+if __name__ == "__main__":
+    # Test both notations with various patterns
+    test_cases = [
+        # Dot notation
+        "os.path.join",
+        "builtins.str.upper",
+        "llmling.testing.processors.failing_processor",
+        "json.dumps",
+        # Colon notation
+        "llmling.testing:processors.failing_processor",
+        "sqlalchemy.orm:Session.query",
+        "django.db.models:Model.objects.filter",
+        # Invalid cases to test error handling
+        "nonexistent.module.function",
+        "os.path.nonexistent",
+        "",  # Empty path
+    ]
+
+    for test in test_cases:
+        try:
+            result = import_callable(test)
+            print(f"✅ {test}: {result}")
+        except ValueError as e:
+            print(f"❌ {test}: {e}")

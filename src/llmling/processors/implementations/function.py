@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import importlib
 import inspect
 from typing import TYPE_CHECKING, Any
 
@@ -12,6 +11,7 @@ import logfire
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.processors.base import ChainableProcessor, ProcessorConfig, ProcessorResult
+from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -39,26 +39,9 @@ class FunctionProcessor(ChainableProcessor):
             raise exceptions.ProcessorError(msg)
 
         try:
-            self.func = self._load_function()
-        except Exception as exc:
+            self.func = importing.import_callable(self.config.import_path)
+        except ValueError as exc:
             msg = f"Failed to load function: {exc}"
-            raise exceptions.ProcessorError(msg) from exc
-        else:
-            if not callable(self.func):
-                msg = f"Loaded object {self.config.import_path} is not callable"
-                raise exceptions.ProcessorError(msg)
-
-    def _load_function(self) -> Callable[..., Any]:
-        """Load function from import path."""
-        try:
-            module_path, func_name = self.config.import_path.rsplit(".", 1)
-            module = importlib.import_module(module_path)
-            return getattr(module, func_name)
-        except (ImportError, AttributeError) as exc:
-            msg = f"Cannot import {self.config.import_path}"
-            raise exceptions.ProcessorError(msg) from exc
-        except Exception as exc:
-            msg = f"Unexpected error loading {self.config.import_path}"
             raise exceptions.ProcessorError(msg) from exc
 
     @logfire.instrument("Executing function processor")
