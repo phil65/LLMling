@@ -32,6 +32,7 @@ classifiers = [
 ]
 keywords = []
 requires-python = ">=3.12"
+license = { file = "LICENSE" }
 dependencies = [
     "pydantic",
     # Only add below (Copier)
@@ -46,8 +47,6 @@ dependencies = [
     "diskcache>=5.6.3",
     "epregistry>=1.2.0",
 ]
-
-license = { file = "LICENSE" }
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
@@ -178,7 +177,7 @@ select = [
     # "TD",   # flake8-todos
     "T10", # flake8-debugger
     # "T20",  # flake8-print
-    "TCH", # flake8-type-checking
+    "TC", # flake8-type-checking
     "TID", # flake8-tidy-imports
     "TRY", # tryceratops
     "UP",  # PyUpgrade
@@ -240,6 +239,7 @@ combine-as-imports = true
 [tool.pyright]
 pythonVersion = "3.12"
 pythonPlatform = "All"
+typeCheckingMode = "basic"
 deprecateTypingAliases = true
 reportMissingTypeStubs = false
 reportUnusedCallResult = false
@@ -248,10 +248,10 @@ reportAny = false
 reportImplicitOverride = false
 reportUnusedFunction = false
 reportImplicitStringConcatenation = false
-reportExplicitAny = false
-
-[tool.logfire]
-ignore_no_config = true
+reportIgnoreCommentWithoutRule = false
+reportUnannotatedClassAttribute = false
+reportSelfClsParameterName = false
+reportPrivateImportUsage = false
 
 [tool.mknodes]
 allowed-commit-types = [

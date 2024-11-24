@@ -28,3 +28,5 @@ junit.xml
 .DS_Store
 # uv
 uv.lock
+# DiskCache cache file
+./model_cache
