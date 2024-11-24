@@ -30,11 +30,9 @@ _CACHE_TTL = timedelta(days=1).total_seconds()
 
 def _ensure_vision_support(model: str, messages: list[LiteLLMMessage]) -> None:
     """Check if model supports vision when image content present."""
-    import litellm
-
     # Check if any message has image content
     has_images = any(
-        isinstance(msg["content"], list)  # First check if it's a list
+        isinstance(msg["content"], list)
         and any(item["type"] == "image_url" for item in msg["content"])
         for msg in messages
     )
@@ -42,7 +40,7 @@ def _ensure_vision_support(model: str, messages: list[LiteLLMMessage]) -> None:
         return
 
     # Get model info and check vision support
-    info = litellm.get_model_info(model)
+    info = get_model_info(model)
     if not info.get("supports_vision"):
         msg = f"Model {model} does not support vision inputs"
         raise exceptions.LLMError(msg)
@@ -52,6 +50,7 @@ def get_model_info(model: str) -> dict[str, Any]:
     """Get model capabilities (cached)."""
     try:
         if cached := _cache.get(f"info_{model}"):
+            assert isinstance(cached, dict)
             return cached
     except Exception:  # noqa: BLE001
         _cache.delete(f"info_{model}")
