@@ -103,24 +103,18 @@ class TaskExecutor:
 
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider)
-            provider = self.provider_registry.create_provider(
-                task_provider.name,
-                llm_config,
-            )
+            prov = self.provider_registry.create_provider(task_provider.name, llm_config)
 
             # Get completion with potential tool calls
             while True:
-                completion = await provider.complete(messages, **llm_params)
+                completion = await prov.complete(messages, **llm_params)
 
                 # Handle tool calls if present
                 if completion.tool_calls:
                     tool_results = []
                     for tool_call in completion.tool_calls:
-                        logger.debug(
-                            "Executing tool call: %s with params: %s",
-                            tool_call.name,
-                            tool_call.parameters,
-                        )
+                        msg = "Executing tool call: %s with params: %s"
+                        logger.debug(msg, tool_call.name, tool_call.parameters)
                         result = await self.tool_registry.execute(
                             tool_call.name,
                             **tool_call.parameters,
@@ -129,13 +123,9 @@ class TaskExecutor:
                         tool_results.append(result)
 
                     # Add tool results to messages
-                    messages.append(
-                        Message(
-                            role="tool",
-                            content=str(tool_results),
-                            name="tool_results",
-                        )
-                    )
+                    content = str(tool_results)
+                    message = Message(role="tool", content=content, name="tool_results")
+                    messages.append(message)
                     continue  # Get next completion
 
                 # No tool calls, return final result
@@ -188,13 +178,10 @@ class TaskExecutor:
 
             # Configure and create provider
             llm_config = self._create_llm_config(task_provider, streaming=True)
-            provider = self.provider_registry.create_provider(
-                task_provider.name,
-                llm_config,
-            )
+            prov = self.provider_registry.create_provider(task_provider.name, llm_config)
 
             # Stream completions
-            async for completion in provider.complete_stream(messages, **llm_params):
+            async for completion in prov.complete_stream(messages, **llm_params):
                 yield TaskResult(
                     content=completion.content,
                     model=completion.model,
@@ -237,9 +224,8 @@ class TaskExecutor:
                             **task_context.runtime_context
                         )
                     except KeyError as exc:
-                        logger.warning(
-                            "Failed to format content with runtime context: %s", exc
-                        )
+                        error_msg = "Failed to format content with runtime context: %s"
+                        logger.warning(error_msg, exc)
                 loaded_context.metadata["runtime_context"] = task_context.runtime_context
 
         except Exception as exc:
