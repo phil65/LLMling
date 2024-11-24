@@ -19,8 +19,14 @@ class GlobalSettings(BaseModel):
     """Global settings that apply to all components."""
 
     timeout: int = 30
+    """Maximum time in seconds to wait for operations"""
+
     max_retries: int = 3
+    """Maximum number of retries for failed operations"""
+
     temperature: float = 0.7
+    """Default sampling temperature for LLM completions"""
+
     model_config = ConfigDict(frozen=True)
 
 
@@ -28,10 +34,10 @@ class LLMProviderConfig(BaseModel):
     """LLM provider configuration."""
 
     name: str
-    """Display name of the provider"""
+    """Display name of the provider for UI/logging purposes"""
 
     model: str
-    """Model identifier (e.g. 'gpt-4-1106-preview' or 'anthropic/claude-2')"""
+    """Model identifier in format 'provider/model' (e.g. 'openai/gpt-4-1106-preview')"""
 
     provider: Literal["litellm", "llm"] | str = "litellm"  # noqa: PYI051
     """Provider type - which implementation to use"""
@@ -82,10 +88,19 @@ class TaskSettings(BaseModel):
     """Settings for a task."""
 
     temperature: float | None = None
+    """Temperature for this specific task, overrides provider default"""
+
     max_tokens: int | None = None
+    """Maximum tokens to generate in the response"""
+
     top_p: float | None = None
-    tools: list[str] | None = None  # Optional tools
+    """Nucleus sampling parameter between 0 and 1"""
+
+    tools: list[str] | None = None
+    """Names of tools allowed for this task"""
+
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+    """How to handle tool selection - 'none', 'auto' or specific tool name"""
 
     model_config = ConfigDict(frozen=True)
 
@@ -94,7 +109,7 @@ class BaseContext(BaseModel):
     """Base class for all context types."""
 
     context_type: ContextType = Field(...)
-    description: str = ""  # Made optional with empty default
+    description: str = ""
     processors: list[ProcessingStep] = Field(
         default_factory=list
     )  # Optional with empty default
@@ -219,14 +234,25 @@ Context = (
 
 
 class TaskTemplate(BaseModel):
-    """Template for a specific task."""
+    """Template for a task."""
 
-    provider: str  # Required: provider name or group name
-    context: str  # Required: context name or group name
-    settings: TaskSettings | None = None  # Optional
-    inherit_tools: bool | None = None  # Optional
-    tools: list[str] | None = None  # Optional
+    provider: str
+    """Provider or provider group name to use for this task"""
+
+    context: str
+    """Context or context group name for task input"""
+
+    settings: TaskSettings | None = None
+    """Optional task-specific settings that override provider defaults"""
+
+    inherit_tools: bool | None = None
+    """Whether to inherit tools configured for the provider"""
+
+    tools: list[str] | None = None
+    """Additional tools to make available for this task"""
+
     tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
+    """How to handle tool selection for this task"""
 
     model_config = ConfigDict(frozen=True)
 
@@ -235,8 +261,13 @@ class ToolConfig(BaseModel):
     """Configuration for a tool."""
 
     import_path: str
+    """Import path to the tool implementation (e.g. 'mymodule.tools.MyTool')"""
+
     name: str | None = None
+    """Optional override for the tool's display name"""
+
     description: str | None = None
+    """Optional override for the tool's description"""
 
     model_config = ConfigDict(frozen=True)
 
