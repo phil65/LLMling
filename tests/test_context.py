@@ -72,10 +72,6 @@ def reverse_text(text: str) -> str:
 
 
 # Fixtures
-@pytest.fixture
-def processor_registry() -> ProcessorRegistry:
-    """Create a test processor registry."""
-    return ProcessorRegistry()
 
 
 @pytest.fixture

@@ -17,8 +17,8 @@ from llmling.processors.registry import ProcessorRegistry
 
 # Test data
 SAMPLE_TEXT = "Hello, World!"
-REVERSED_TEXT = "!dlroW ,olleH"
-UPPER_TEXT = "HELLO, WORLD!"
+REVERSED_TEXT = SAMPLE_TEXT[::-1]
+UPPER_TEXT = SAMPLE_TEXT.upper()
 REVERSE_IMPORT = "llmling.testing.processors.reverse_text"
 UPPERCASE_IMPORT = "llmling.testing.processors.uppercase_text"
 APPEND_IMPORT = "llmling.testing.processors.append_text"
