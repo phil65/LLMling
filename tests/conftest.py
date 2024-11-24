@@ -111,6 +111,20 @@ def test_config(
     provider_config: LLMProviderConfig | None = None,
 ) -> Config:
     """Create a test configuration using DummyProvider."""
+    return get_test_config(
+        provider_name=provider_name,
+        context_name=context_name,
+        template_name=template_name,
+        provider_config=provider_config,
+    )
+
+
+def get_test_config(
+    provider_name: str = "test-provider",
+    context_name: str = "test-context",
+    template_name: str = "test-template",
+    provider_config: LLMProviderConfig | None = None,
+):
     return Config(
         version="1.0",
         global_settings=GlobalSettings(),
@@ -130,6 +144,37 @@ def test_config(
             ),
         },
     )
+
+
+# Predefined test configurations for common scenarios
+VISION_TEST_CONFIG = get_test_config(
+    provider_config=create_test_provider_config(
+        capabilities={"supports_vision": True},
+        responses={
+            "condition:has_image=true": {
+                "content": "I see an image of...",
+                "metadata": {"type": "vision"},
+            },
+        },
+    )
+)
+
+TOOL_TEST_CONFIG = get_test_config(
+    provider_config=create_test_provider_config(
+        capabilities={"supports_function_calling": True},
+        responses={
+            "condition:has_tools=true": {
+                "content": "Using tools",
+                "tool_calls": [
+                    {
+                        "name": "test_tool",
+                        "parameters": {"param": "value"},
+                    }
+                ],
+            },
+        },
+    )
+)
 
 
 # Specialized test configurations as fixtures
