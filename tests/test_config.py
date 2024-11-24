@@ -94,18 +94,14 @@ def test_validate_processor_config() -> None:
 def test_validate_llm_provider() -> None:
     """Test validation of LLM provider configurations."""
     # Test invalid model format
+    invalid = {"model": "invalid-model-format", "name": "test"}
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.LLMProviderConfig.model_validate({
-            "model": "invalid-model-format",
-            "name": "test",
-        })
+        config.LLMProviderConfig.model_validate(invalid)
     assert "must be in format 'provider/model'" in str(exc_info.value)
 
     # Test valid model format
-    provider = config.LLMProviderConfig.model_validate({
-        "model": "openai/gpt-4",
-        "name": "test",
-    })
+    valid = {"model": "openai/gpt-4", "name": "test"}
+    provider = config.LLMProviderConfig.model_validate(valid)
     assert provider.model == "openai/gpt-4"
 
 
@@ -133,41 +129,25 @@ def test_validate_provider_references(valid_config_dict: dict[str, Any]) -> None
 
 def test_validate_source_context() -> None:
     """Test validation of source context configurations."""
-    invalid_import = {
-        "type": "source",
-        "import_path": "invalid.1path",
-        "description": "test",
-    }
+    invalid = {"type": "source", "import_path": "invalid.1path", "description": "test"}
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.SourceContext.model_validate(invalid_import)
+        config.SourceContext.model_validate(invalid)
     assert "Invalid import path" in str(exc_info.value)
 
-    valid_import = {
-        "type": "source",
-        "import_path": "valid.path",
-        "description": "test",
-    }
-    ctx = config.SourceContext.model_validate(valid_import)
+    valid = {"type": "source", "import_path": "valid.path", "description": "test"}
+    ctx = config.SourceContext.model_validate(valid)
     assert ctx.import_path == "valid.path"
 
 
 def test_validate_callable_context() -> None:
     """Test validation of callable context configurations."""
-    invalid_import = {
-        "type": "callable",
-        "import_path": "invalid.1path",
-        "description": "test",
-    }
+    invalid = {"type": "callable", "import_path": "invalid.1path", "description": "test"}
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.CallableContext.model_validate(invalid_import)
+        config.CallableContext.model_validate(invalid)
     assert "Invalid import path" in str(exc_info.value)
 
-    valid_import = {
-        "type": "callable",
-        "import_path": "valid.path",
-        "description": "test",
-    }
-    ctx = config.CallableContext.model_validate(valid_import)
+    valid = {"type": "callable", "import_path": "valid.path", "description": "test"}
+    ctx = config.CallableContext.model_validate(valid)
     assert ctx.import_path == "valid.path"
 
 
@@ -212,11 +192,9 @@ def test_task_template_validation(minimal_config_dict: dict[str, Any]) -> None:
     """Test validation of task template configurations."""
     # Test invalid provider reference
     invalid_config = minimal_config_dict.copy()
-    invalid_config["task_templates"]["invalid-task"] = {
-        "provider": "non-existent-provider",
-        "context": "test-context",  # This exists in minimal_config
-        "settings": {},
-    }
+    # This exists in minimal_config
+    task = {"provider": "non-existent-provider", "context": "test-context"}
+    invalid_config["task_templates"]["invalid-task"] = task
 
     with pytest.raises(pydantic.ValidationError) as exc_info:
         config.Config.model_validate(invalid_config)
@@ -225,15 +203,10 @@ def test_task_template_validation(minimal_config_dict: dict[str, Any]) -> None:
     # Test invalid context reference
     invalid_config = minimal_config_dict.copy()
     # First add a valid provider
-    invalid_config["llm_providers"]["test-provider"] = {
-        "model": "openai/test-model",
-        "name": "test",
-    }
-    invalid_config["task_templates"]["invalid-task"] = {
-        "provider": "test-provider",
-        "context": "non-existent-context",
-        "settings": {},
-    }
+    provider = {"model": "openai/test-model", "name": "test"}
+    invalid_config["llm_providers"]["test-provider"] = provider
+    task = {"provider": "test-provider", "context": "non-existent-context"}
+    invalid_config["task_templates"]["invalid-task"] = task
 
     with pytest.raises(pydantic.ValidationError) as exc_info:
         config.Config.model_validate(invalid_config)

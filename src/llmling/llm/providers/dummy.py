@@ -343,9 +343,8 @@ if __name__ == "__main__":
 
         # Test streaming
         print("\nStreaming response:")
-        async for chunk in provider.complete_stream([
-            Message(role="user", content="Hello!"),
-        ]):
+        messages = [Message(role="user", content="Hello!")]
+        async for chunk in provider.complete_stream(messages):
             print(chunk.content, end="", flush=True)
         print()
 
