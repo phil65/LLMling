@@ -306,6 +306,12 @@ class Config(BaseModel):
                 msg = f"Context {template.context} referenced in task {name} not found"
                 raise ValueError(msg)
 
+    def model_dump_yaml(self) -> str:
+        """Dump configuration to YAML string."""
+        import yamling
+
+        return yamling.dump_yaml(self.model_dump(exclude_none=True))
+
 
 if __name__ == "__main__":
     from pydantic import ValidationError
