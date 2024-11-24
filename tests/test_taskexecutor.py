@@ -49,7 +49,7 @@ class MockProcessorRegistry:
 
 
 class MockLLMProvider(LLMProvider):
-    def __init__(self, config: LLMConfig) -> None:
+    def __init__(self, config: LLMConfig):
         super().__init__(config)
         self.calls: list[tuple[list[Message], dict[str, Any]]] = []
         self._config = config  # Store for testing
@@ -345,7 +345,7 @@ async def test_simple_error_chain(
 
     executor.context_registry.get_loader = lambda x: SimpleErrorLoader()  # type: ignore
     text_ctx = TextContext(description="test", content="test content")
-    valid_context = TaskContext(context=text_ctx, processors=[], inherit_tools=True)
+    valid_context = TaskContext(context=text_ctx, inherit_tools=True)
 
     with pytest.raises(exceptions.TaskError) as exc_info:
         await executor.execute(valid_context, task_provider)
@@ -400,7 +400,6 @@ def test_prepare_messages(executor: TaskExecutor) -> None:
     loaded_context = LoadedContext(
         content="Test loaded content",
         source_type="test",
-        metadata={},
     )
     messages = executor._prepare_messages(loaded_context, system_prompt)
 

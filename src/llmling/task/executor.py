@@ -41,7 +41,7 @@ class TaskExecutor:
         *,
         default_timeout: int = 30,
         default_max_retries: int = 3,
-    ) -> None:
+    ):
         """Initialize the task executor.
 
         Args:

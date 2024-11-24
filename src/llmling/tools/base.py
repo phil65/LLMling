@@ -26,6 +26,7 @@ class LLMCallableTool(ABC):
     name: ClassVar[str]
     description: ClassVar[str]
     _import_path: str | None = None  # For dynamic tools
+    _original_callable: Callable[..., Any] | None = None  # For dynamic tools
 
     def __repr__(self) -> str:
         """Show tool name and import path."""
@@ -47,7 +48,7 @@ class LLMCallableTool(ABC):
     def get_schema(cls) -> py2openai.OpenAIFunctionTool:
         """Get the tool's schema for LLM function calling."""
         # For dynamic tools, we want to use the original callable's schema
-        if hasattr(cls, "_original_callable"):
+        if cls._original_callable:
             schema = py2openai.create_schema(cls._original_callable).model_dump_openai()
             schema["function"]["name"] = cls.name
             schema["function"]["description"] = cls.description
@@ -100,7 +101,7 @@ class LLMCallableTool(ABC):
             name = name_override or callable_obj.__name__
             description = (
                 description_override
-                or callable_obj.__doc__
+                or inspect.getdoc(callable_obj)
                 or f"Tool from {callable_obj.__name__}"
             )
 

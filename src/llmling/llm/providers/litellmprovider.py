@@ -15,6 +15,7 @@ from llmling.llm.base import (
     LLMProvider,
     Message,
     MessageContent,
+    ToolCall,
 )
 from llmling.llm.clients import litellmclient
 
@@ -166,7 +167,7 @@ class LiteLLMProvider(LLMProvider):
             msg = f"LiteLLM streaming failed: {exc}"
             raise exceptions.LLMError(msg) from exc
 
-    def _process_tool_calls(self, response: Any) -> list[dict[str, Any]] | None:
+    def _process_tool_calls(self, response: Any) -> list[ToolCall] | None:
         """Process tool calls from response."""
         if not hasattr(response.choices[0].message, "tool_calls"):
             return None
@@ -175,7 +176,7 @@ class LiteLLMProvider(LLMProvider):
         if not tool_calls:
             return None
 
-        processed = []
+        processed: list[ToolCall] = []
         for call in tool_calls:
             try:
                 parameters = (
@@ -190,9 +191,7 @@ class LiteLLMProvider(LLMProvider):
                 )
                 parameters = {}
 
-            processed.append({
-                "id": call.id,
-                "name": call.function.name,
-                "parameters": parameters,
-            })
+            processed.append(
+                ToolCall(id=call.id, name=call.function.name, parameters=parameters)
+            )
         return processed

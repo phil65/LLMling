@@ -88,7 +88,7 @@ async def stream(
     if chunk_size is not None:
         request_kwargs["chunk_size"] = chunk_size
 
-    async for chunk in await litellm.acompletion(
+    async for chunk in await litellm.acompletion(  # pyright: ignore
         model=model,
         messages=messages,
         **request_kwargs,

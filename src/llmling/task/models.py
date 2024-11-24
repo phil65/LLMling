@@ -4,7 +4,7 @@ from __future__ import annotations  # noqa: I001
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.config import Context, TaskSettings  # noqa: TC001
@@ -21,7 +21,7 @@ class TaskContext(BaseModel):
     """
 
     context: Context
-    processors: list[ProcessingStep]
+    processors: list[ProcessingStep] = Field(default_factory=list)
     inherit_tools: bool = False
     tools: list[str] | None = None
     runtime_context: dict[str, Any] | None = None
