@@ -20,7 +20,7 @@ from llmling.task.executor import TaskExecutor
 from llmling.task.manager import TaskManager
 
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "ConfigError",
