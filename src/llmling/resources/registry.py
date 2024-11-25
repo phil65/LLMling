@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import upath
 
-from llmling.config.models import PathContext, TextContext
+from llmling.config.models import PathResource, TextContext
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
@@ -38,7 +38,7 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
             case str() | os.PathLike() if upath.UPath(item).exists():
                 from llmling.resources.loaders.path import PathResourceLoader
 
-                return PathResourceLoader(PathContext(path=str(item)))
+                return PathResourceLoader(PathResource(path=str(item)))
             case type() as cls if issubclass(cls, ResourceLoader):
                 return cls()
             case ResourceLoader():

@@ -12,7 +12,7 @@ from llmling.config.models import (
     CallableContext,
     CLIContext,
     Context,
-    PathContext,
+    PathResource,
     SourceContext,
     TextContext,
 )
@@ -116,7 +116,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
 @pytest.mark.asyncio
 async def test_path_loader_file(tmp_file: Path) -> None:
     """Test loading from a file."""
-    context = PathContext(path=str(tmp_file), description="Test file")
+    context = PathResource(path=str(tmp_file), description="Test file")
     loader = PathResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
@@ -136,7 +136,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
     path = upath.UPath(test_file)
     file_url = str(path.as_uri())  # This will create the correct file:// URL format
 
-    context = PathContext(path=file_url, description="Test file URL")
+    context = PathResource(path=file_url, description="Test file URL")
 
     loader = PathResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
@@ -150,7 +150,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_path_loader_error() -> None:
     """Test loading from a non-existent path."""
-    context = PathContext(path="/nonexistent/file.txt", description="Test missing file")
+    context = PathResource(path="/nonexistent/file.txt", description="Test missing file")
     loader = PathResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
@@ -249,7 +249,7 @@ async def test_all_loaders_with_processors(
 
     contexts: list[Context] = [
         TextContext(content=SAMPLE_TEXT, description="Test text", processors=processors),
-        PathContext(path=str(tmp_file), description="Test file", processors=processors),
+        PathResource(path=str(tmp_file), description="Test file", processors=processors),
         CLIContext(
             command=ECHO_COMMAND,
             description="Test command",

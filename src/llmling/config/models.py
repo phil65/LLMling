@@ -41,14 +41,14 @@ class BaseContext(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class PathContext(BaseContext):
+class PathResource(BaseContext):
     """Context loaded from a file or URL."""
 
     context_type: Literal["path"] = "path"
     path: str | os.PathLike[str]
 
     @model_validator(mode="after")
-    def validate_path(self) -> PathContext:
+    def validate_path(self) -> PathResource:
         """Validate that the path is not empty."""
         if not self.path:
             msg = "Path cannot be empty"
@@ -149,7 +149,7 @@ class ImageContext(BaseContext):
 
 
 Context = (
-    PathContext
+    PathResource
     | TextContext
     | CLIContext
     | SourceContext

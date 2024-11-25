@@ -47,9 +47,9 @@ context_processors:  # dict[str, ProcessorConfig]
     type: template
     template: "{{ content }}\n---"
 
-contexts:  # dict[str, Context(PathContext | TextContext | CLIContext)]
+contexts:  # dict[str, Context(PathResource | TextContext | CLIContext)]
   guidelines:
-    type: path  # PathContext
+    type: path  # PathResource
     path: "./guide.md"
     description: "Guide"
     processors:  # list[ProcessingStep]

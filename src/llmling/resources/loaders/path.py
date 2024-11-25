@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import logfire
 from upath import UPath
 
-from llmling.config.models import PathContext
+from llmling.config.models import PathResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
@@ -21,15 +21,15 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class PathResourceLoader(ResourceLoader[PathContext]):
+class PathResourceLoader(ResourceLoader[PathResource]):
     """Loads context from files or URLs."""
 
-    context_class = PathContext
+    context_class = PathResource
 
     @logfire.instrument("Loading context from path {context.path}")
     async def load(
         self,
-        context: PathContext,
+        context: PathResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load content from a file or URL.
