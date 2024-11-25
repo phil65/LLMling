@@ -14,7 +14,7 @@ from llmling.core.log import get_logger
 if TYPE_CHECKING:
     import os
 
-    from llmling.config.models import Config, Context, TaskTemplate
+    from llmling.config.models import Config, Context
 
 
 logger = get_logger(__name__)
@@ -43,19 +43,6 @@ class ConfigManager:
             msg = f"Context already exists: {name}"
             raise exceptions.ConfigError(msg)
         self.config.contexts[name] = context
-
-    def register_template(
-        self,
-        name: str,
-        template: TaskTemplate,
-        *,
-        replace: bool = False,
-    ) -> None:
-        """Register a new task template."""
-        if name in self.config.task_templates and not replace:
-            msg = f"Template already exists: {name}"
-            raise exceptions.ConfigError(msg)
-        self.config.task_templates[name] = template
 
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> ConfigManager:
@@ -100,10 +87,9 @@ class ConfigManager:
             List of validation warnings
         """
         # Check context references
-        warnings = [
+        return [
             f"Context {context} in group {group} not found"
             for group, contexts in self.config.context_groups.items()
             for context in contexts
             if context not in self.config.contexts
         ]
-        return warnings
