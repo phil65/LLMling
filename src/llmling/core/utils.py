@@ -1,36 +1,105 @@
-# llmling/core/utils.py
+"""Provides a decorator for exception handling with template support."""
+
 from __future__ import annotations
 
-from contextlib import contextmanager
-from typing import TYPE_CHECKING, TypeVar
+import functools
+import inspect
+import logging
+import string
+import sys
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
-    from llmling.core.exceptions import LLMLingError
+    from collections.abc import Callable
 
 
-T = TypeVar("T")
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-@contextmanager
 def error_handler(
-    error_class: type[LLMLingError],
-    message: str,
-) -> Generator[None, None, None]:
-    """Handle exceptions and wrap them with custom error.
+    log_template: str,
+    catch_exception: type[Exception],
+    *,
+    chain_with: type[Exception] | None = None,
+    hide_internal_trace: bool = True,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Decorator that logs function calls and handles exceptions.
 
     Args:
-        error_class: The error class to raise
-        message: The error message format
+        log_template: Template string for logging (uses function parameters)
+        catch_exception: Exception type to catch
+        chain_with: Optional exception type to chain with the caught exception
+        hide_internal_trace: Whether to hide decorator frames from traceback
 
-    Example:
-        with error_handler(ConfigError, "Failed to load config"):
-            config = load_config()
+    Returns:
+        Decorated function that includes logging and exception handling
     """
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        # Create a template with safe_substitute support
+        template = string.Template(log_template)
+        sig = inspect.signature(func)
+        param_names = list(sig.parameters.keys())
+
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            # Combine args and kwargs using actual parameter names
+            params = dict(zip(param_names, args))
+            params.update(kwargs)
+
+            try:
+                # Use safe_substitute to handle missing parameters gracefully
+                log_msg = template.safe_substitute(params)
+                logger.info(log_msg)
+
+                return func(*args, **kwargs)
+
+            except catch_exception as exc:
+                error_msg = f"Error in {func.__name__}: {exc}"
+
+                if chain_with is not None:
+                    new_exc = chain_with(error_msg)
+                    if hide_internal_trace:
+                        tb = sys.exc_info()[2]
+                        if tb is not None and tb.tb_next is not None:
+                            new_exc.__traceback__ = tb.tb_next
+                    raise new_exc from exc
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+if __name__ == "__main__":
+    # Example usage
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    @error_handler(
+        log_template="Processing item: ${item}",  # Note the $ prefix for template vars
+        catch_exception=ValueError,
+        chain_with=RuntimeError,
+    )
+    def process_item(item: str) -> str:
+        if not item:
+            msg = "Item cannot be empty"
+            raise ValueError(msg)
+        return item.upper()
+
+    # Successful case
+    result = process_item("test")
+    print(f"Result: {result}")
+    # Error case
     try:
-        yield
-    except Exception as exc:
-        msg = f"{message}: {exc}"
-        raise error_class(msg) from exc
+        result = process_item("")
+        print(f"Result: {result}")
+    except RuntimeError as e:
+        print(f"Caught error: {e}")
