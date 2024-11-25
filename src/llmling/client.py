@@ -10,6 +10,7 @@ from llmling.config.manager import ConfigManager
 from llmling.context import default_registry as context_registry
 from llmling.core import exceptions
 from llmling.core.log import get_logger, setup_logging
+from llmling.core.utils import error_handler
 from llmling.llm.registry import default_registry as llm_registry
 from llmling.processors.registry import ProcessorRegistry
 from llmling.task.concurrent import execute_concurrent
@@ -81,6 +82,11 @@ class LLMLingClient:
         return self._manager
 
     @classmethod
+    @error_handler(
+        log_template="Creating client with config: {config_path}",
+        catch_exception=Exception,
+        chain_with=exceptions.LLMLingError,
+    )
     def create(
         cls,
         config_path: str | os.PathLike[str],
@@ -88,65 +94,63 @@ class LLMLingClient:
     ) -> LLMLingClient:
         """Create and initialize a client synchronously."""
         client = cls(config_path, **kwargs)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(client.startup())
-                return client
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
-        except Exception as exc:
-            msg = f"Failed to create client: {exc}"
-            raise exceptions.LLMLingError(msg) from exc
+            loop.run_until_complete(client.startup())
+            return client
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
+    @error_handler(
+        log_template="Starting up client",
+        catch_exception=Exception,
+        chain_with=exceptions.LLMLingError,
+    )
     async def startup(self) -> None:
         """Initialize all components."""
         if self._initialized:
             return
+        # Initialize registries
+        llm_registry.reset()  # Ensure clean state
 
-        try:
-            # Initialize registries
-            llm_registry.reset()  # Ensure clean state
+        # Load configuration
+        config = load_config(
+            self.config_path,
+            validate=self.validate_config,
+        )
+        self.config_manager = ConfigManager(config)
 
-            # Load configuration
-            config = load_config(
-                self.config_path,
-                validate=self.validate_config,
-            )
-            self.config_manager = ConfigManager(config)
+        # Register providers
+        await self._register_providers()
 
-            # Register providers
-            await self._register_providers()
+        # Register components
+        await self._register_components()
 
-            # Register components
-            await self._register_components()
+        # Start processor registry
+        await self._processor_registry.startup()
 
-            # Start processor registry
-            await self._processor_registry.startup()
+        # Create executor with empty tool registry
+        self._executor = TaskExecutor(
+            context_registry=context_registry,
+            processor_registry=self._processor_registry,
+            provider_registry=llm_registry,
+            tool_registry=self.tool_registry,
+            config_manager=self.config_manager,
+        )
 
-            # Create executor with empty tool registry
-            self._executor = TaskExecutor(
-                context_registry=context_registry,
-                processor_registry=self._processor_registry,
-                provider_registry=llm_registry,
-                tool_registry=self.tool_registry,
-                config_manager=self.config_manager,
-            )
+        # Create manager (will handle tool registration)
+        self._manager = TaskManager(self.config_manager.config, self._executor)
 
-            # Create manager (will handle tool registration)
-            self._manager = TaskManager(self.config_manager.config, self._executor)
+        self._initialized = True
+        logger.debug("Client initialized successfully")
 
-            self._initialized = True
-            logger.debug("Client initialized successfully")
-
-        except Exception as exc:
-            logger.exception("Client initialization failed")
-            await self.shutdown()
-            msg = f"Failed to initialize client: {exc}"
-            raise exceptions.LLMLingError(msg) from exc
-
+    @error_handler(
+        log_template="Executing template: {template}",
+        catch_exception=Exception,
+        chain_with=exceptions.TaskError,
+    )
     def execute_sync(
         self,
         template: str,
@@ -163,25 +167,26 @@ class LLMLingClient:
             system_prompt: Optional system prompt
             **llm_params: Additional parameters for LLM
         """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(
-                    self.execute(
-                        template,
-                        context=context,
-                        system_prompt=system_prompt,
-                        llm_params=llm_params,
-                    )
+            return loop.run_until_complete(
+                self.execute(
+                    template,
+                    context=context,
+                    system_prompt=system_prompt,
+                    llm_params=llm_params,
                 )
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
-        except Exception as exc:
-            msg = f"Synchronous execution failed: {exc}"
-            raise exceptions.TaskError(msg) from exc
+            )
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
 
+    @error_handler(
+        log_template="Executing multiple templates: {templates}",
+        catch_exception=Exception,
+        chain_with=exceptions.TaskError,
+    )
     def execute_many_sync(
         self,
         templates: Sequence[str],
@@ -234,6 +239,11 @@ class LLMLingClient:
         llm_params: dict[str, Any] | None = None,
     ) -> TaskResult: ...
 
+    @error_handler(
+        log_template="Executing template: {template}",
+        catch_exception=Exception,
+        chain_with=exceptions.TaskError,
+    )
     async def execute(
         self,
         template: str,
@@ -253,23 +263,19 @@ class LLMLingClient:
             llm_params: Parameters for the LLM provider
         """
         self._ensure_initialized()
-        try:
-            if stream:
-                return self.manager.execute_template_stream(
-                    template,
-                    context=context,
-                    system_prompt=system_prompt,
-                    llm_params=llm_params or {},
-                )
-            return await self.manager.execute_template(
+        if stream:
+            return self.manager.execute_template_stream(
                 template,
                 context=context,
                 system_prompt=system_prompt,
                 llm_params=llm_params or {},
             )
-        except Exception as exc:
-            msg = f"Failed to execute template {template}"
-            raise exceptions.TaskError(msg) from exc
+        return await self.manager.execute_template(
+            template,
+            context=context,
+            system_prompt=system_prompt,
+            llm_params=llm_params or {},
+        )
 
     async def execute_many(
         self,
