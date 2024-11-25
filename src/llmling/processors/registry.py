@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Any
 
 import logfire
 
-from llmling.context.models import ProcessingContext
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
 from llmling.processors.base import BaseProcessor, ProcessorConfig, ProcessorResult
 from llmling.processors.implementations.function import FunctionProcessor
 from llmling.processors.implementations.template import TemplateProcessor
+from llmling.resources.models import ProcessingContext
 
 
 if TYPE_CHECKING:

@@ -12,8 +12,8 @@ from llmling.core.log import get_logger
 
 if TYPE_CHECKING:
     from llmling.config.models import Context
-    from llmling.context.models import LoadedContext
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.models import LoadedContext
 
 
 logger = get_logger(__name__)
@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 TContext = TypeVar("TContext", bound="Context")
 
 
-class ContextLoader[TContext](ABC):
+class ResourceLoader[TContext](ABC):
     """Base class for context loaders with associated context type."""
 
     context_class: type[TContext]

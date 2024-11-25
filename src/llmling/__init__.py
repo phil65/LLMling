@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from llmling.context import (
-    ContextLoader,
+from llmling.resources import (
+    ResourceLoader,
     LoadedContext,
     default_registry as context_registry,
 )
@@ -21,13 +21,13 @@ __version__ = "0.4.0"
 __all__ = [
     "ConfigError",
     "ContextError",
-    "ContextLoader",
     "LLMError",
     "LLMLingError",
     "LoadedContext",
     "LoaderError",
     "ProcessorError",
     "ProcessorRegistry",
+    "ResourceLoader",
     "context_registry",
 ]
 
@@ -95,10 +95,8 @@ __all__ = [
 # │       │   ├── processors.py          # Test processors
 # │       │   └── tools.py               # Test tools
 # │       │
-# │       └── resources/                 # Configuration resources
-# │           ├── system_tools.yml       # System tools config
+# │       └── config_resources/                 # Configuration resources
 # │           ├── test.yml              # Test configuration
-# │           ├── vision_test.yml       # Vision testing config
 # │           └── web_research.yml      # Web research config
 # │
 # ├── tests/                             # Test suite

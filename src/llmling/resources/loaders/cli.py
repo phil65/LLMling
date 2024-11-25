@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 import logfire
 
 from llmling.config.models import CLIContext
-from llmling.context.base import ContextLoader
-from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.resources.base import ResourceLoader
+from llmling.resources.models import LoadedContext
 
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class CLIContextLoader(ContextLoader[CLIContext]):
+class CLIResourceLoader(ResourceLoader[CLIContext]):
     """Loads context from CLI command execution."""
 
     context_class = CLIContext

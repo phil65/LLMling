@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from llmling.config.models import CallableContext
-from llmling.context.base import ContextLoader
-from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.resources.base import ResourceLoader
+from llmling.resources.models import LoadedContext
 from llmling.utils import calling
 
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class CallableContextLoader(ContextLoader[CallableContext]):
+class CallableResourceLoader(ResourceLoader[CallableContext]):
     """Loads context from Python callable execution."""
 
     context_class = CallableContext

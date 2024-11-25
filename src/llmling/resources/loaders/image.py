@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 import upath
 
 from llmling.config.models import ImageContext
-from llmling.context.base import ContextLoader
-from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
+from llmling.resources.base import ResourceLoader
+from llmling.resources.models import LoadedContext
 
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ImageContextLoader(ContextLoader[ImageContext]):
+class ImageResourceLoader(ResourceLoader[ImageContext]):
     """Loads image content from files or URLs."""
 
     context_class = ImageContext

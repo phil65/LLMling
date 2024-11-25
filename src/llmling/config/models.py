@@ -227,7 +227,7 @@ if __name__ == "__main__":
     from llmling.config.loading import load_config
 
     try:
-        config = load_config("src/llmling/resources/test.yml")  # type: ignore[has-type]
+        config = load_config("src/llmling/config_resources/test.yml")  # type: ignore[has-type]
         print(config)
     except ValidationError as e:
         print(e)

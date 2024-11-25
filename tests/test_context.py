@@ -16,18 +16,18 @@ from llmling.config.models import (
     SourceContext,
     TextContext,
 )
-from llmling.context.loaders import (
-    CallableContextLoader,
-    CLIContextLoader,
-    PathContextLoader,
-    SourceContextLoader,
-    TextContextLoader,
-)
-from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.typedefs import ProcessingStep
 from llmling.processors.base import ProcessorConfig
 from llmling.processors.registry import ProcessorRegistry
+from llmling.resources.loaders import (
+    CallableResourceLoader,
+    CLIResourceLoader,
+    PathResourceLoader,
+    SourceResourceLoader,
+    TextResourceLoader,
+)
+from llmling.resources.models import LoadedContext
 from tests.test_processors import REVERSED_TEXT
 
 
@@ -87,7 +87,7 @@ def tmp_file(tmp_path: Path) -> Path:
 async def test_text_loader_basic() -> None:
     """Test basic text loading functionality."""
     context = TextContext(content=SAMPLE_TEXT, description="Test text")
-    loader = TextContextLoader()
+    loader = TextResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert isinstance(result, LoadedContext)
@@ -105,7 +105,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
         processor_registry.register("reverse", cfg)
         steps = [ProcessingStep(name="reverse")]
         context = TextContext(content=SAMPLE_TEXT, description="test", processors=steps)
-        loader = TextContextLoader()
+        loader = TextResourceLoader()
         result = await loader.load(context, processor_registry)
         assert result.content == REVERSED_TEXT
     finally:
@@ -117,7 +117,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
 async def test_path_loader_file(tmp_file: Path) -> None:
     """Test loading from a file."""
     context = PathContext(path=str(tmp_file), description="Test file")
-    loader = PathContextLoader()
+    loader = PathResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert result.content == TEST_FILE_CONTENT
@@ -138,7 +138,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
 
     context = PathContext(path=file_url, description="Test file URL")
 
-    loader = PathContextLoader()
+    loader = PathResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert result.content == TEST_FILE_CONTENT
@@ -151,7 +151,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
 async def test_path_loader_error() -> None:
     """Test loading from a non-existent path."""
     context = PathContext(path="/nonexistent/file.txt", description="Test missing file")
-    loader = PathContextLoader()
+    loader = PathResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
         await loader.load(context, ProcessorRegistry())
@@ -163,7 +163,7 @@ async def test_cli_loader_basic() -> None:
     """Test basic CLI command execution."""
     is_shell = sys.platform == "win32"
     context = CLIContext(command=ECHO_COMMAND, description="Test command", shell=is_shell)
-    loader = CLIContextLoader()
+    loader = CLIResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert "test" in result.content.strip()
@@ -174,7 +174,7 @@ async def test_cli_loader_basic() -> None:
 async def test_cli_loader_timeout() -> None:
     """Test CLI command timeout."""
     context = CLIContext(command=SLEEP_COMMAND, timeout=0.1, description="test")
-    loader = CLIContextLoader()
+    loader = CLIResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
         await loader.load(context, ProcessorRegistry())
@@ -186,10 +186,10 @@ async def test_source_loader_basic() -> None:
     """Test basic source code loading."""
     path = "llmling.context.loaders.text"
     context = SourceContext(import_path=path, description="Test source")
-    loader = SourceContextLoader()
+    loader = SourceResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
-    assert "class TextContextLoader" in result.content
+    assert "class TextResourceLoader" in result.content
     assert result.metadata["import_path"] == context.import_path
 
 
@@ -197,7 +197,7 @@ async def test_source_loader_basic() -> None:
 async def test_source_loader_invalid_module() -> None:
     """Test loading from non-existent module."""
     context = SourceContext(import_path=INVALID_MODULE, description="Test invalid module")
-    loader = SourceContextLoader()
+    loader = SourceResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
         await loader.load(context, ProcessorRegistry())
@@ -212,7 +212,7 @@ async def test_callable_loader_sync() -> None:
         description="Test sync callable",
         keyword_args={"test": "value"},
     )
-    loader = CallableContextLoader()
+    loader = CallableResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert "Sync result with" in result.content
@@ -227,7 +227,7 @@ async def test_callable_loader_async() -> None:
         description="Test async callable",
         keyword_args={"test": "value"},
     )
-    loader = CallableContextLoader()
+    loader = CallableResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert "Async result with" in result.content
@@ -259,9 +259,9 @@ async def test_all_loaders_with_processors(
     ]
 
     loaders = {
-        "text": TextContextLoader(),
-        "path": PathContextLoader(),
-        "cli": CLIContextLoader(),
+        "text": TextResourceLoader(),
+        "path": PathResourceLoader(),
+        "cli": CLIResourceLoader(),
     }
 
     for context in contexts:

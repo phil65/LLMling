@@ -17,7 +17,7 @@ PROCESSOR_TYPES = Literal["function", "template", "image"]
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from llmling.context.models import ProcessingContext
+    from llmling.resources.models import ProcessingContext
 
 
 logger = get_logger(__name__)

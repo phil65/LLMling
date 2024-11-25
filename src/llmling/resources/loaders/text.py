@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from llmling.config.models import TextContext
-from llmling.context.base import ContextLoader
-from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.resources.base import ResourceLoader
+from llmling.resources.models import LoadedContext
 
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class TextContextLoader(ContextLoader[TextContext]):
+class TextResourceLoader(ResourceLoader[TextContext]):
     """Loads context from raw text."""
 
     context_class = TextContext

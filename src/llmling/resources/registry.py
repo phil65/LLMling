@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 import upath
 
 from llmling.config.models import PathContext, TextContext
-from llmling.context.base import ContextLoader
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
+from llmling.resources.base import ResourceLoader
 
 
 if TYPE_CHECKING:
@@ -21,32 +21,32 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ContextLoaderRegistry(BaseRegistry[str, ContextLoader[Any]]):
+class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
     """Registry for context loaders."""
 
     @property
     def _error_class(self) -> type[exceptions.LoaderError]:
         return exceptions.LoaderError
 
-    def _validate_item(self, item: Any) -> ContextLoader[Any]:
+    def _validate_item(self, item: Any) -> ResourceLoader[Any]:
         """Validate and possibly transform item before registration."""
         match item:
             case str() if "\n" in item:  # Multiline string -> TextContext
-                from llmling.context.loaders.text import TextContextLoader
+                from llmling.resources.loaders.text import TextResourceLoader
 
-                return TextContextLoader(TextContext(content=item))
+                return TextResourceLoader(TextContext(content=item))
             case str() | os.PathLike() if upath.UPath(item).exists():
-                from llmling.context.loaders.path import PathContextLoader
+                from llmling.resources.loaders.path import PathResourceLoader
 
-                return PathContextLoader(PathContext(path=str(item)))
-            case type() as cls if issubclass(cls, ContextLoader):
+                return PathResourceLoader(PathContext(path=str(item)))
+            case type() as cls if issubclass(cls, ResourceLoader):
                 return cls()
-            case ContextLoader():
+            case ResourceLoader():
                 return item
             case _:
                 msg = f"Invalid context loader type: {type(item)}"
                 raise exceptions.LoaderError(msg)
 
-    def get_loader(self, context: Context) -> ContextLoader[Any]:
+    def get_loader(self, context: Context) -> ResourceLoader[Any]:
         """Get a loader instance for a context type."""
         return self.get(context.context_type)

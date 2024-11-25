@@ -20,7 +20,9 @@ if TYPE_CHECKING:
 @pytest.fixture
 def valid_config_dict() -> dict[str, Any]:
     """Create a valid configuration dictionary for testing."""
-    test_yaml_path = UPath(__file__).parent.parent / "src/llmling/resources/test.yml"
+    test_yaml_path = (
+        UPath(__file__).parent.parent / "src/llmling/config_resources/test.yml"
+    )
     return yamling.load_yaml_file(test_yaml_path)
 
 

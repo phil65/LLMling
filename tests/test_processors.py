@@ -6,13 +6,13 @@ import asyncio
 
 import pytest
 
-from llmling.context.models import ProcessingContext
 from llmling.core import exceptions
 from llmling.core.typedefs import ProcessingStep
 from llmling.processors.base import ProcessorConfig
 from llmling.processors.implementations.function import FunctionProcessor
 from llmling.processors.implementations.template import TemplateProcessor
 from llmling.processors.registry import ProcessorRegistry
+from llmling.resources.models import ProcessingContext
 
 
 # Test data

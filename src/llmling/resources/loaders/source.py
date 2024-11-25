@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import logfire
 
 from llmling.config.models import SourceContext
-from llmling.context.base import ContextLoader
-from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.resources.base import ResourceLoader
+from llmling.resources.models import LoadedContext
 from llmling.utils import importing
 
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class SourceContextLoader(ContextLoader[SourceContext]):
+class SourceResourceLoader(ResourceLoader[SourceContext]):
     """Loads context from Python source code."""
 
     context_class = SourceContext
