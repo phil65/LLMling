@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import base64
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import upath
 
 from llmling.config.models import ImageContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.core.typedefs import MessageContent
 from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
@@ -25,7 +26,7 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
 
     context_class = ImageContext
     uri_scheme = "image"
-    supported_mime_types = ["image/jpeg", "image/png", "image/gif"]
+    supported_mime_types: ClassVar[list[str]] = ["image/jpeg", "image/png", "image/gif"]
 
     @classmethod
     def get_uri_template(cls) -> str:
@@ -59,37 +60,43 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
             path_obj = upath.UPath(context.path)
             is_url = path_obj.as_uri().startswith(("http://", "https://"))
 
-            # Get image content
+            # Get image content and type
             if is_url:
                 image_content = str(path_obj.as_uri())
                 content_type = "image_url"
             else:
                 if not path_obj.exists():
                     msg = f"Image file not found: {path_obj}"
-                    raise exceptions.LoaderError(msg)
+                    raise exceptions.LoaderError(msg)  # noqa: TRY301
 
                 with path_obj.open("rb") as f:
                     image_content = base64.b64encode(f.read()).decode()
                     content_type = "image_base64"
 
-            # Images don't have text content, but we need to provide one for backwards compatibility
+            # Create placeholder text for backwards compatibility
             placeholder_text = f"Image: {context.path}"
             if context.alt_text:
                 placeholder_text = f"{placeholder_text} - {context.alt_text}"
 
             return create_loaded_resource(
-                content=placeholder_text,  # Text placeholder
+                content=placeholder_text,
                 source_type="image",
                 uri=str(path_obj.as_uri()),
                 mime_type=self._detect_mime_type(path_obj),
                 name=path_obj.name,
                 description=context.alt_text,
-                content_type=content_type,  # Override default text type
                 additional_metadata={
                     "path": str(context.path),
                     "type": "url" if is_url else "local",
                     "alt_text": context.alt_text,
                 },
+                content_items=[
+                    MessageContent(
+                        type=content_type,
+                        content=image_content,
+                        alt_text=context.alt_text,
+                    )
+                ],
             )
 
         except Exception as exc:

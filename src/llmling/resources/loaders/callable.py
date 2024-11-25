@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from llmling.config.models import CallableResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader, create_loaded_resource
-from llmling.resources.models import LoadedResource
 from llmling.utils import calling
 
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.models import LoadedResource
 
 
 logger = get_logger(__name__)
@@ -22,7 +22,7 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
 
     context_class = CallableResource
     uri_scheme = "callable"
-    supported_mime_types = ["text/plain"]
+    supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
     async def load(
         self,

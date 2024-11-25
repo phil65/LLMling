@@ -34,6 +34,8 @@ from tests.test_processors import REVERSED_TEXT
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from llmling.resources.base import ResourceLoader
+
 # Constants for test data
 SAMPLE_TEXT = "Hello, World!"
 TIMEOUT_SECONDS = 1
@@ -92,7 +94,7 @@ async def test_text_loader_basic() -> None:
 
     assert isinstance(result, LoadedResource)
     assert result.content == SAMPLE_TEXT
-    assert result.metadata["type"] == "text"
+    assert result.metadata.extra["type"] == "text"
 
 
 @pytest.mark.asyncio
@@ -121,8 +123,8 @@ async def test_path_loader_file(tmp_file: Path) -> None:
     result = await loader.load(context, ProcessorRegistry())
 
     assert result.content == TEST_FILE_CONTENT
-    assert result.metadata["type"] == "path"
-    assert result.metadata["path"] == str(tmp_file)
+    assert result.metadata.extra["type"] == "path"
+    assert result.metadata.extra["path"] == str(tmp_file)
 
 
 @pytest.mark.asyncio
@@ -142,9 +144,9 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
     result = await loader.load(context, ProcessorRegistry())
 
     assert result.content == TEST_FILE_CONTENT
-    assert result.metadata["path"] == file_url
-    assert result.metadata["scheme"] == "file"
-    assert result.metadata["size"] == len(TEST_FILE_CONTENT)
+    assert result.metadata.extra["path"] == file_url
+    assert result.metadata.extra["scheme"] == "file"
+    assert result.metadata.size == len(TEST_FILE_CONTENT)
 
 
 @pytest.mark.asyncio
@@ -169,7 +171,7 @@ async def test_cli_loader_basic() -> None:
     result = await loader.load(context, ProcessorRegistry())
 
     assert "test" in result.content.strip()
-    assert result.metadata["exit_code"] == 0
+    assert result.metadata.extra["exit_code"] == 0
 
 
 @pytest.mark.asyncio
@@ -186,13 +188,13 @@ async def test_cli_loader_timeout() -> None:
 @pytest.mark.asyncio
 async def test_source_loader_basic() -> None:
     """Test basic source code loading."""
-    path = "llmling.context.loaders.text"
+    path = "llmling.resources.loaders.text"
     context = SourceResource(import_path=path, description="Test source")
     loader = SourceResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
     assert "class TextResourceLoader" in result.content
-    assert result.metadata["import_path"] == context.import_path
+    assert result.metadata.extra["import_path"] == context.import_path
 
 
 @pytest.mark.asyncio
@@ -220,7 +222,7 @@ async def test_callable_loader_sync() -> None:
     result = await loader.load(context, ProcessorRegistry())
 
     assert "Sync result with" in result.content
-    assert result.metadata["import_path"] == context.import_path
+    assert result.metadata.extra["import_path"] == context.import_path
 
 
 @pytest.mark.asyncio
@@ -235,7 +237,7 @@ async def test_callable_loader_async() -> None:
     result = await loader.load(context, ProcessorRegistry())
 
     assert "Async result with" in result.content
-    assert result.metadata["import_path"] == context.import_path
+    assert result.metadata.extra["import_path"] == context.import_path
 
 
 # Integration Tests
@@ -262,7 +264,7 @@ async def test_all_loaders_with_processors(
         ),
     ]
 
-    loaders = {
+    loaders: dict[str, ResourceLoader[Any]] = {
         "text": TextResourceLoader(),
         "path": PathResourceLoader(),
         "cli": CLIResourceLoader(),

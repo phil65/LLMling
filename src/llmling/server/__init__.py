@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from mcp.server import Server, NotificationOptions
 from mcp.server.models import InitializationOptions
@@ -16,13 +16,13 @@ from mcp.types import (
     PromptArgument,
     GetPromptResult,
 )
-from pydantic import AnyUrl
 
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry, default_registry
 from llmling.tools.registry import ToolRegistry
+from pydantic import AnyUrl
 
 if TYPE_CHECKING:
     from llmling.config.models import Config
@@ -74,15 +74,16 @@ class LLMLingServer:
                 # Get loader class for context type
                 loader_class = self.resource_registry[context.context_type]
                 # Create loader instance with context
-                loader = loader_class(context)
-                uri = loader.create_uri(path=name)
+                loader = loader_class.create(context)
+                uri = loader.create_uri(name=name)
 
+                # TODO: Get mimetype from loader.supported_mime_types[0]
                 resources.append(
                     Resource(
-                        uri=cast(AnyUrl, uri),
+                        uri=AnyUrl(uri),
                         name=name,
                         description=context.description,
-                        mimeType="text/plain",  # TODO: Get from loader.supported_mime_types[0]
+                        mimeType="text/plain",
                     )
                 )
 
@@ -92,48 +93,36 @@ class LLMLingServer:
         async def handle_read_resource(uri: AnyUrl) -> str:
             """Read a specific resource."""
             try:
-                # Get appropriate loader class for URI scheme
-                for loader_class in self.resource_registry.values():
-                    if loader_class.supports_uri(uri):
-                        # Find matching context
-                        for context in self.config.contexts.values():
-                            if context.context_type == loader_class.context_type:
-                                # Create loader with context and load
-                                loader = loader_class(context)
-                                result = await loader.load(
-                                    context, self.processor_registry
-                                )
-                                return result.content
-
-                msg = f"No suitable loader found for URI: {uri}"
-                raise ValueError(msg)
-
+                # Convert AnyUrl to str for internal use
+                uri_str = str(uri)
+                loader = self.resource_registry.find_loader_for_uri(uri_str)
+                result = await loader.load(
+                    context=loader.context, processor_registry=self.processor_registry
+                )
             except Exception:
                 logger.exception("Failed to read resource %s", uri)
                 raise
+            else:
+                return result.content
 
         @self.server.list_prompts()
         async def handle_list_prompts() -> list[Prompt]:
             """List available prompts."""
-            prompts = []
-
-            for name, prompt in self.prompt_registry.items():
-                prompts.append(
-                    Prompt(
-                        name=prompt.name,
-                        description=prompt.description,
-                        arguments=[
-                            PromptArgument(
-                                name=arg.name,
-                                description=arg.description,
-                                required=arg.required,
-                            )
-                            for arg in prompt.arguments
-                        ],
-                    )
+            return [
+                Prompt(
+                    name=prompt.name,
+                    description=prompt.description,
+                    arguments=[
+                        PromptArgument(
+                            name=arg.name,
+                            description=arg.description,
+                            required=arg.required,
+                        )
+                        for arg in prompt.arguments
+                    ],
                 )
-
-            return prompts
+                for prompt in self.prompt_registry.values()
+            ]
 
         @self.server.get_prompt()
         async def handle_get_prompt(
@@ -157,7 +146,7 @@ class LLMLingServer:
             """List available tools."""
             tools = []
 
-            for name, tool in self.tool_registry.items():
+            for tool in self.tool_registry.values():
                 schema = tool.get_schema()
                 tools.append(
                     Tool(
@@ -244,17 +233,13 @@ if __name__ == "__main__":
     async def test_server():
         """Test server functionality with example config."""
         try:
-            # Ensure output is flushed immediately
             sys.stdout.reconfigure(line_buffering=True)  # type: ignore
-
             print("\nInitializing test server...", flush=True)
 
-            # Load test config
             config_path = Path(__file__).parent.parent / "config_resources" / "test.yml"
             print(f"Loading config from: {config_path}", flush=True)
             config = load_config(config_path)
 
-            # Create server
             server = LLMLingServer(config)
 
             # Register test components
@@ -266,9 +251,10 @@ if __name__ == "__main__":
             print("\nServer capabilities:", flush=True)
             print("------------------", flush=True)
             caps = server.server.get_capabilities(NotificationOptions(), {})
-            print(f"Resources: {bool(caps.get('resources'))}", flush=True)
-            print(f"Tools: {bool(caps.get('tools'))}", flush=True)
-            print(f"Prompts: {bool(caps.get('prompts'))}", flush=True)
+            # Access capabilities directly as attributes
+            print(f"Resources: {bool(caps.resources)}", flush=True)
+            print(f"Tools: {bool(caps.tools)}", flush=True)
+            print(f"Prompts: {bool(caps.prompts)}", flush=True)
 
             print("\nLoaded configuration:", flush=True)
             print(f"Contexts: {len(config.contexts)}", flush=True)
@@ -276,8 +262,6 @@ if __name__ == "__main__":
 
             print("\nStarting MCP server (Ctrl+C to exit)...", flush=True)
             print("-" * 40, flush=True)
-
-            # We need to flush all output before starting the server
             sys.stdout.flush()
             sys.stderr.flush()
 
@@ -317,6 +301,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nShutdown complete", flush=True)
         sys.exit(0)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Fatal error: {e}", file=sys.stderr, flush=True)
         sys.exit(1)

@@ -33,13 +33,21 @@ def create_loaded_resource(
     description: str | None = None,
     additional_metadata: dict[str, Any] | None = None,
     content_type: str = "text",
+    content_items: list[MessageContent] | None = None,
 ) -> LoadedResource:
-    """Create a LoadedResource with all required fields."""
-    # Ensure URI is valid
-    if not uri:
-        uri = f"{source_type}://{name or 'unnamed'}"
+    """Create a LoadedResource with all required fields.
 
-    # Create base metadata
+    Args:
+        content: The main content (for backwards compatibility)
+        source_type: Type of source ("text", "path", etc.)
+        uri: Resource URI
+        mime_type: Content MIME type
+        name: Resource name
+        description: Resource description
+        additional_metadata: Additional metadata
+        content_type: Type of content for default content item
+        content_items: Optional list of content items (overrides default)
+    """
     metadata = ResourceMetadata(
         uri=uri,
         mime_type=mime_type or "text/plain",
@@ -47,15 +55,17 @@ def create_loaded_resource(
         description=description,
         size=len(content),
         modified=datetime.now().isoformat(),
-        # If we have additional metadata, include it in the initial creation
-        **(additional_metadata or {}),
+        extra=additional_metadata or {},
     )
+
+    # Use provided content items or create default text item
+    items = content_items or [MessageContent(type=content_type, content=content)]
 
     return LoadedResource(
         content=content,
         source_type=source_type,
         metadata=metadata,
-        content_items=[MessageContent(type=content_type, content=content)],
+        content_items=items,
         etag=f"{source_type}-{metadata.size}-{metadata.modified}",
     )
 
@@ -78,9 +88,14 @@ class ResourceLoader[TContext](ABC):
         self.context = context
 
     @classmethod
-    def supports_uri(cls, uri: AnyUrl) -> bool:
+    def create(cls, context: TContext) -> ResourceLoader[TContext]:
+        """Create a loader instance for the given context."""
+        return cls(context)
+
+    @classmethod
+    def supports_uri(cls, uri: str) -> bool:
         """Check if this loader supports a given URI."""
-        return uri.scheme == cls.uri_scheme
+        return uri.startswith(f"{cls.uri_scheme}://")
 
     @classmethod  # could be classproperty
     def get_uri_template(cls) -> str:
@@ -88,7 +103,7 @@ class ResourceLoader[TContext](ABC):
         return f"{cls.uri_scheme}://{{name}}"
 
     @classmethod
-    def create_uri(cls, name: str) -> str:
+    def create_uri(cls, *, name: str) -> str:
         """Create a valid URI for this resource type."""
         return cls.get_uri_template().format(name=name)
 

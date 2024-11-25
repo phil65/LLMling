@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import logfire
 
@@ -24,7 +24,7 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
 
     context_class = SourceResource
     uri_scheme = "python"
-    supported_mime_types = ["text/x-python"]
+    supported_mime_types: ClassVar[list[str]] = ["text/x-python"]
 
     @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(

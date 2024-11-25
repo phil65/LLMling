@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import logfire
 
@@ -11,11 +11,11 @@ from llmling.config.models import CLIResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader, create_loaded_resource
-from llmling.resources.models import LoadedResource
 
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.models import LoadedResource
 
 
 logger = get_logger(__name__)
@@ -26,7 +26,7 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
 
     context_class = CLIResource
     uri_scheme = "cli"
-    supported_mime_types = ["text/plain"]
+    supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
     @logfire.instrument("Executing CLI command {context.command}")
     async def load(

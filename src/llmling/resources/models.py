@@ -39,6 +39,9 @@ class ResourceMetadata(BaseModel):
     description: str | None = None
     size: int | None = None
     modified: str | None = None
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(frozen=True)
 
 
 class LoadedResource(BaseModel):

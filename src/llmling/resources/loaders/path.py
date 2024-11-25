@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import logfire
 from upath import UPath
@@ -26,7 +26,7 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
     context_class = PathResource
     uri_scheme = "file"
-    supported_mime_types = [
+    supported_mime_types: ClassVar[list[str]] = [
         "text/plain",
         "application/json",
         "text/markdown",
@@ -65,19 +65,25 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         try:
             path = UPath(context.path)
             content = path.read_text("utf-8")
+            uri = str(path.as_uri())
 
             if procs := context.processors:
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
+            # Size should go in core metadata, other fields in extra
             return create_loaded_resource(
                 content=content,
                 source_type="path",
-                uri=str(path.as_uri()),
+                uri=uri,
                 mime_type=self.supported_mime_types[0],
                 name=path.name,
                 description=context.description,
-                additional_metadata={"path": str(path), "scheme": path.protocol},
+                additional_metadata={
+                    "type": "path",
+                    "path": str(path),
+                    "scheme": path.protocol,
+                },
             )
         except Exception as exc:
             msg = f"Failed to load content from {context.path}"
@@ -85,5 +91,5 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
 
 if __name__ == "__main__":
-    uri = PathResourceLoader.create_uri(path="/path/to/file.txt")
+    uri = PathResourceLoader.create_uri(name="/path/to/file.txt")
     print(uri)  # file:///path/to/file.txt

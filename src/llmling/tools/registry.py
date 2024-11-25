@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 
     import py2openai
 
-    from llmling.task.models import TaskContext, TaskProvider
-
 
 logger = get_logger(__name__)
 
@@ -59,51 +57,6 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             case _:
                 msg = f"Invalid tool type: {type(item)}"
                 raise ToolError(msg)
-
-    def get_tool_config(
-        self,
-        task_context: TaskContext,
-        task_provider: TaskProvider,
-    ) -> dict[str, Any] | None:
-        """Get tool configuration for LLM parameters."""
-        available_tools: list[str] = []
-
-        # Add inherited tools from provider if enabled
-        if (
-            task_context.inherit_tools
-            and task_provider.settings
-            and task_provider.settings.tools
-        ):
-            logger.debug(
-                "Inheriting tools from provider: %s", task_provider.settings.tools
-            )
-            available_tools.extend(task_provider.settings.tools)
-
-        # Add task-specific tools
-        if task_context.tools:
-            logger.debug("Adding task-specific tools: %s", task_context.tools)
-            available_tools.extend(task_context.tools)
-
-        if not available_tools:
-            logger.debug("No tools available")
-            return None
-
-        # Get complete tool schemas
-        tool_schemas = [self.get_schema(name) for name in available_tools if name in self]
-
-        if not tool_schemas:
-            return None
-
-        return {
-            "tools": tool_schemas,
-            "tool_choice": (
-                task_context.tool_choice
-                or (
-                    task_provider.settings.tool_choice if task_provider.settings else None
-                )
-                or "auto"
-            ),
-        }
 
     def add_container(
         self,

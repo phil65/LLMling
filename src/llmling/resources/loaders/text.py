@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from llmling.config.models import TextResource
 from llmling.core import exceptions
@@ -21,12 +21,10 @@ class TextResourceLoader(ResourceLoader[TextResource]):
 
     context_class = TextResource
     uri_scheme = "text"
-    supported_mime_types = ["text/plain"]
+    supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
     async def load(
-        self,
-        context: TextResource,
-        processor_registry: ProcessorRegistry,
+        self, context: TextResource, processor_registry: ProcessorRegistry
     ) -> LoadedResource:
         context_to_use = context or self.context
         if not context_to_use:
@@ -39,14 +37,16 @@ class TextResourceLoader(ResourceLoader[TextResource]):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
-            name = context_to_use.description or "text-content"
             return create_loaded_resource(
                 content=content,
                 source_type="text",
-                uri=self.create_uri(name=name),
+                uri=self.create_uri(name="text-content"),
                 mime_type=self.supported_mime_types[0],
                 name=context_to_use.description,
                 description=context_to_use.description,
+                additional_metadata={
+                    "type": "text",  # Add type to extra metadata
+                },
             )
         except Exception as exc:
             logger.exception("Failed to load text content")

@@ -45,10 +45,18 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
 
     def find_loader_for_uri(self, uri: str) -> ResourceLoader[Any]:
         """Find appropriate loader for a URI."""
+        # Parse scheme from URI string
+        try:
+            scheme = uri.split("://")[0]
+        except IndexError:
+            msg = f"Invalid URI format: {uri}"
+            raise exceptions.LoaderError(msg) from None
+
         for loader in self._items.values():
-            if loader.supports_uri(uri):
+            if loader.uri_scheme == scheme:
                 return loader
-        msg = f"No loader found for URI scheme: {uri.scheme}"
+
+        msg = f"No loader found for URI scheme: {scheme}"
         raise exceptions.LoaderError(msg)
 
     def _validate_item(self, item: Any) -> ResourceLoader[Any]:
