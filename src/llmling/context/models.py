@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from llmling.llm.base import MessageContent
+from llmling.core.typedefs import MessageContent
 
 
 class BaseContext(BaseModel):

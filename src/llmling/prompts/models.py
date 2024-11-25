@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from llmling.llm.base import MessageContent  # noqa: TC001
+from llmling.core.typedefs import MessageContent  # noqa: TC001
 
 
 MessageRole = Literal["system", "user", "assistant", "tool"]

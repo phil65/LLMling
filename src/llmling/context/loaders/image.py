@@ -12,7 +12,7 @@ from llmling.context.base import ContextLoader
 from llmling.context.models import LoadedContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.llm.base import MessageContent
+from llmling.core.typedefs import MessageContent
 
 
 if TYPE_CHECKING:

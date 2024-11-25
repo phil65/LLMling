@@ -22,49 +22,6 @@ tools:
     import_path: "llmling.testing.tools.analyze_ast"
     description: "Analyze Python code structure"
 
-# LLM provider configurations
-llm_providers:
-  gpt-35-turbo:
-    name: "GPT-4 Turbo"
-    model: openai/gpt-4-1106-preview
-    temperature: 0.8
-    max_tokens: 4096
-    top_p: 0.95
-    # Can now use either format:
-    tools:
-      - analyze_ast
-    # Or with settings:
-    # tools:
-    #   analyze_code: {}
-    #   analyze_ast: {max_lines: 1000}
-    #   format_code: {style: "black"}
-
-  claude2:
-    name: "Claude 2"
-    model: anthropic/claude-2
-    temperature: 0.7
-    max_tokens: 8192
-
-  local-llama:
-    name: "Local Llama"
-    model: openai/gpt-3.5-turbo
-    temperature: 0.7
-    max_tokens: 2048
-
-# Provider groups
-provider_groups:
-  code_review:
-    - gpt-35-turbo
-    - claude2
-
-  draft_content:
-    - local-llama
-
-  fallback_chain:
-    - gpt-35-turbo
-    - claude2
-    - local-llama
-
 # Context definitions
 contexts:
   python_guidelines:
@@ -145,26 +102,3 @@ context_groups:
     - code_review_template
     - python_guidelines
     - git_diff
-
-# Task templates
-task_templates:
-  quick_review:
-    provider: local-llama
-    context: system_prompt
-    settings:
-      temperature: 0.7
-      max_tokens: 2048
-
-  detailed_review:
-    provider: code_review
-    context: code_review_advanced
-    settings:
-      temperature: 0.5
-      max_tokens: 4096
-
-  generate_draft:
-    provider: draft_content
-    context: system_prompt
-    settings:
-      temperature: 0.9
-      max_tokens: 2048

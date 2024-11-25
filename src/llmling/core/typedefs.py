@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Protocol, TypeVar
+from typing import Any, Literal, Protocol, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+MessageContentType = Literal["text", "image_url", "image_base64"]
 
 
 class SupportsStr(Protocol):
@@ -21,6 +24,16 @@ class ProcessingStep(BaseModel):  # type: ignore[no-redef]
     parallel: bool = False
     required: bool = True
     kwargs: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class MessageContent(BaseModel):
+    """Content item in a message."""
+
+    type: MessageContentType = "text"  # Default to text for backward compatibility
+    content: str
+    alt_text: str | None = None  # For image descriptions
 
     model_config = ConfigDict(frozen=True)
 

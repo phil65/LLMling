@@ -47,16 +47,6 @@ context_processors:  # dict[str, ProcessorConfig]
     type: template
     template: "{{ content }}\n---"
 
-llm_providers:  # dict[str, LLMProvider]
-  gpt4:
-    model: openai/gpt-4
-    temperature: 0.7
-
-provider_groups:  # dict[str, list[str]]
-  fast_models:
-    - gpt4
-    - claude2
-
 contexts:  # dict[str, Context(PathContext | TextContext | CLIContext)]
   guidelines:
     type: path  # PathContext
@@ -80,11 +70,3 @@ context_groups:  # dict[str, list[str]]
   review_contexts:
     - guidelines
     - prompt
-
-task_templates:  # dict[str, TaskTemplate]
-  code_review:
-    provider: gpt4  # provider or group name
-    context: review_contexts  # context or group name
-    settings:  # TaskSettings
-      temperature: 0.5
-```

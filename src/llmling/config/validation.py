@@ -35,32 +35,8 @@ class ConfigValidator:
             List of validation warnings
         """
         warnings = []
-        warnings.extend(self._validate_providers())
         warnings.extend(self._validate_contexts())
         warnings.extend(self._validate_processors())
-        warnings.extend(self._validate_templates())
-        return warnings
-
-    def _validate_providers(self) -> list[str]:
-        """Validate provider configuration.
-
-        Returns:
-            List of validation warnings
-        """
-        warnings = [
-            f"Provider {provider} in group {group} not found"
-            for group, providers in self.config.provider_groups.items()
-            for provider in providers
-            if provider not in self.config.llm_providers
-        ]
-
-        # Check provider models
-        for name, provider in self.config.llm_providers.items():
-            if "/" not in provider.model:
-                warnings.append(
-                    f"Provider {name} model should be in format 'provider/model'",
-                )
-
         return warnings
 
     def _validate_contexts(self) -> list[str]:
@@ -107,35 +83,6 @@ class ConfigValidator:
 
         return warnings
 
-    def _validate_templates(self) -> list[str]:
-        """Validate template configuration.
-
-        Returns:
-            List of validation warnings
-        """
-        warnings = []
-
-        for name, template in self.config.task_templates.items():
-            # Validate provider reference
-            if (
-                template.provider not in self.config.llm_providers
-                and template.provider not in self.config.provider_groups
-            ):
-                warnings.append(
-                    f"Provider {template.provider} in template {name} not found",
-                )
-
-            # Validate context reference
-            if (
-                template.context not in self.config.contexts
-                and template.context not in self.config.context_groups
-            ):
-                warnings.append(
-                    f"Context {template.context} in template {name} not found",
-                )
-
-        return warnings
-
     @logfire.instrument("Validating configs")
     def validate_or_raise(self) -> None:
         """Run all validations and raise on warnings.
@@ -147,46 +94,3 @@ class ConfigValidator:
         if warnings:
             msg = "Configuration validation failed:\n" + "\n".join(warnings)
             raise exceptions.ConfigError(msg)
-
-    def validate_references(self) -> list[str]:
-        """Validate all references in configuration."""
-        # Validate provider references
-        warnings = [
-            f"Provider {provider_name} in group {group_name} not found"
-            for group_name, providers in self.config.provider_groups.items()
-            for provider_name in providers
-            if provider_name not in self.config.llm_providers
-        ]
-
-        # Validate context references
-        for template_name, template in self.config.task_templates.items():
-            provider = template.provider
-            if (
-                provider not in self.config.llm_providers
-                and provider not in self.config.provider_groups
-            ):
-                warnings.append(
-                    f"Provider {provider} in template {template_name} not found"
-                )
-
-        return warnings
-
-    def validate_tools(self) -> list[str]:
-        """Validate tool configuration."""
-        warnings: list[str] = []
-
-        # Skip tool validation if tools aren't configured
-        if not self.config.tools:
-            return warnings
-
-        # Validate tool references in tasks
-        for name, template in self.config.task_templates.items():
-            if not template.tools:
-                continue
-            warnings.extend(
-                f"Tool {tool} referenced in task {name} not found"
-                for tool in template.tools
-                if tool not in self.config.tools
-            )
-
-        return warnings

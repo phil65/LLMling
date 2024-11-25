@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from upath import UPath
 import yamling
@@ -14,7 +14,7 @@ from llmling.core.log import get_logger
 if TYPE_CHECKING:
     import os
 
-    from llmling.config.models import Config, Context, LLMProviderConfig, TaskTemplate
+    from llmling.config.models import Config, Context, TaskTemplate
 
 
 logger = get_logger(__name__)
@@ -57,19 +57,6 @@ class ConfigManager:
             raise exceptions.ConfigError(msg)
         self.config.task_templates[name] = template
 
-    def register_provider(
-        self,
-        name: str,
-        provider_config: LLMProviderConfig,
-        *,
-        replace: bool = False,
-    ) -> None:
-        """Register a new provider configuration."""
-        if name in self.config.llm_providers and not replace:
-            msg = f"Provider already exists: {name}"
-            raise exceptions.ConfigError(msg)
-        self.config.llm_providers[name] = provider_config
-
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> ConfigManager:
         """Load configuration from file.
@@ -106,79 +93,17 @@ class ConfigManager:
             msg = f"Failed to save configuration to {path}"
             raise exceptions.ConfigError(msg) from exc
 
-    def get_effective_settings(
-        self,
-        template_name: str,
-    ) -> dict[str, Any]:
-        """Get effective settings for a template.
-
-        Args:
-            template_name: Template name
-
-        Returns:
-            Combined settings from global and template
-
-        Raises:
-            ConfigError: If template not found
-        """
-        try:
-            template = self.config.task_templates[template_name]
-        except KeyError as exc:
-            msg = f"Template not found: {template_name}"
-            raise exceptions.ConfigError(msg) from exc
-        # Start with global settings
-        settings = self.config.global_settings.model_dump()
-
-        # Add provider settings if direct provider
-        if template.provider in self.config.llm_providers:
-            provider = self.config.llm_providers[template.provider]
-            settings.update(provider.model_dump(exclude_none=True))
-
-        # Add template settings
-        if template.settings:
-            dct = template.settings.model_dump(exclude_none=True)
-            settings.update(dct)
-        return settings
-
     def validate_references(self) -> list[str]:
         """Validate all references in configuration.
 
         Returns:
             List of validation warnings
         """
-        warnings = [
-            f"Provider {provider} in group {group} not found"
-            for group, providers in self.config.provider_groups.items()
-            for provider in providers
-            if provider not in self.config.llm_providers
-        ]
-
         # Check context references
-        warnings.extend(
+        warnings = [
             f"Context {context} in group {group} not found"
             for group, contexts in self.config.context_groups.items()
             for context in contexts
             if context not in self.config.contexts
-        )
-
-        # Check template references
-        for name, template in self.config.task_templates.items():
-            # Check provider reference
-            if (
-                template.provider not in self.config.llm_providers
-                and template.provider not in self.config.provider_groups
-            ):
-                warnings.append(
-                    f"Provider {template.provider} in template {name} not found",
-                )
-
-            # Check context reference
-            if (
-                template.context not in self.config.contexts
-                and template.context not in self.config.context_groups
-            ):
-                warnings.append(
-                    f"Context {template.context} in template {name} not found",
-                )
-
+        ]
         return warnings

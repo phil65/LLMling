@@ -15,35 +15,17 @@ if TYPE_CHECKING:
 
 
 VERSION = "1.0"
-DEFAULT_TIMEOUT = 30
-DEFAULT_MAX_RETRIES = 3
-DEFAULT_TEMPERATURE = 0.7
-TEMPLATE_TEMPERATURE = 0.8
 EXPECTED_WARNING_COUNT = 2
 
 CONFIG_YAML = f"""
 version: "{VERSION}"
-global_settings:
-    timeout: {DEFAULT_TIMEOUT}
-    max_retries: {DEFAULT_MAX_RETRIES}
-    temperature: {DEFAULT_TEMPERATURE}
 context_processors: {{}}
-llm_providers:
-    test-provider:
-        model: test/model
-        name: Test
 contexts:
     test-context:
         type: text
         content: "Test content"
         description: "Test context"
-task_templates:
-    test-template:
-        provider: test-provider
-        context: test-context
-        settings:
-            temperature: {TEMPLATE_TEMPERATURE}
-provider_groups: {{}}
+
 context_groups: {{}}
 """
 
@@ -60,8 +42,6 @@ def test_load_config(config_file: Path):
     """Test loading configuration from file."""
     manager = ConfigManager.load(config_file)
     assert manager.config.version == VERSION
-    assert manager.config.global_settings.timeout == DEFAULT_TIMEOUT
-    assert "test-template" in manager.config.task_templates
 
 
 def test_load_invalid_config(tmp_path: Path):
@@ -83,33 +63,6 @@ def test_save_config(tmp_path: Path, config_file: Path):
     # Load saved config and verify
     loaded = ConfigManager.load(save_path)
     assert loaded.config.model_dump() == manager.config.model_dump()
-
-
-def test_get_effective_settings(config_file: Path):
-    """Test getting effective settings for a template."""
-    manager = ConfigManager.load(config_file)
-    settings = manager.get_effective_settings("test-template")
-
-    assert settings["temperature"] == TEMPLATE_TEMPERATURE  # From template
-    assert settings["timeout"] == DEFAULT_TIMEOUT  # From global
-    assert settings["max_retries"] == DEFAULT_MAX_RETRIES  # From global
-
-
-def test_validate_references(config_file: Path):
-    """Test configuration reference validation."""
-    from llmling.config.models import TaskTemplate
-
-    manager = ConfigManager.load(config_file)
-    warnings = manager.validate_references()
-    assert not warnings  # Should be valid
-
-    # Add invalid reference using proper TaskTemplate model
-    template = TaskTemplate(provider="non-existent", context="non-existent")
-    manager.config.task_templates["invalid"] = template
-
-    warnings = manager.validate_references()
-    # Should have provider and context warnings
-    assert len(warnings) == EXPECTED_WARNING_COUNT
 
 
 if __name__ == "__main__":

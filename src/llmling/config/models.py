@@ -6,7 +6,7 @@ from collections.abc import Sequence as TypingSequence  # noqa: TC003
 import os  # noqa: TC003
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
@@ -26,81 +26,6 @@ class GlobalSettings(BaseModel):
 
     temperature: float = 0.7
     """Default sampling temperature for LLM completions"""
-
-    model_config = ConfigDict(frozen=True)
-
-
-class LLMProviderConfig(BaseModel):
-    """LLM provider configuration."""
-
-    name: str
-    """Display name of the provider for UI/logging purposes"""
-
-    model: str
-    """Model identifier in format 'provider/model' (e.g. 'openai/gpt-4-1106-preview')"""
-
-    provider: Literal["litellm", "llm"] | str = "litellm"  # noqa: PYI051
-    """Provider type - which implementation to use"""
-
-    temperature: float | None = None
-    """Sampling temperature between 0 and 1 (higher means more random)"""
-
-    max_tokens: int | None = None
-    """Maximum number of tokens to generate"""
-
-    top_p: float | None = None
-    """Nucleus sampling parameter between 0 and 1"""
-
-    tools: dict[str, dict[str, Any]] | list[str] | None = None
-    """Available tools for function calling. Can be list of names or dict with settings"""
-
-    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
-    """How to handle tool selection - 'none', 'auto' or specific tool name"""
-
-    max_image_size: int | None = None
-    """Maximum image size in pixels for vision models"""
-
-    metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific configuration options",
-    )
-    """Additional provider-specific configuration options and settings"""
-    model_config = ConfigDict(frozen=True)
-
-    @field_validator("tools", mode="before")
-    @classmethod
-    def convert_tools(cls, v: Any) -> dict[str, dict[str, Any]] | None:
-        """Convert tool references to dictionary format."""
-        if isinstance(v, list):
-            return {tool: {} for tool in v}
-        return v
-
-    @model_validator(mode="after")
-    def validate_model_format(self) -> LLMProviderConfig:
-        """Validate that model follows provider/name format."""
-        if "/" not in self.model:
-            msg = f"Model {self.model} must be in format 'provider/model'"
-            raise ValueError(msg)
-        return self
-
-
-class TaskSettings(BaseModel):
-    """Settings for a task."""
-
-    temperature: float | None = None
-    """Temperature for this specific task, overrides provider default"""
-
-    max_tokens: int | None = None
-    """Maximum tokens to generate in the response"""
-
-    top_p: float | None = None
-    """Nucleus sampling parameter between 0 and 1"""
-
-    tools: list[str] | None = None
-    """Names of tools allowed for this task"""
-
-    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
-    """How to handle tool selection - 'none', 'auto' or specific tool name"""
 
     model_config = ConfigDict(frozen=True)
 
@@ -233,30 +158,6 @@ Context = (
 )
 
 
-class TaskTemplate(BaseModel):
-    """Template for a task."""
-
-    provider: str
-    """Provider or provider group name to use for this task"""
-
-    context: str
-    """Context or context group name for task input"""
-
-    settings: TaskSettings | None = None
-    """Optional task-specific settings that override provider defaults"""
-
-    inherit_tools: bool | None = None
-    """Whether to inherit tools configured for the provider"""
-
-    tools: list[str] | None = None
-    """Additional tools to make available for this task"""
-
-    tool_choice: Literal["none", "auto"] | str | None = None  # noqa: PYI051
-    """How to handle tool selection for this task"""
-
-    model_config = ConfigDict(frozen=True)
-
-
 class ToolConfig(BaseModel):
     """Configuration for a tool."""
 
@@ -278,11 +179,8 @@ class Config(BaseModel):
     version: str = "1.0"
     global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
     context_processors: dict[str, ProcessorConfig] = Field(default_factory=dict)
-    llm_providers: dict[str, LLMProviderConfig]  # Required: at least one provider needed
-    provider_groups: dict[str, list[str]] = Field(default_factory=dict)
     contexts: dict[str, Context]  # Required: at least one context needed
     context_groups: dict[str, list[str]] = Field(default_factory=dict)
-    task_templates: dict[str, TaskTemplate]  # Required: at least one template needed
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
 
     model_config = ConfigDict(
@@ -294,22 +192,11 @@ class Config(BaseModel):
     def validate_references(self) -> Config:
         """Validate all references between components."""
         # Only validate if the optional components are present
-        if self.provider_groups:
-            self._validate_provider_groups()
         if self.context_groups:
             self._validate_context_groups()
         if self.context_processors:
             self._validate_processor_references()
-        self._validate_task_templates()
         return self
-
-    def _validate_provider_groups(self) -> None:
-        """Validate provider references in groups."""
-        for group, providers in self.provider_groups.items():
-            for provider in providers:
-                if provider not in self.llm_providers:
-                    msg = f"Provider {provider} referenced in group {group} not found"
-                    raise ValueError(msg)
 
     def _validate_context_groups(self) -> None:
         """Validate context references in groups."""
@@ -326,25 +213,6 @@ class Config(BaseModel):
                 if processor.name not in self.context_processors:
                     msg = f"Processor {processor.name!r} not found"
                     raise ValueError(msg)
-
-    def _validate_task_templates(self) -> None:
-        """Validate task template references."""
-        for name, template in self.task_templates.items():
-            # Validate provider reference
-            if (
-                template.provider not in self.llm_providers
-                and template.provider not in self.provider_groups
-            ):
-                msg = f"Provider {template.provider} referenced in task {name} not found"
-                raise ValueError(msg)
-
-            # Validate context reference
-            if (
-                template.context not in self.contexts
-                and template.context not in self.context_groups
-            ):
-                msg = f"Context {template.context} referenced in task {name} not found"
-                raise ValueError(msg)
 
     def model_dump_yaml(self) -> str:
         """Dump configuration to YAML string."""

@@ -31,13 +31,5 @@ class ValidationError(LLMLingError):
     """Validation related errors."""
 
 
-class ProviderError(LLMLingError):
-    """Provider related errors."""
-
-
-class TaskError(LLMLingError):
-    """Task execution related errors."""
-
-
 class LLMError(LLMLingError):
     """LLM related errors."""

@@ -3,15 +3,6 @@ tools:
     import_path: "llmling.tools.browser.BrowserTool"
     description: "Browser automation tool for web research. Requires 'action' parameter for every call."
 
-llm_providers:
-  llama:
-    name: "GPT-3.5 Turbo"
-    model: "openai/gpt-3.5-turbo"
-    temperature: 0.7
-    max_tokens: 1000
-    tools:
-      browser: {} # This format is important
-
 contexts:
   research_prompt:
     type: "text"

@@ -12,12 +12,8 @@ from llmling.core.exceptions import (
     LoaderError,
     ProcessorError,
     LLMError,
-    TaskError,
 )
-from llmling.llm.registry import default_registry as llm_registry
 from llmling.processors.registry import ProcessorRegistry
-from llmling.task.executor import TaskExecutor
-from llmling.task.manager import TaskManager
 
 
 __version__ = "0.4.0"
@@ -32,11 +28,7 @@ __all__ = [
     "LoaderError",
     "ProcessorError",
     "ProcessorRegistry",
-    "TaskError",
-    "TaskExecutor",
-    "TaskManager",
     "context_registry",
-    "llm_registry",
 ]
 
 # llmling/
@@ -84,21 +76,6 @@ __all__ = [
 # │       │       ├── __init__.py
 # │       │       ├── function.py
 # │       │       └── template.py
-# │       │
-# │       ├── llm/                       # LLM integration
-# │       │   ├── __init__.py
-# │       │   ├── base.py                # Base LLM classes
-# │       │   ├── registry.py            # LLM provider registry
-# │       │   └── providers/             # LLM providers
-# │       │       ├── __init__.py
-# │       │       └── litellm.py
-# │       │
-# │       ├── task/                      # Task management
-# │       │   ├── __init__.py
-# │       │   ├── models.py              # Task models
-# │       │   ├── executor.py            # Task execution
-# │       │   ├── manager.py             # Task management
-# │       │   └── concurrent.py          # Concurrent execution
 # │       │
 # │       ├── tools/                     # Tool system
 # │       │   ├── __init__.py

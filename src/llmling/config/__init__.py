@@ -7,9 +7,6 @@ from llmling.config.models import (
     Config,
     Context,
     GlobalSettings,
-    LLMProviderConfig,
-    TaskSettings,
-    TaskTemplate,
     CallableContext,
     SourceContext,
 )
@@ -24,9 +21,6 @@ __all__ = [
     "ConfigValidator",
     "Context",
     "GlobalSettings",
-    "LLMProviderConfig",
     "SourceContext",
-    "TaskSettings",
-    "TaskTemplate",
     "load_config",
 ]

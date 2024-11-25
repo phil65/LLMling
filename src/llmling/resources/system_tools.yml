@@ -3,11 +3,6 @@ tools:
     import_path: "llmling.tools.filesystem.FileSystemTool"
     description: "File system operations"
 
-llm_providers:
-  llama:
-    name: "Local Llama"
-    model: "openai/gpt-3.5-turbo"
-
 contexts:
   list_directory:
     type: "text"
