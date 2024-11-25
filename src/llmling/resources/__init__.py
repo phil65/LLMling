@@ -9,7 +9,7 @@ from llmling.resources.loaders import (
     TextResourceLoader,
 )
 from llmling.resources.registry import ResourceLoaderRegistry
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 from llmling.resources.loaders.image import ImageResourceLoader
 
 # Create and populate the default registry
@@ -24,7 +24,7 @@ default_registry["callable"] = CallableResourceLoader
 __all__ = [
     "CLIResourceLoader",
     "CallableResourceLoader",
-    "LoadedContext",
+    "LoadedResource",
     "PathResourceLoader",
     "ResourceLoader",
     "ResourceLoaderRegistry",

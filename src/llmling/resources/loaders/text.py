@@ -6,7 +6,7 @@ from llmling.config.models import TextContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class TextResourceLoader(ResourceLoader[TextContext]):
         self,
         context: TextContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load content from raw text.
 
         Args:
@@ -50,7 +50,7 @@ class TextResourceLoader(ResourceLoader[TextContext]):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
             meta = {"type": "text", "size": len(content)}
-            return LoadedContext(content=content, source_type="text", metadata=meta)
+            return LoadedResource(content=content, source_type="text", metadata=meta)
         except Exception as exc:
             msg = "Failed to load text content"
             raise exceptions.LoaderError(msg) from exc

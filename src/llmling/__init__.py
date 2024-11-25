@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from llmling.resources import (
     ResourceLoader,
-    LoadedContext,
-    default_registry as context_registry,
+    LoadedResource,
+    default_registry as resource_registry,
 )
 from llmling.core.exceptions import (
     LLMLingError,
@@ -23,12 +23,12 @@ __all__ = [
     "ContextError",
     "LLMError",
     "LLMLingError",
-    "LoadedContext",
+    "LoadedResource",
     "LoaderError",
     "ProcessorError",
     "ProcessorRegistry",
     "ResourceLoader",
-    "context_registry",
+    "resource_registry",
 ]
 
 # llmling/

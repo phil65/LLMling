@@ -30,7 +30,7 @@ class ProcessingContext(BaseModel):  # type: ignore[no-redef]
     model_config = ConfigDict(frozen=True)
 
 
-class LoadedContext(BaseModel):
+class LoadedResource(BaseModel):
     """Result of loading and processing a context."""
 
     content: str = ""  # Keep for backward compatibility

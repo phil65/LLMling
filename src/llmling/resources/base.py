@@ -13,7 +13,7 @@ from llmling.core.log import get_logger
 if TYPE_CHECKING:
     from llmling.config.models import Context
     from llmling.processors.registry import ProcessorRegistry
-    from llmling.resources.models import LoadedContext
+    from llmling.resources.models import LoadedResource
 
 
 logger = get_logger(__name__)
@@ -49,7 +49,7 @@ class ResourceLoader[TContext](ABC):
         self,
         context: TContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load and process context content.
 
         Args:

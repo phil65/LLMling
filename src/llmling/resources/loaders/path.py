@@ -11,7 +11,7 @@ from llmling.config.models import PathContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ class PathResourceLoader(ResourceLoader[PathContext]):
         self,
         context: PathContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load content from a file or URL.
 
         Args:
@@ -57,7 +57,7 @@ class PathResourceLoader(ResourceLoader[PathContext]):
                 "size": len(content),
                 "scheme": path.protocol,
             }
-            return LoadedContext(content=content, source_type="path", metadata=meta)
+            return LoadedResource(content=content, source_type="path", metadata=meta)
         except Exception as exc:
             msg = f"Failed to load content from {context.path}"
             logger.exception(msg)

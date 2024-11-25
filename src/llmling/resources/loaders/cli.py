@@ -11,7 +11,7 @@ from llmling.config.models import CLIContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ class CLIResourceLoader(ResourceLoader[CLIContext]):
         self,
         context: CLIContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load content from CLI command execution.
 
         Args:
@@ -96,7 +96,7 @@ class CLIResourceLoader(ResourceLoader[CLIContext]):
                 "exit_code": proc.returncode,
                 "size": len(content),
             }
-            return LoadedContext(content=content, source_type="cli", metadata=meta)
+            return LoadedResource(content=content, source_type="cli", metadata=meta)
 
         except TimeoutError as exc:
             msg = f"Command timed out after {context.timeout} seconds"

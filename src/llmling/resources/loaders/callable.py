@@ -6,7 +6,7 @@ from llmling.config.models import CallableContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 from llmling.utils import calling
 
 
@@ -26,7 +26,7 @@ class CallableResourceLoader(ResourceLoader[CallableContext]):
         self,
         context: CallableContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load content from callable execution.
 
         Args:
@@ -52,7 +52,7 @@ class CallableResourceLoader(ResourceLoader[CallableContext]):
                 "import_path": context.import_path,
                 "size": len(content),
             }
-            return LoadedContext(content=content, source_type="callable", metadata=meta)
+            return LoadedResource(content=content, source_type="callable", metadata=meta)
         except Exception as exc:
             msg = f"Failed to execute callable {context.import_path}"
             raise exceptions.LoaderError(msg) from exc

@@ -12,7 +12,7 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
 from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
         self,
         context: ImageContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load and process image content.
 
         Args:
@@ -54,7 +54,7 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
                 alt_text=context.alt_text,
             )
 
-            return LoadedContext(
+            return LoadedResource(
                 content="",  # Keep empty for backward compatibility
                 content_items=[content_item],
                 source_type="image",

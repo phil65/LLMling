@@ -8,7 +8,7 @@ from llmling.config.models import SourceContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 from llmling.utils import importing
 
 
@@ -29,7 +29,7 @@ class SourceResourceLoader(ResourceLoader[SourceContext]):
         self,
         context: SourceContext,
         processor_registry: ProcessorRegistry,
-    ) -> LoadedContext:
+    ) -> LoadedResource:
         """Load content from Python source.
 
         Args:
@@ -57,7 +57,7 @@ class SourceResourceLoader(ResourceLoader[SourceContext]):
                 "import_path": context.import_path,
                 "size": len(content),
             }
-            return LoadedContext(content=content, source_type="source", metadata=meta)
+            return LoadedResource(content=content, source_type="source", metadata=meta)
         except Exception as exc:
             msg = f"Failed to load source from {context.import_path}"
             raise exceptions.LoaderError(msg) from exc

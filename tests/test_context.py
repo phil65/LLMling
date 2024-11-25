@@ -27,7 +27,7 @@ from llmling.resources.loaders import (
     SourceResourceLoader,
     TextResourceLoader,
 )
-from llmling.resources.models import LoadedContext
+from llmling.resources.models import LoadedResource
 from tests.test_processors import REVERSED_TEXT
 
 
@@ -90,7 +90,7 @@ async def test_text_loader_basic() -> None:
     loader = TextResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
-    assert isinstance(result, LoadedContext)
+    assert isinstance(result, LoadedResource)
     assert result.content == SAMPLE_TEXT
     assert result.metadata["type"] == "text"
 
@@ -267,7 +267,7 @@ async def test_all_loaders_with_processors(
     for context in contexts:
         loader = loaders[context.context_type]
         result = await loader.load(context, processor_registry)
-        assert isinstance(result, LoadedContext)
+        assert isinstance(result, LoadedResource)
         assert result.content
         assert result.content.startswith("'")
 
