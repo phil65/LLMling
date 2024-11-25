@@ -54,12 +54,12 @@ __all__ = [
 # │       │   ├── manager.py             # Config management
 # │       │   └── validation.py          # Config validation
 # │       │
-# │       ├── context/                    # Context handling
+# │       ├── resources/                    # Resource handling
 # │       │   ├── __init__.py
-# │       │   ├── base.py                # Base context classes
-# │       │   ├── models.py              # Context models
-# │       │   ├── registry.py            # Context registry
-# │       │   └── loaders/               # Context loaders
+# │       │   ├── base.py                # Base resource classes
+# │       │   ├── models.py              # Resource models
+# │       │   ├── registry.py            # Resource registry
+# │       │   └── loaders/               # Resource loaders
 # │       │       ├── __init__.py
 # │       │       ├── callable.py
 # │       │       ├── cli.py
@@ -68,7 +68,7 @@ __all__ = [
 # │       │       ├── source.py
 # │       │       └── text.py
 # │       │
-# │       ├── processors/                 # Content processing
+# │       ├── processors/                 # Resource processing
 # │       │   ├── __init__.py
 # │       │   ├── base.py                # Base processor classes
 # │       │   ├── registry.py            # Processor registry

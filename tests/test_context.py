@@ -9,7 +9,7 @@ import pytest
 import upath
 
 from llmling.config.models import (
-    CallableContext,
+    CallableResource,
     CLIResource,
     Context,
     PathResource,
@@ -211,7 +211,7 @@ async def test_source_loader_invalid_module() -> None:
 @pytest.mark.asyncio
 async def test_callable_loader_sync() -> None:
     """Test loading from synchronous callable."""
-    context = CallableContext(
+    context = CallableResource(
         import_path=f"{__name__}.sync_function",
         description="Test sync callable",
         keyword_args={"test": "value"},
@@ -226,7 +226,7 @@ async def test_callable_loader_sync() -> None:
 @pytest.mark.asyncio
 async def test_callable_loader_async() -> None:
     """Test loading from asynchronous callable."""
-    context = CallableContext(
+    context = CallableResource(
         import_path=f"{__name__}.async_function",
         description="Test async callable",
         keyword_args={"test": "value"},

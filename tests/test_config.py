@@ -111,11 +111,11 @@ def test_validate_callable_context() -> None:
     """Test validation of callable context configurations."""
     invalid = {"type": "callable", "import_path": "invalid.1path", "description": "test"}
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.CallableContext.model_validate(invalid)
+        config.CallableResource.model_validate(invalid)
     assert "Invalid import path" in str(exc_info.value)
 
     valid = {"type": "callable", "import_path": "valid.path", "description": "test"}
-    ctx = config.CallableContext.model_validate(valid)
+    ctx = config.CallableResource.model_validate(valid)
     assert ctx.import_path == "valid.path"
 
 

@@ -113,7 +113,7 @@ class SourceResource(BaseContext):
         return self
 
 
-class CallableContext(BaseContext):
+class CallableResource(BaseContext):
     """Context from executing a Python callable."""
 
     context_type: Literal["callable"] = "callable"
@@ -121,7 +121,7 @@ class CallableContext(BaseContext):
     keyword_args: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def validate_import_path(self) -> CallableContext:
+    def validate_import_path(self) -> CallableResource:
         """Validate that the import path is properly formatted."""
         if not all(part.isidentifier() for part in self.import_path.split(".")):
             msg = f"Invalid import path: {self.import_path}"
@@ -153,7 +153,7 @@ Context = (
     | TextResource
     | CLIResource
     | SourceResource
-    | CallableContext
+    | CallableResource
     | ImageContext
 )
 

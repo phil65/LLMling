@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from llmling.config.models import CallableContext
+from llmling.config.models import CallableResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
@@ -17,14 +17,14 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class CallableResourceLoader(ResourceLoader[CallableContext]):
+class CallableResourceLoader(ResourceLoader[CallableResource]):
     """Loads context from Python callable execution."""
 
-    context_class = CallableContext
+    context_class = CallableResource
 
     async def load(
         self,
-        context: CallableContext,
+        context: CallableResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load content from callable execution.
