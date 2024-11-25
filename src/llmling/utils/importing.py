@@ -6,12 +6,12 @@ import importlib
 import inspect
 from pathlib import Path
 import pkgutil
+from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
-    from types import ModuleType
+    from collections.abc import Callable, Generator, Iterator
 
 
 def get_module_source(
@@ -128,6 +128,49 @@ def import_callable(path: str) -> Callable[..., Any]:
     # If we get here, no import combination worked
     msg = f"Could not import callable from path: {path}"
     raise ValueError(msg)
+
+
+def get_pyobject_members(
+    obj: type | ModuleType | Any,
+    *,
+    include_imported: bool = False,
+) -> Iterator[tuple[str, Callable[..., Any]]]:
+    """Get callable members defined in a Python object.
+
+    Works with modules, classes, and instances. Only returns public callable
+    members (functions, methods, etc.) that are defined in the object's module
+    unless include_imported is True.
+
+    Args:
+        obj: Any Python object to inspect (module, class, instance)
+        include_imported: Whether to include imported/inherited callables
+
+    Yields:
+        Tuples of (name, callable) for each public callable
+
+    Example:
+        >>> class MyClass:
+        ...     def method(self): pass
+        ...     def _private(self): pass
+        >>> for name, func in get_pyobject_members(MyClass()):
+        ...     print(name)
+        method
+
+        >>> import my_module
+        >>> for name, func in get_pyobject_members(my_module):
+        ...     print(name)
+        public_function
+    """
+    # Get the module where the object is defined
+    defining_module = obj.__name__ if isinstance(obj, ModuleType) else obj.__module__
+
+    for name, member in inspect.getmembers(obj, inspect.isroutine):
+        if name.startswith("_"):
+            continue
+
+        # Check if callable is defined in the object's module
+        if include_imported or getattr(member, "__module__", None) == defining_module:
+            yield name, member
 
 
 if __name__ == "__main__":
