@@ -25,6 +25,12 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
     """Loads image content from files or URLs."""
 
     context_class = ImageContext
+    uri_scheme = "image"
+    supported_mime_types = ["image/jpeg", "image/png", "image/gif"]
+
+    @classmethod
+    def get_uri_template(cls) -> str:
+        return "image://{path}"
 
     async def load(
         self,

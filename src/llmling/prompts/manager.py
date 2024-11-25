@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from llmling.core.log import get_logger
-from llmling.llm.base import Message
+from llmling.core.typedefs import Message
 from llmling.prompts.models import MessageContext, PromptPriority, SystemPrompt
 
 

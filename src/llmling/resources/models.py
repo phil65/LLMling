@@ -30,15 +30,25 @@ class ProcessingContext(BaseModel):  # type: ignore[no-redef]
     model_config = ConfigDict(frozen=True)
 
 
+class ResourceMetadata(BaseModel):
+    """MCP resource metadata."""
+
+    uri: str
+    mime_type: str
+    name: str | None = None
+    description: str | None = None
+    size: int | None = None
+    modified: str | None = None
+
+
 class LoadedResource(BaseModel):
     """Result of loading and processing a context."""
 
     content: str = ""  # Keep for backward compatibility
     content_items: list[MessageContent] = Field(default_factory=list)
     source_type: str | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    model_config = ConfigDict(frozen=True)
+    metadata: ResourceMetadata
+    etag: str | None = None  # For MCP caching support
 
     @model_validator(mode="before")
     @classmethod
@@ -62,3 +72,15 @@ class LoadedResource(BaseModel):
                 if text_items:
                     data["content"] = text_items[0]["content"]
         return data
+
+    def to_mcp_resource(self) -> dict[str, Any]:
+        """Convert to MCP resource format."""
+        return {
+            "uri": self.metadata.uri,
+            "mimeType": self.metadata.mime_type,
+            "name": self.metadata.name,
+            "description": self.metadata.description,
+            "size": self.metadata.size,
+            "modified": self.metadata.modified,
+            "etag": self.etag,
+        }

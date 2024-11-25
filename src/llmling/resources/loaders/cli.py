@@ -25,6 +25,13 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
     """Loads context from CLI command execution."""
 
     context_class = CLIResource
+    uri_scheme = "cli"
+    supported_mime_types = ["text/plain"]
+
+    @classmethod
+    def get_uri_template(cls) -> str:
+        """Get URI template for CLI resources."""
+        return "cli://{command}"
 
     @logfire.instrument("Executing CLI command {context.command}")
     async def load(

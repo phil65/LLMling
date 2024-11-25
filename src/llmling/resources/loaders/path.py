@@ -25,6 +25,17 @@ class PathResourceLoader(ResourceLoader[PathResource]):
     """Loads context from files or URLs."""
 
     context_class = PathResource
+    uri_scheme = "file"
+    supported_mime_types = [
+        "text/plain",
+        "application/json",
+        "text/markdown",
+        "text/yaml",
+    ]
+
+    @classmethod
+    def get_uri_template(cls) -> str:
+        return "file://{path}"
 
     @logfire.instrument("Loading context from path {context.path}")
     async def load(
@@ -62,3 +73,8 @@ class PathResourceLoader(ResourceLoader[PathResource]):
             msg = f"Failed to load content from {context.path}"
             logger.exception(msg)
             raise exceptions.LoaderError(msg) from exc
+
+
+if __name__ == "__main__":
+    uri = PathResourceLoader.create_uri(path="/path/to/file.txt")
+    print(uri)  # file:///path/to/file.txt

@@ -21,6 +21,13 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
     """Loads context from Python callable execution."""
 
     context_class = CallableResource
+    uri_scheme = "callable"
+    supported_mime_types = ["text/plain"]
+
+    @classmethod
+    def get_uri_template(cls) -> str:
+        """Get URI template for callable resources."""
+        return "callable://{import_path}"
 
     async def load(
         self,

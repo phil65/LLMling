@@ -23,6 +23,12 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
     """Loads context from Python source code."""
 
     context_class = SourceResource
+    uri_scheme = "python"
+    supported_mime_types = ["text/x-python"]
+
+    @classmethod
+    def get_uri_template(cls) -> str:
+        return "python://{module_path}"
 
     @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(

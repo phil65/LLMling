@@ -20,6 +20,12 @@ class TextResourceLoader(ResourceLoader[TextResource]):
     """Loads context from raw text."""
 
     context_class = TextResource
+    uri_scheme = "text"
+    supported_mime_types = ["text/plain"]
+
+    @classmethod
+    def get_uri_template(cls) -> str:
+        return "text://{content_id}"
 
     async def load(
         self,

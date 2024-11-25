@@ -63,6 +63,11 @@ class ProcessorConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    # MCP-specific fields
+    supported_mime_types: list[str] = Field(default_factory=lambda: ["text/plain"])
+    max_input_size: int | None = None
+    streaming: bool = False
+
     @model_validator(mode="after")
     def validate_config(self) -> ProcessorConfig:
         """Validate processor configuration based on type."""
@@ -100,6 +105,17 @@ class ProcessorConfig(BaseModel):
         return {
             "template": self.template,
             "template_engine": self.template_engine,
+        }
+
+    def to_mcp_capability(self) -> dict[str, Any]:
+        """Convert to MCP capability format."""
+        return {
+            "name": self.name,
+            "type": self.type,
+            "description": self.description,
+            "mimeTypes": self.supported_mime_types,
+            "maxInputSize": self.max_input_size,
+            "streaming": self.streaming,
         }
 
 

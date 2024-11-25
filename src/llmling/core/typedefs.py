@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Protocol, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 MessageContentType = Literal["text", "image_url", "image_base64"]
+MessageRole = Literal["system", "user", "assistant", "tool"]
 
 
 class SupportsStr(Protocol):
@@ -36,6 +37,85 @@ class MessageContent(BaseModel):
     alt_text: str | None = None  # For image descriptions
 
     model_config = ConfigDict(frozen=True)
+
+
+class ToolCall(BaseModel):
+    """A tool call request from the LLM."""
+
+    id: str  # Required by OpenAI
+    name: str
+    parameters: dict[str, Any]
+
+    model_config = ConfigDict(frozen=True)
+
+
+class Message(BaseModel):
+    """A chat message."""
+
+    role: MessageRole
+    content: str = ""  # Keep for backward compatibility
+    content_items: list[MessageContent] = Field(default_factory=list)
+    name: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_content_items(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Ensure content_items is populated from content if empty."""
+        if isinstance(data, dict):
+            content = data.get("content", "")
+            content_items = data.get("content_items", [])
+            # Only create content_items from content if we have content and no items
+            if content and not content_items:
+                data["content_items"] = [
+                    MessageContent(type="text", content=content).model_dump()
+                ]
+            # Always keep content in sync with first text content item
+            elif content_items:
+                text_items = [
+                    item
+                    for item in content_items
+                    if isinstance(item, dict) and item.get("type") == "text"
+                ]
+                if text_items:
+                    data["content"] = text_items[0]["content"]
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Message:
+        """Create message from dict representation."""
+        # Handle content_items if present
+        if "content_items" in data and isinstance(data["content_items"], list):
+            data["content_items"] = [
+                MessageContent(**item) if isinstance(item, dict) else item
+                for item in data["content_items"]
+            ]
+        # Handle tool_calls if present
+        if "tool_calls" in data and isinstance(data["tool_calls"], list):
+            data["tool_calls"] = [
+                ToolCall(**call) if isinstance(call, dict) else call
+                for call in data["tool_calls"]
+            ]
+        return cls(**data)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dict for serialization."""
+        return self.model_dump(exclude_none=True)
+
+    @property
+    def has_tools(self) -> bool:
+        """Check if message contains tool calls."""
+        return bool(self.tool_calls)
+
+    @property
+    def has_images(self) -> bool:
+        """Check if message contains images."""
+        return any(
+            item.type in ("image_url", "image_base64") for item in self.content_items
+        )
 
 
 T = TypeVar("T")

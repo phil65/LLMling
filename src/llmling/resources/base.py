@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from llmling.core import exceptions
 from llmling.core.descriptors import classproperty
@@ -25,6 +25,10 @@ class ResourceLoader[TContext](ABC):
     """Base class for context loaders with associated context type."""
 
     context_class: type[TContext]
+    uri_scheme: ClassVar[str]  # e.g., "file", "text", "git"
+
+    # Optional media types this loader supports
+    supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
     def __init__(self, context: TContext | None = None) -> None:
         """Initialize loader with optional context.
@@ -33,6 +37,21 @@ class ResourceLoader[TContext](ABC):
             context: Optional pre-configured context
         """
         self.context = context
+
+    @classmethod
+    def supports_uri(cls, uri: AnyUrl) -> bool:
+        """Check if this loader supports a given URI."""
+        return uri.scheme == cls.uri_scheme
+
+    @classmethod  # could be classproperty
+    def get_uri_template(cls) -> str:
+        """Get the URI template for this resource type."""
+        return f"{cls.uri_scheme}://{{path}}"
+
+    @classmethod
+    def create_uri(cls, **params: str) -> str:
+        """Create a valid URI for this resource type."""
+        return cls.get_uri_template().format(**params)
 
     def __repr__(self) -> str:
         """Show loader type and context."""
