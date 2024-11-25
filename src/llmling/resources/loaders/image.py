@@ -10,13 +10,12 @@ import upath
 from llmling.config.models import ImageContext
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.core.typedefs import MessageContent
-from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedResource
+from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.models import LoadedResource
 
 logger = get_logger(__name__)
 
@@ -30,7 +29,14 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
 
     @classmethod
     def get_uri_template(cls) -> str:
-        return "image://{path}"
+        """Image URIs follow the same pattern as file URIs."""
+        return "image:///{name}"
+
+    @classmethod
+    def create_uri(cls, *, name: str) -> str:
+        """Handle image paths properly."""
+        normalized = name.replace("\\", "/").lstrip("/")
+        return cls.get_uri_template().format(name=normalized)
 
     async def load(
         self,
@@ -50,22 +56,37 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
             LoaderError: If loading fails or context type is invalid
         """
         try:
-            # Use UPath to handle the path
             path_obj = upath.UPath(context.path)
             is_url = path_obj.as_uri().startswith(("http://", "https://"))
 
-            content_item = MessageContent(
-                type="image_url" if is_url else "image_base64",
-                content=await self._load_content(path_obj, is_url),
-                alt_text=context.alt_text,
-            )
+            # Get image content
+            if is_url:
+                image_content = str(path_obj.as_uri())
+                content_type = "image_url"
+            else:
+                if not path_obj.exists():
+                    msg = f"Image file not found: {path_obj}"
+                    raise exceptions.LoaderError(msg)
 
-            return LoadedResource(
-                content="",  # Keep empty for backward compatibility
-                content_items=[content_item],
+                with path_obj.open("rb") as f:
+                    image_content = base64.b64encode(f.read()).decode()
+                    content_type = "image_base64"
+
+            # Images don't have text content, but we need to provide one for backwards compatibility
+            placeholder_text = f"Image: {context.path}"
+            if context.alt_text:
+                placeholder_text = f"{placeholder_text} - {context.alt_text}"
+
+            return create_loaded_resource(
+                content=placeholder_text,  # Text placeholder
                 source_type="image",
-                metadata={
-                    "path": context.path,
+                uri=str(path_obj.as_uri()),
+                mime_type=self._detect_mime_type(path_obj),
+                name=path_obj.name,
+                description=context.alt_text,
+                content_type=content_type,  # Override default text type
+                additional_metadata={
+                    "path": str(context.path),
                     "type": "url" if is_url else "local",
                     "alt_text": context.alt_text,
                 },
@@ -74,6 +95,16 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
         except Exception as exc:
             msg = f"Failed to load image from {context.path}"
             raise exceptions.LoaderError(msg) from exc
+
+    def _detect_mime_type(self, path: upath.UPath) -> str:
+        """Detect MIME type from file extension."""
+        ext = path.suffix.lower()
+        return {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+        }.get(ext, "application/octet-stream")
 
     async def _load_content(self, path_obj: upath.UPath, is_url: bool) -> str:
         """Load content from path.

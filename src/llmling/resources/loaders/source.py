@@ -7,13 +7,13 @@ import logfire
 from llmling.config.models import SourceResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedResource
+from llmling.resources.base import ResourceLoader, create_loaded_resource
 from llmling.utils import importing
 
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.models import LoadedResource
 
 
 logger = get_logger(__name__)
@@ -25,10 +25,6 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
     context_class = SourceResource
     uri_scheme = "python"
     supported_mime_types = ["text/x-python"]
-
-    @classmethod
-    def get_uri_template(cls) -> str:
-        return "python://{module_path}"
 
     @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(
@@ -58,12 +54,19 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
             if procs := context.processors:
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-            meta = {
-                "type": "source",
-                "import_path": context.import_path,
-                "size": len(content),
-            }
-            return LoadedResource(content=content, source_type="source", metadata=meta)
+
+            return create_loaded_resource(
+                content=content,
+                source_type="source",
+                uri=self.create_uri(name=context.import_path),
+                mime_type="text/x-python",
+                name=context.import_path,
+                description=context.description,
+                additional_metadata={
+                    "import_path": context.import_path,
+                    "recursive": context.recursive,
+                },
+            )
         except Exception as exc:
             msg = f"Failed to load source from {context.import_path}"
             raise exceptions.LoaderError(msg) from exc

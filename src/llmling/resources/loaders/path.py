@@ -10,12 +10,12 @@ from upath import UPath
 from llmling.config.models import PathResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.resources.base import ResourceLoader
-from llmling.resources.models import LoadedResource
+from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.models import LoadedResource
 
 
 logger = get_logger(__name__)
@@ -35,7 +35,14 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
     @classmethod
     def get_uri_template(cls) -> str:
-        return "file://{path}"
+        """File URIs need three slashes for absolute paths."""
+        return "file:///{name}"
+
+    @classmethod
+    def create_uri(cls, *, name: str) -> str:
+        """Handle file paths properly."""
+        normalized = name.replace("\\", "/").lstrip("/")
+        return cls.get_uri_template().format(name=normalized)
 
     @logfire.instrument("Loading context from path {context.path}")
     async def load(
@@ -62,16 +69,18 @@ class PathResourceLoader(ResourceLoader[PathResource]):
             if procs := context.processors:
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-            meta = {
-                "type": "path",
-                "path": str(path),
-                "size": len(content),
-                "scheme": path.protocol,
-            }
-            return LoadedResource(content=content, source_type="path", metadata=meta)
+
+            return create_loaded_resource(
+                content=content,
+                source_type="path",
+                uri=str(path.as_uri()),
+                mime_type=self.supported_mime_types[0],
+                name=path.name,
+                description=context.description,
+                additional_metadata={"path": str(path), "scheme": path.protocol},
+            )
         except Exception as exc:
             msg = f"Failed to load content from {context.path}"
-            logger.exception(msg)
             raise exceptions.LoaderError(msg) from exc
 
 

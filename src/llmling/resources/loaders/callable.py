@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from llmling.config.models import CallableResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.resources.base import ResourceLoader
+from llmling.resources.base import ResourceLoader, create_loaded_resource
 from llmling.resources.models import LoadedResource
 from llmling.utils import calling
 
@@ -23,11 +23,6 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
     context_class = CallableResource
     uri_scheme = "callable"
     supported_mime_types = ["text/plain"]
-
-    @classmethod
-    def get_uri_template(cls) -> str:
-        """Get URI template for callable resources."""
-        return "callable://{import_path}"
 
     async def load(
         self,
@@ -54,12 +49,18 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
             if procs := context.processors:
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-            meta = {
-                "type": "callable",
-                "import_path": context.import_path,
-                "size": len(content),
-            }
-            return LoadedResource(content=content, source_type="callable", metadata=meta)
+
+            return create_loaded_resource(
+                content=content,
+                source_type="callable",
+                uri=self.create_uri(name=context.import_path),
+                name=context.import_path,
+                description=context.description,
+                additional_metadata={
+                    "import_path": context.import_path,
+                    "args": context.keyword_args,
+                },
+            )
         except Exception as exc:
             msg = f"Failed to execute callable {context.import_path}"
             raise exceptions.LoaderError(msg) from exc

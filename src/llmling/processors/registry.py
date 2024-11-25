@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 import logfire
@@ -32,12 +33,20 @@ class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
         return exceptions.ProcessorError
 
     def _validate_item(self, item: Any) -> BaseProcessor:
-        """Validate processor configuration and create instance."""
+        """Validate and transform items."""
         match item:
-            case ProcessorConfig():
-                return self._create_processor(item)
             case BaseProcessor():
                 return item
+            case ProcessorConfig():
+                return self._create_processor(item)
+            case _ if callable(item):
+                # Use existing FunctionProcessor
+                config = ProcessorConfig(
+                    type="function",
+                    import_path=f"{item.__module__}.{item.__qualname__}",
+                    async_execution=asyncio.iscoroutinefunction(item),
+                )
+                return FunctionProcessor(config)
             case _:
                 msg = f"Invalid processor type: {type(item)}"
                 raise exceptions.ProcessorError(msg)

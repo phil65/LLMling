@@ -10,7 +10,7 @@ import logfire
 from llmling.config.models import CLIResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.resources.base import ResourceLoader
+from llmling.resources.base import ResourceLoader, create_loaded_resource
 from llmling.resources.models import LoadedResource
 
 
@@ -27,11 +27,6 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
     context_class = CLIResource
     uri_scheme = "cli"
     supported_mime_types = ["text/plain"]
-
-    @classmethod
-    def get_uri_template(cls) -> str:
-        """Get URI template for CLI resources."""
-        return "cli://{command}"
 
     @logfire.instrument("Executing CLI command {context.command}")
     async def load(
@@ -97,17 +92,15 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
             if procs := context.processors:
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-            meta = {
-                "type": "cli",
-                "command": context.command,
-                "exit_code": proc.returncode,
-                "size": len(content),
-            }
-            return LoadedResource(content=content, source_type="cli", metadata=meta)
 
-        except TimeoutError as exc:
-            msg = f"Command timed out after {context.timeout} seconds"
-            raise exceptions.LoaderError(msg) from exc
+            return create_loaded_resource(
+                content=content,
+                source_type="cli",
+                uri=self.create_uri(name=cmd.replace(" ", "-")),
+                name=f"CLI Output: {cmd}",
+                description=context.description,
+                additional_metadata={"command": cmd, "exit_code": proc.returncode},
+            )
         except Exception as exc:
             msg = "CLI command execution failed"
             raise exceptions.LoaderError(msg) from exc
