@@ -276,24 +276,14 @@ class Config(BaseModel):
     """Root configuration model."""
 
     version: str = "1.0"
-    global_settings: GlobalSettings = Field(
-        default_factory=GlobalSettings
-    )  # Optional with defaults
-    context_processors: dict[str, ProcessorConfig] = Field(
-        default_factory=dict
-    )  # Optional with empty default
+    global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
+    context_processors: dict[str, ProcessorConfig] = Field(default_factory=dict)
     llm_providers: dict[str, LLMProviderConfig]  # Required: at least one provider needed
-    provider_groups: dict[str, list[str]] = Field(
-        default_factory=dict
-    )  # Optional with empty default
+    provider_groups: dict[str, list[str]] = Field(default_factory=dict)
     contexts: dict[str, Context]  # Required: at least one context needed
-    context_groups: dict[str, list[str]] = Field(
-        default_factory=dict
-    )  # Optional with empty default
+    context_groups: dict[str, list[str]] = Field(default_factory=dict)
     task_templates: dict[str, TaskTemplate]  # Required: at least one template needed
-    tools: dict[str, ToolConfig] = Field(
-        default_factory=dict
-    )  # Optional with empty default
+    tools: dict[str, ToolConfig] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,

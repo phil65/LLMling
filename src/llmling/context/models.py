@@ -50,15 +50,14 @@ class LoadedContext(BaseModel):
 
             # If we have content but no items, create a text item
             if content and not content_items:
-                data["content_items"] = [
-                    MessageContent(type="text", content=content).model_dump()
-                ]
+                msg_content = MessageContent(type="text", content=content)
+                data["content_items"] = [msg_content.model_dump()]
             # If we have items but no content, use first text item's content
             elif content_items and not content:
                 text_items = [
-                    item
-                    for item in content_items
-                    if isinstance(item, dict) and item.get("type") == "text"
+                    i
+                    for i in content_items
+                    if isinstance(i, dict) and i.get("type") == "text"
                 ]
                 if text_items:
                     data["content"] = text_items[0]["content"]
