@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import upath
 
-from llmling.config.models import PathResource, TextContext
+from llmling.config.models import PathResource, TextResource
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
@@ -31,10 +31,10 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
     def _validate_item(self, item: Any) -> ResourceLoader[Any]:
         """Validate and possibly transform item before registration."""
         match item:
-            case str() if "\n" in item:  # Multiline string -> TextContext
+            case str() if "\n" in item:  # Multiline string -> TextResource
                 from llmling.resources.loaders.text import TextResourceLoader
 
-                return TextResourceLoader(TextContext(content=item))
+                return TextResourceLoader(TextResource(content=item))
             case str() | os.PathLike() if upath.UPath(item).exists():
                 from llmling.resources.loaders.path import PathResourceLoader
 

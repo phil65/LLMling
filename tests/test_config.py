@@ -99,11 +99,11 @@ def test_validate_source_context() -> None:
     """Test validation of source context configurations."""
     invalid = {"type": "source", "import_path": "invalid.1path", "description": "test"}
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.SourceContext.model_validate(invalid)
+        config.SourceResource.model_validate(invalid)
     assert "Invalid import path" in str(exc_info.value)
 
     valid = {"type": "source", "import_path": "valid.path", "description": "test"}
-    ctx = config.SourceContext.model_validate(valid)
+    ctx = config.SourceResource.model_validate(valid)
     assert ctx.import_path == "valid.path"
 
 

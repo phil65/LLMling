@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from llmling.config.models import TextContext
+from llmling.config.models import TextResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
@@ -16,14 +16,14 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class TextResourceLoader(ResourceLoader[TextContext]):
+class TextResourceLoader(ResourceLoader[TextResource]):
     """Loads context from raw text."""
 
-    context_class = TextContext
+    context_class = TextResource
 
     async def load(
         self,
-        context: TextContext,
+        context: TextResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load content from raw text.

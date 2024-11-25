@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import logfire
 
-from llmling.config.models import SourceContext
+from llmling.config.models import SourceResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
@@ -19,15 +19,15 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class SourceResourceLoader(ResourceLoader[SourceContext]):
+class SourceResourceLoader(ResourceLoader[SourceResource]):
     """Loads context from Python source code."""
 
-    context_class = SourceContext
+    context_class = SourceResource
 
     @logfire.instrument("Loading source code from module {context.import_path}")
     async def load(
         self,
-        context: SourceContext,
+        context: SourceResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load content from Python source.

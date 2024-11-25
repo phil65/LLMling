@@ -11,11 +11,11 @@ class ConfigError(LLMLingError):
     """Configuration related errors."""
 
 
-class ContextError(LLMLingError):
+class ResourceError(LLMLingError):
     """Base class for context-related errors."""
 
 
-class LoaderError(ContextError):
+class LoaderError(ResourceError):
     """Error during context loading."""
 
 

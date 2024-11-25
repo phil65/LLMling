@@ -10,11 +10,11 @@ import upath
 
 from llmling.config.models import (
     CallableContext,
-    CLIContext,
+    CLIResource,
     Context,
     PathResource,
-    SourceContext,
-    TextContext,
+    SourceResource,
+    TextResource,
 )
 from llmling.core import exceptions
 from llmling.core.typedefs import ProcessingStep
@@ -86,7 +86,7 @@ def tmp_file(tmp_path: Path) -> Path:
 @pytest.mark.asyncio
 async def test_text_loader_basic() -> None:
     """Test basic text loading functionality."""
-    context = TextContext(content=SAMPLE_TEXT, description="Test text")
+    context = TextResource(content=SAMPLE_TEXT, description="Test text")
     loader = TextResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
@@ -104,7 +104,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
         cfg = ProcessorConfig(type="function", import_path=path)
         processor_registry.register("reverse", cfg)
         steps = [ProcessingStep(name="reverse")]
-        context = TextContext(content=SAMPLE_TEXT, description="test", processors=steps)
+        context = TextResource(content=SAMPLE_TEXT, description="test", processors=steps)
         loader = TextResourceLoader()
         result = await loader.load(context, processor_registry)
         assert result.content == REVERSED_TEXT
@@ -162,7 +162,9 @@ async def test_path_loader_error() -> None:
 async def test_cli_loader_basic() -> None:
     """Test basic CLI command execution."""
     is_shell = sys.platform == "win32"
-    context = CLIContext(command=ECHO_COMMAND, description="Test command", shell=is_shell)
+    context = CLIResource(
+        command=ECHO_COMMAND, description="Test command", shell=is_shell
+    )
     loader = CLIResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
@@ -173,7 +175,7 @@ async def test_cli_loader_basic() -> None:
 @pytest.mark.asyncio
 async def test_cli_loader_timeout() -> None:
     """Test CLI command timeout."""
-    context = CLIContext(command=SLEEP_COMMAND, timeout=0.1, description="test")
+    context = CLIResource(command=SLEEP_COMMAND, timeout=0.1, description="test")
     loader = CLIResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
@@ -185,7 +187,7 @@ async def test_cli_loader_timeout() -> None:
 async def test_source_loader_basic() -> None:
     """Test basic source code loading."""
     path = "llmling.context.loaders.text"
-    context = SourceContext(import_path=path, description="Test source")
+    context = SourceResource(import_path=path, description="Test source")
     loader = SourceResourceLoader()
     result = await loader.load(context, ProcessorRegistry())
 
@@ -196,7 +198,9 @@ async def test_source_loader_basic() -> None:
 @pytest.mark.asyncio
 async def test_source_loader_invalid_module() -> None:
     """Test loading from non-existent module."""
-    context = SourceContext(import_path=INVALID_MODULE, description="Test invalid module")
+    context = SourceResource(
+        import_path=INVALID_MODULE, description="Test invalid module"
+    )
     loader = SourceResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
@@ -248,9 +252,9 @@ async def test_all_loaders_with_processors(
     processors = [ProcessingStep(name="upper"), ProcessingStep(name="reverse")]
 
     contexts: list[Context] = [
-        TextContext(content=SAMPLE_TEXT, description="Test text", processors=processors),
+        TextResource(content=SAMPLE_TEXT, description="Test text", processors=processors),
         PathResource(path=str(tmp_file), description="Test file", processors=processors),
-        CLIContext(
+        CLIResource(
             command=ECHO_COMMAND,
             description="Test command",
             shell=sys.platform == "win32",

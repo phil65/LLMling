@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import logfire
 
-from llmling.config.models import CLIContext
+from llmling.config.models import CLIResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader
@@ -21,15 +21,15 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class CLIResourceLoader(ResourceLoader[CLIContext]):
+class CLIResourceLoader(ResourceLoader[CLIResource]):
     """Loads context from CLI command execution."""
 
-    context_class = CLIContext
+    context_class = CLIResource
 
     @logfire.instrument("Executing CLI command {context.command}")
     async def load(
         self,
-        context: CLIContext,
+        context: CLIResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load content from CLI command execution.

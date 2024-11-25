@@ -8,7 +8,7 @@ from llmling.resources import (
 from llmling.core.exceptions import (
     LLMLingError,
     ConfigError,
-    ContextError,
+    ResourceError,
     LoaderError,
     ProcessorError,
     LLMError,
@@ -20,13 +20,13 @@ __version__ = "0.4.0"
 
 __all__ = [
     "ConfigError",
-    "ContextError",
     "LLMError",
     "LLMLingError",
     "LoadedResource",
     "LoaderError",
     "ProcessorError",
     "ProcessorRegistry",
+    "ResourceError",
     "ResourceLoader",
     "resource_registry",
 ]

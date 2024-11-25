@@ -47,7 +47,7 @@ context_processors:  # dict[str, ProcessorConfig]
     type: template
     template: "{{ content }}\n---"
 
-contexts:  # dict[str, Context(PathResource | TextContext | CLIContext)]
+contexts:  # dict[str, Context(PathResource | TextResource | CLIResource)]
   guidelines:
     type: path  # PathResource
     path: "./guide.md"
@@ -57,12 +57,12 @@ contexts:  # dict[str, Context(PathResource | TextContext | CLIContext)]
         keyword_args: {key: "value"}
 
   prompt:
-    type: text  # TextContext
+    type: text  # TextResource
     content: "System prompt"
     description: "Basic prompt"
 
   git_diff:
-    type: cli  # CLIContext
+    type: cli  # CLIResource
     command: "git diff"
     description: "Changes"
 

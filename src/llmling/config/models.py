@@ -56,14 +56,14 @@ class PathResource(BaseContext):
         return self
 
 
-class TextContext(BaseContext):
+class TextResource(BaseContext):
     """Raw text context."""
 
     context_type: Literal["text"] = "text"
     content: str
 
     @model_validator(mode="after")
-    def validate_content(self) -> TextContext:
+    def validate_content(self) -> TextResource:
         """Validate that the content is not empty."""
         if not self.content:
             msg = "Content cannot be empty"
@@ -71,7 +71,7 @@ class TextContext(BaseContext):
         return self
 
 
-class CLIContext(BaseContext):
+class CLIResource(BaseContext):
     """Context from CLI command execution."""
 
     context_type: Literal["cli"] = "cli"
@@ -81,7 +81,7 @@ class CLIContext(BaseContext):
     timeout: float | None = None
 
     @model_validator(mode="after")
-    def validate_command(self) -> CLIContext:
+    def validate_command(self) -> CLIResource:
         """Validate command configuration."""
         if not self.command:
             msg = "Command cannot be empty"
@@ -96,7 +96,7 @@ class CLIContext(BaseContext):
         return self
 
 
-class SourceContext(BaseContext):
+class SourceResource(BaseContext):
     """Context from Python source code."""
 
     context_type: Literal["source"] = "source"
@@ -105,7 +105,7 @@ class SourceContext(BaseContext):
     include_tests: bool = False
 
     @model_validator(mode="after")
-    def validate_import_path(self) -> SourceContext:
+    def validate_import_path(self) -> SourceResource:
         """Validate that the import path is properly formatted."""
         if not all(part.isidentifier() for part in self.import_path.split(".")):
             msg = f"Invalid import path: {self.import_path}"
@@ -150,9 +150,9 @@ class ImageContext(BaseContext):
 
 Context = (
     PathResource
-    | TextContext
-    | CLIContext
-    | SourceContext
+    | TextResource
+    | CLIResource
+    | SourceResource
     | CallableContext
     | ImageContext
 )

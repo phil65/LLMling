@@ -8,7 +8,7 @@ from llmling.config.models import (
     Context,
     GlobalSettings,
     CallableContext,
-    SourceContext,
+    SourceResource,
 )
 from llmling.config.validation import ConfigValidator
 from llmling.config.loading import load_config
@@ -21,6 +21,6 @@ __all__ = [
     "ConfigValidator",
     "Context",
     "GlobalSettings",
-    "SourceContext",
+    "SourceResource",
     "load_config",
 ]
