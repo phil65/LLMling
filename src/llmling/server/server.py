@@ -61,23 +61,6 @@ class LLMLingServer:
         self._setup_handlers()
         logger.debug("Server initialized with name: %s", name)
 
-    @classmethod
-    def from_config_file(
-        cls, config_path: str, *, name: str = "llmling-server"
-    ) -> LLMLingServer:
-        """Create server from config file.
-
-        Args:
-            config_path: Path to configuration file
-            name: Optional server name
-
-        Returns:
-            Configured server instance
-        """
-        from llmling.config.loading import load_config
-
-        return cls(load_config(config_path), name=name)
-
     def _setup_handlers(self) -> None:
         """Register MCP protocol handlers."""
 
@@ -139,6 +122,15 @@ class LLMLingServer:
             )
             return result.content
 
+    @classmethod
+    def from_config_file(
+        cls, config_path: str, *, name: str = "llmling-server"
+    ) -> LLMLingServer:
+        """Create server from config file."""
+        from llmling.config.loading import load_config
+
+        return cls(load_config(config_path), name=name)
+
     async def start(self, *, raise_exceptions: bool = False) -> None:
         """Start the server."""
         try:
@@ -172,11 +164,28 @@ class LLMLingServer:
         await self.shutdown()
 
 
+async def serve(config_path: str | None = None) -> None:
+    """Serve LLMling via MCP protocol.
+
+    Args:
+        config_path: Optional path to config file
+    """
+    logger = get_logger(__name__)
+
+    # Create server instance
+    server = LLMLingServer.from_config_file(
+        config_path or "src/llmling/config_resources/test.yml"
+    )
+
+    try:
+        await server.start(raise_exceptions=True)
+    except Exception as exc:
+        logger.exception("Server error: %s", exc)
+        raise
+
+
 if __name__ == "__main__":
     config_path = (
         sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
     )
-
-    # Create and run server
-    server = LLMLingServer.from_config_file(config_path)
-    asyncio.run(server.start(raise_exceptions=True))
+    asyncio.run(serve(config_path))

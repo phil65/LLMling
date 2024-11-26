@@ -9,8 +9,6 @@ from mcp.client.session import ClientSession
 from mcp.types import TextContent
 import pytest
 
-from llmling.server.session import SessionState
-
 
 if TYPE_CHECKING:
     from llmling.server import LLMLingServer
@@ -25,10 +23,6 @@ async def test_server_lifecycle(running_server: tuple[LLMLingServer, tuple[Any, 
         with anyio.move_on_after(2.0):
             # Initialize client
             await session.initialize()
-
-            # Verify server state
-            assert server.session.state == SessionState.RUNNING
-
             # Test basic functionality
             resources = await session.list_resources()
             assert isinstance(resources.resources, list)

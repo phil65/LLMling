@@ -14,7 +14,7 @@ from llmling.core.exceptions import (
     LLMError,
 )
 from llmling.processors.registry import ProcessorRegistry
-from llmling.server import LLMLingServer, create_server
+from llmling.server import LLMLingServer, serve
 
 
 __version__ = "0.4.0"
@@ -30,8 +30,8 @@ __all__ = [
     "ProcessorRegistry",
     "ResourceError",
     "ResourceLoader",
-    "create_server",
     "resource_registry",
+    "serve",
 ]
 
 # llmling/
