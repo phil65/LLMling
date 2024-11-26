@@ -11,9 +11,7 @@ from mcp.types import (
     AnyUrl,
     CallToolResult,
     EmbeddedResource,
-    GetPromptResult,
     ImageContent,
-    PromptMessage,
     Resource,
     ServerResult,
     TextContent,
@@ -151,40 +149,94 @@ class LLMLingMCPServer:
                 raise exceptions.ProcessorError(msg) from exc
 
         @self.mcp_server.get_prompt()
-        @logfire.instrument("Getting prompt: {name}")
         async def handle_get_prompt(
             name: str, arguments: dict[str, str] | None = None
-        ) -> GetPromptResult:
-            """Get a specific prompt.
-
-            Args:
-                name: Prompt name
-                arguments: Optional prompt arguments
-
-            Returns:
-                Rendered prompt result
-
-            Raises:
-                ProcessorError: If prompt cannot be rendered
-            """
+        ) -> mcp.types.GetPromptResult:
+            """Get a specific prompt."""
             try:
                 result = await self.session.prompt_registry.render(name, arguments or {})
 
-                messages = [
-                    PromptMessage(
-                        role=msg.role, content=TextContent(type="text", text=msg.content)
+                messages = []
+                for msg in result.messages:
+                    # Map internal role to MCP role (user/assistant only)
+                    mcp_role: mcp.types.Role = (
+                        "assistant" if msg.role == "assistant" else "user"
                     )
-                    for msg in result.messages
-                ]
 
-                return GetPromptResult(
+                    # Convert content
+                    match msg.content:
+                        case str():
+                            mcp_content = mcp.types.TextContent(
+                                type="text",
+                                text=msg.content,
+                            )
+                        case list():
+                            contents = []
+                            for item in msg.get_content_items():
+                                if item.type == "resource":
+                                    # Find matching resolved content if any
+                                    resolved_content = None
+                                    if msg.resolved_content:
+                                        for rc in msg.resolved_content:
+                                            if rc.original == item and rc.resolved:
+                                                resolved_content = rc.resolved
+                                                break
+
+                                    if resolved_content:
+                                        contents.append(
+                                            mcp.types.TextContent(
+                                                type="text",
+                                                text=resolved_content.content,
+                                            )
+                                        )
+                                    else:
+                                        contents.append(
+                                            mcp.types.EmbeddedResource(
+                                                type="resource",
+                                                resource=mcp.types.TextResourceContents(
+                                                    uri=mcp.types.AnyUrl(item.content),
+                                                    text=item.alt_text or "",
+                                                    mimeType="text/plain",
+                                                ),
+                                            )
+                                        )
+                                elif item.type in ("image_url", "image_base64"):
+                                    contents.append(
+                                        mcp.types.ImageContent(
+                                            type="image",
+                                            data=item.content,
+                                            mimeType="image/png",
+                                            # Or determine from content
+                                        )
+                                    )
+                                else:  # text
+                                    contents.append(
+                                        mcp.types.TextContent(
+                                            type="text",
+                                            text=item.content,
+                                        )
+                                    )
+                            # MCP expects a single content item, not a list
+                            mcp_content = (
+                                contents[0] if len(contents) == 1 else contents[0]
+                            )
+
+                    messages.append(
+                        mcp.types.PromptMessage(
+                            role=mcp_role,
+                            content=mcp_content,
+                        )
+                    )
+
+                return mcp.types.GetPromptResult(
                     description=f"Prompt: {name}",
                     messages=messages,
                 )
+
             except Exception as exc:
-                msg = f"Failed to get prompt: {name}"
-                logger.exception(msg)
-                raise exceptions.ProcessorError(msg) from exc
+                logger.exception("Failed to get prompt")
+                error_msg = f"Failed to get prompt: {exc}"
+                raise exceptions.ProcessorError(error_msg) from exc
 
         @self.mcp_server.list_tools()
         @logfire.instrument("Listing available tools")

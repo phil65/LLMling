@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
@@ -10,8 +10,28 @@ from llmling.prompts.models import Prompt, PromptResult
 from llmling.prompts.rendering import render_prompt
 
 
+if TYPE_CHECKING:
+    from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.registry import ResourceLoaderRegistry
+
+
 class PromptRegistry(BaseRegistry[str, Prompt]):
     """Registry for prompt templates."""
+
+    def __init__(
+        self,
+        resource_registry: ResourceLoaderRegistry | None = None,
+        processor_registry: ProcessorRegistry | None = None,
+    ) -> None:
+        """Initialize registry.
+
+        Args:
+            resource_registry: Optional registry for resolving resources
+            processor_registry: Optional registry for content processors
+        """
+        super().__init__()
+        self.resource_registry = resource_registry
+        self.processor_registry = processor_registry
 
     @property
     def _error_class(self) -> type[exceptions.LLMLingError]:
@@ -35,4 +55,9 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
     ) -> PromptResult:
         """Render a prompt template with arguments."""
         prompt = self[name]
-        return await render_prompt(prompt, arguments or {})
+        return await render_prompt(
+            prompt,
+            arguments or {},
+            resource_registry=self.resource_registry,
+            processor_registry=self.processor_registry,
+        )

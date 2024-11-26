@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 MessageContentType = Literal["text", "resource", "image_url", "image_base64"]
+
+# Our internal role type (could include more roles)
 MessageRole = Literal["system", "user", "assistant", "tool"]
 
 

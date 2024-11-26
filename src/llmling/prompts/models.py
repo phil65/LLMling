@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import datetime  # noqa: TC003
 from enum import Enum, IntEnum
 from typing import Any, Literal
 
 import mcp
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from llmling.core.typedefs import MessageContent  # noqa: TC001
+from llmling.core.typedefs import MessageContent
+from llmling.resources.models import LoadedResource  # noqa: TC001
 
 
 MessageRole = Literal["system", "user", "assistant", "tool"]
@@ -102,14 +104,83 @@ class ExtendedPromptArgument(BaseModel):
         return self
 
 
-class PromptMessage(BaseModel):
-    """Single message in a prompt template."""
+class ResolvedContent(BaseModel):
+    """Content with resolved resources."""
 
-    role: MessageRole
-    content: str
-    name: str | None = None
+    original: MessageContent
+    resolved: LoadedResource | None = None
+    resolved_at: datetime | None = None
 
     model_config = ConfigDict(frozen=True)
+
+
+class PromptMessage(BaseModel):
+    """A message in a prompt."""
+
+    role: MessageRole
+    content: str | MessageContent | list[MessageContent] = ""
+    resolved_content: list[ResolvedContent] | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+    def needs_resolution(self) -> bool:
+        """Check if message has unresolved resources."""
+        contents = self.get_content_items()
+        return any(item.type == "resource" for item in contents)
+
+    def get_content_items(self) -> list[MessageContent]:
+        """Get all content items."""
+        match self.content:
+            case str():
+                return [MessageContent.text(self.content)]
+            case MessageContent():
+                return [self.content]
+            case list():
+                return self.content
+            case _:
+                return [MessageContent.text(str(self.content))]
+
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_content_items(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Ensure backwards compatibility for content field."""
+        if isinstance(data, dict):
+            content = data.get("content", "")
+            match content:
+                case str():
+                    # Convert string to text content
+                    data["content"] = MessageContent.text(content)
+                case MessageContent():
+                    # Already correct format
+                    pass
+                case list():
+                    # Ensure all items are MessageContent
+                    data["content"] = [
+                        item
+                        if isinstance(item, MessageContent)
+                        else MessageContent.text(str(item))
+                        for item in content
+                    ]
+                case _:
+                    # Convert anything else to string
+                    data["content"] = MessageContent.text(str(content))
+        return data
+
+    def get_text_content(self) -> str:
+        """Get text content for backwards compatibility."""
+        match self.content:
+            case str():
+                return self.content
+            case MessageContent() if self.content.type == "text":
+                return self.content.content
+            case list() if self.content:
+                # Get first text content or first content
+                text_items = [
+                    item.content for item in self.content if item.type == "text"
+                ]
+                return text_items[0] if text_items else self.content[0].content
+            case _:
+                return ""
 
 
 class Prompt(BaseModel):
@@ -145,5 +216,6 @@ class PromptResult(BaseModel):
 
     messages: list[PromptMessage]
     metadata: dict[str, Any] = Field(default_factory=dict)
+    resolved_at: datetime | None = None
 
     model_config = ConfigDict(frozen=True)
