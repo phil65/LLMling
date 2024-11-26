@@ -107,17 +107,6 @@ class ProcessorConfig(BaseModel):
             "template_engine": self.template_engine,
         }
 
-    def to_mcp_capability(self) -> dict[str, Any]:
-        """Convert to MCP capability format."""
-        return {
-            "name": self.name,
-            "type": self.type,
-            "description": self.description,
-            "mimeTypes": self.supported_mime_types,
-            "maxInputSize": self.max_input_size,
-            "streaming": self.streaming,
-        }
-
 
 class ProcessorResult(BaseModel):
     """Result of processing content."""

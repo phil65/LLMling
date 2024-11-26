@@ -75,15 +75,3 @@ class LoadedResource(BaseModel):
                 if text_items:
                     data["content"] = text_items[0]["content"]
         return data
-
-    def to_mcp_resource(self) -> dict[str, Any]:
-        """Convert to MCP resource format."""
-        return {
-            "uri": self.metadata.uri,
-            "mimeType": self.metadata.mime_type,
-            "name": self.metadata.name,
-            "description": self.metadata.description,
-            "size": self.metadata.size,
-            "modified": self.metadata.modified,
-            "etag": self.etag,
-        }

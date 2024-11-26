@@ -8,9 +8,14 @@ from mcp import types
 import pytest
 
 from llmling.config.manager import ConfigManager
-from llmling.config.models import Config, ToolConfig
+from llmling.config.models import Config, GlobalSettings, TextResource, ToolConfig
 from llmling.processors.registry import ProcessorRegistry
-from llmling.prompts.models import ArgumentType, ExtendedPromptArgument, Prompt
+from llmling.prompts.models import (
+    ArgumentType,
+    ExtendedPromptArgument,
+    Prompt,
+    PromptMessage,
+)
 from llmling.server import LLMLingServer
 
 
@@ -32,15 +37,28 @@ def processor_registry():
 
 @pytest.fixture
 def test_config() -> Config:
-    """Create a test configuration."""
+    """Create test configuration with sample data."""
+    prompt_msg = PromptMessage(role="user", content="Test message")
     return Config(
-        version="1.0",
-        contexts={},  # Empty for now
+        version="1.0.0",
+        global_settings=GlobalSettings(),
+        contexts={
+            "test-resource": TextResource(
+                content="test content", description="Test resource"
+            ),
+        },
         tools={
             "example": ToolConfig(
                 import_path="llmling.testing.tools.example_tool",
                 name="example",
                 description="Example tool for testing",
+            ),
+        },
+        prompts={
+            "test-prompt": Prompt(
+                name="test-prompt",
+                description="Test prompt",
+                messages=[prompt_msg],
             ),
         },
     )

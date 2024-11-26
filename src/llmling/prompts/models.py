@@ -6,7 +6,6 @@ from datetime import datetime  # noqa: TC003
 from enum import Enum, IntEnum
 from typing import Any, Literal
 
-import mcp
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llmling.core.typedefs import MessageContent
@@ -75,14 +74,6 @@ class ExtendedPromptArgument(BaseModel):
     default: Any | None = None
 
     model_config = ConfigDict(extra="allow")
-
-    def to_mcp_argument(self) -> mcp.types.PromptArgument:
-        """Convert to MCP PromptArgument."""
-        return mcp.types.PromptArgument(
-            name=self.name,
-            description=self.description,
-            required=self.required,
-        )
 
     @model_validator(mode="after")
     def validate_type_specific_fields(self) -> ExtendedPromptArgument:
@@ -193,14 +184,6 @@ class Prompt(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
-
-    def to_mcp_prompt(self) -> mcp.types.Prompt:
-        """Convert to MCP Prompt."""
-        return mcp.types.Prompt(
-            name=self.name,
-            description=self.description,
-            arguments=[arg.to_mcp_argument() for arg in self.arguments],
-        )
 
     def validate_arguments(self, provided: dict[str, Any]) -> None:
         """Validate provided arguments against requirements."""
