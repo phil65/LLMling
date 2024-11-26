@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import anyio
 import logfire
+from mcp.server import stdio_server
 
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
@@ -77,17 +77,17 @@ class LLMLingServer:
         }
 
     @logfire.instrument("Starting server")
-    async def start(
-        self, *, timeout: float = 30.0, raise_exceptions: bool = False
-    ) -> None:
+    async def start(self, *, raise_exceptions: bool = False) -> None:
         """Start the server."""
         try:
-            with anyio.move_on_after(timeout) as scope:
-                await self.session.startup()
-                if scope.cancel_called:
-                    msg = f"Server startup timed out after {timeout}s"
-                    raise TimeoutError(msg)  # noqa: TRY301
-                await self.mcp_server.start(raise_exceptions=raise_exceptions)
+            await self.session.startup()
+            async with stdio_server() as (read_stream, write_stream):
+                await self.mcp_server.mcp_server.run(
+                    read_stream,
+                    write_stream,
+                    self.mcp_server.mcp_server.create_initialization_options(),
+                    raise_exceptions=raise_exceptions,
+                )
         except Exception as exc:
             logger.exception("Server startup failed")
             await self.shutdown()
@@ -116,7 +116,11 @@ class LLMLingServer:
         exc_tb: types.TracebackType | None,
     ) -> None:
         """Async context manager exit."""
-        await self.shutdown()
+        try:
+            await self.shutdown()
+        except Exception:
+            logger.exception("Error during cleanup")
+            raise
 
 
 def create_server(config_path: str) -> LLMLingServer:
