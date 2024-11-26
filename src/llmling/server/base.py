@@ -2,24 +2,25 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from mcp.server import Server as MCPServer
+from mcp.server.session import ServerSession
+from mcp.shared.context import RequestContext
 from mcp.types import (
+    CallToolResult,
     EmbeddedResource,
+    EmptyResult,
     ImageContent,
     LoggingLevel,
     ServerResult,
     TextContent,
 )
+from pydantic import AnyUrl
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 
-
-if TYPE_CHECKING:
-    from mcp.server.session import ServerSession
-    from mcp.shared.context import RequestContext
 
 logger = get_logger(__name__)
 
@@ -59,32 +60,26 @@ class ServerBase:
         *,
         description: str | None = None,
     ) -> None:
-        """Send progress notification if progress token exists.
-
-        Args:
-            progress: Current progress value
-            total: Optional total value
-            description: Optional progress description
-        """
+        """Send progress notification if progress token exists."""
         try:
             ctx = self.request_context
-            if progress_token := ctx.meta.progressToken:
+            if ctx.meta and (progress_token := ctx.meta.progressToken):
                 # Send progress notification
                 await ctx.session.send_progress_notification(
-                    progress_token=progress_token,
+                    progress_token=progress_token,  # Send token first
                     progress=progress,
                     total=total,
                 )
-                # Send description as log message if provided
+                # Send description separately if provided
                 if description:
                     await ctx.session.send_log_message(
                         level="info",
                         data=description,
                     )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("Failed to send progress notification", exc_info=True)
 
-    async def convert_to_mcp_content(
+    async def convert_to_mcp_content(  # noqa: PLR0911
         self,
         content: Any,
         *,
@@ -119,7 +114,7 @@ class ServerBase:
             ]
 
         # Handle lists and tuples
-        if isinstance(content, (list, tuple)):
+        if isinstance(content, list | tuple):
             results = []
             for item in content:
                 results.extend(await self.convert_to_mcp_content(item))
@@ -144,16 +139,7 @@ class ServerBase:
         *,
         error: bool = False,
     ) -> ServerResult:
-        """Wrap result in proper MCP response type.
-
-        Args:
-            result: Result to wrap
-            error: Whether this is an error result
-
-        Returns:
-            Wrapped MCP result
-        """
-        # If already wrapped, return as-is
+        """Wrap result in proper MCP response type."""
         if isinstance(result, ServerResult):
             return result
 
@@ -161,23 +147,24 @@ class ServerBase:
             # Convert to MCP content types
             content = await self.convert_to_mcp_content(result, error=error)
 
-            # Return as CallToolResult for tools, TextContent for others
-            if self.request_context.request.method == "tools/call":
-                from mcp.types import CallToolResult
-
+            # Get the current request context
+            _ctx = self.request_context
+            # If this is a tool call result
+            if isinstance(content, list) and content:
                 return ServerResult(
                     root=CallToolResult(
                         content=content,
                         isError=error,
                     )
                 )
-            return ServerResult(
-                root=content[0] if content else TextContent(type="text", text="")
-            )
+
+            # For empty or non-list results
+            return ServerResult(root=EmptyResult())
 
         except Exception as exc:
             logger.exception("Failed to wrap result")
-            raise exceptions.ProcessorError(f"Failed to process result: {exc}") from exc
+            msg = f"Failed to process result: {exc}"
+            raise exceptions.ProcessorError(msg) from exc
 
     async def log_message(
         self,
@@ -199,31 +186,29 @@ class ServerBase:
                 data=message,
                 logger=logger_name,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("Failed to send log message", exc_info=True)
 
     async def notify_resource_change(self, uri: str) -> None:
-        """Notify clients about resource changes.
-
-        Args:
-            uri: Resource URI that changed
-        """
+        """Notify clients about resource changes."""
         try:
-            await self.request_context.session.send_resource_updated(uri)
+            # Convert string URI to AnyUrl
+            url = AnyUrl(uri)
+            await self.request_context.session.send_resource_updated(url)
             await self.request_context.session.send_resource_list_changed()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("Failed to send resource change notification", exc_info=True)
 
     async def notify_prompt_change(self) -> None:
         """Notify clients about prompt changes."""
         try:
             await self.request_context.session.send_prompt_list_changed()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("Failed to send prompt change notification", exc_info=True)
 
     async def notify_tool_change(self) -> None:
         """Notify clients about tool changes."""
         try:
             await self.request_context.session.send_tool_list_changed()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.warning("Failed to send tool change notification", exc_info=True)

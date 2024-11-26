@@ -83,7 +83,7 @@ class ExtendedPromptArgument(BaseModel):
         )
 
     @model_validator(mode="after")
-    def validate_type_specific_fields(self) -> PromptArgument:
+    def validate_type_specific_fields(self) -> ExtendedPromptArgument:
         """Validate fields specific to argument types."""
         match self.type:
             case ArgumentType.ENUM:

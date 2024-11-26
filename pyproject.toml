@@ -83,9 +83,12 @@ Discussions = "https://github.com/phil65/llmling/discussions"
 "Code coverage" = "https://app.codecov.io/gh/phil65/llmling"
 
 [tool.pytest.ini_options]
-testpaths = "tests/"
+testpaths = ["tests"]
 log_cli = true
+python_files = ["test_*.py"]
+pythonpath = ["src"]
 log_level = "ERROR"
+asyncio_default_fixture_loop_scope = "function"
 log_format = "%(asctime)s %(levelname)s %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
 asyncio_mode = "auto"
@@ -178,7 +181,7 @@ select = [
     # "TD",   # flake8-todos
     "T10", # flake8-debugger
     # "T20",  # flake8-print
-    "TC", # flake8-type-checking
+    "TC",  # flake8-type-checking
     "TID", # flake8-tidy-imports
     "TRY", # tryceratops
     "UP",  # PyUpgrade
