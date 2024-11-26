@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 import pytest
@@ -16,7 +16,12 @@ from llmling.prompts.models import (
     PromptResult,
 )
 from llmling.prompts.rendering import render_prompt
+from llmling.resources.base import ResourceLoader
 from llmling.resources.models import LoadedResource, ResourceMetadata
+
+
+if TYPE_CHECKING:
+    from llmling.processors.registry import ProcessorRegistry
 
 
 def test_config_with_prompts():
@@ -168,19 +173,23 @@ async def test_prompt_with_resources(
         async def process(self, content: str, *args: Any, **kwargs: Any) -> str:
             return "processed content"
 
-    class MockLoader:
-        context = None
+    class MockLoader(ResourceLoader[None]):
+        context_class = type(None)
+        uri_scheme = "source"
+
+        def __init__(self) -> None:
+            super().__init__(None)
 
         async def load(
             self,
-            context: Any,
-            processor_registry: Any,
+            context: None,
+            processor_registry: ProcessorRegistry,
         ) -> LoadedResource:
             return loaded_resource
 
     class MockResourceRegistry:
-        # Changed to non-async method to match real implementation
-        def find_loader_for_uri(self, uri: str) -> MockLoader:
+        # Changed to sync method to match the actual interface
+        def find_loader_for_uri(self, uri: str) -> ResourceLoader[Any]:
             return MockLoader()
 
     result = await render_prompt(
@@ -194,13 +203,11 @@ async def test_prompt_with_resources(
     msg = result.messages[0]
     assert isinstance(msg.content, list)
     assert len(msg.content) == 2  # noqa: PLR2004
-    assert isinstance(msg.content[0], MessageContent)
     assert msg.content[0].type == "text"
-    assert isinstance(msg.content[1], MessageContent)
+    assert msg.content[0].content == "Analyze this code:"
     assert msg.content[1].type == "resource"
     assert msg.resolved_content is not None
     assert len(msg.resolved_content) == 2  # noqa: PLR2004
-    # First item is text, second is resolved resource
     assert msg.resolved_content[0].original == msg.content[0]
     assert msg.resolved_content[1].resolved == loaded_resource
 

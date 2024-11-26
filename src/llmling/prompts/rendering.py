@@ -9,6 +9,7 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
 from llmling.prompts.models import PromptMessage, PromptResult, ResolvedContent
+from llmling.resources.base import ResourceLoader
 
 
 if TYPE_CHECKING:
@@ -36,7 +37,8 @@ async def resolve_resources(
         Message with resolved resources
 
     Raises:
-        ProcessorError: If resource resolution fails
+        ResourceResolutionError: If resource resolution fails
+        ProcessorError: If content processing fails
     """
     if not message.needs_resolution():
         return message
@@ -52,11 +54,20 @@ async def resolve_resources(
         try:
             # Find appropriate loader
             loader = resource_registry.find_loader_for_uri(content.content)
+            if not isinstance(loader, ResourceLoader):
+                msg = f"Invalid loader type for {content.content}"
+                raise exceptions.ResourceResolutionError(msg)  # noqa: TRY301
+
             # Load resource
-            resource = await loader.load(
-                loader.context,
-                processor_registry,
-            )
+            try:
+                resource = await loader.load(
+                    loader.context,
+                    processor_registry,
+                )
+            except Exception as exc:
+                msg = f"Failed to load resource {content.content}: {exc}"
+                raise exceptions.ResourceResolutionError(msg) from exc
+
             resolved.append(
                 ResolvedContent(
                     original=content,
@@ -64,9 +75,12 @@ async def resolve_resources(
                     resolved_at=now,
                 )
             )
+        except exceptions.ResourceResolutionError:
+            # Re-raise specific resource errors
+            raise
         except Exception as exc:
-            msg = f"Failed to resolve resource {content.content}"
-            raise exceptions.ProcessorError(msg) from exc
+            msg = f"Unexpected error resolving {content.content}: {exc}"
+            raise exceptions.ResourceResolutionError(msg) from exc
 
     return PromptMessage(
         role=message.role,

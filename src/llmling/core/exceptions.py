@@ -33,3 +33,7 @@ class ValidationError(LLMLingError):
 
 class LLMError(LLMLingError):
     """LLM related errors."""
+
+
+class ResourceResolutionError(ResourceError):
+    """Raised when resource resolution fails."""
