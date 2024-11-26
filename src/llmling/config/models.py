@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
+from llmling.prompts.models import Prompt  # noqa: TC001
 
 
 ContextType = Literal["path", "text", "cli", "source", "callable", "image"]
@@ -182,6 +183,8 @@ class Config(BaseModel):
     contexts: dict[str, Context]  # Required: at least one context needed
     context_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
+    # Add prompts support
+    prompts: dict[str, Prompt] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,
@@ -196,7 +199,16 @@ class Config(BaseModel):
             self._validate_context_groups()
         if self.context_processors:
             self._validate_processor_references()
+        if self.prompts:
+            self._validate_prompts()
         return self
+
+    def _validate_prompts(self) -> None:
+        """Validate prompt configurations."""
+        for name, prompt in self.prompts.items():
+            if prompt.name != name:
+                msg = f"Prompt name mismatch: {prompt.name} != {name}"
+                raise ValueError(msg)
 
     def _validate_context_groups(self) -> None:
         """Validate context references in groups."""
