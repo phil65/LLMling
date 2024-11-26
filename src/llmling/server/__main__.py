@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 
 from llmling.server import create_server
@@ -14,6 +15,13 @@ async def main() -> None:
     config_path = (
         sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
     )
+    logging_level = logging.DEBUG
+    # if verbose == 1:
+    #     logging_level = logging.INFO
+    # elif verbose >= 2:
+    #     logging_level = logging.DEBUG
+
+    logging.basicConfig(level=logging_level, stream=sys.stderr)
 
     try:
         # Create and start server
