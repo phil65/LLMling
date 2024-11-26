@@ -4,23 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import logfire
 import mcp
-from mcp.server import NotificationOptions, Server as MCPServer
+from mcp.server import Server as MCPServer
+from mcp.server.models import InitializationOptions
 from mcp.types import (
     AnyUrl,
-    CallToolResult,
     EmbeddedResource,
     ImageContent,
-    Resource,
-    ServerResult,
+    Prompt,
     TextContent,
     Tool,
 )
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.tools.exceptions import ToolError
 
 
 if TYPE_CHECKING:
@@ -49,42 +46,18 @@ class LLMLingMCPServer:
         self.name = name
         self.config = config
         self.session = session
-        self.mcp_server = MCPServer(name)
+        # Create MCP server with proper initialization options
+        self.server = MCPServer(name)
+        self.mcp_server = self.server
+        # self.init_opts = self.server.create_initialization_options()
         self._setup_handlers()
-        logger.info("MCP server initialized with name: %s", name)
+        logger.debug("MCP server initialized with name: %s", name)
 
     def _setup_handlers(self) -> None:
         """Register MCP protocol handlers."""
 
-        @self.mcp_server.list_resources()
-        @logfire.instrument("Listing available resources")
-        async def handle_list_resources() -> list[Resource]:
-            """List available resources."""
-            try:
-                resources = []
-                for name, context in self.config.contexts.items():
-                    # Get loader for context type
-                    loader_class = self.session.resource_registry[context.context_type]
-                    loader = loader_class.create(context)
-                    uri = loader.create_uri(name=name)
-
-                    resources.append(
-                        Resource(
-                            uri=AnyUrl(uri),
-                            name=name,
-                            description=context.description,
-                            mimeType=loader.supported_mime_types[0],
-                        )
-                    )
-            except Exception as exc:
-                msg = "Failed to list resources"
-                logger.exception(msg)
-                raise exceptions.ResourceError(msg) from exc
-            else:
-                return resources
-
         @self.mcp_server.read_resource()
-        @logfire.instrument("Reading resource: {uri}")
+        # @logfire.instrument("Reading resource: {uri}")
         async def handle_read_resource(uri: AnyUrl) -> str:
             """Read a specific resource."""
             try:
@@ -135,18 +108,27 @@ class LLMLingMCPServer:
                 return result.content
 
         @self.mcp_server.list_prompts()
-        @logfire.instrument("Listing available prompts")
-        async def handle_list_prompts() -> list[dict[str, Any]]:
+        # @logfire.instrument("Listing available prompts")
+        async def handle_list_prompts() -> list[Prompt]:
             """List available prompts."""
+            logger.debug("Handling tools/list request")
             try:
-                return [
-                    prompt.to_mcp_prompt().model_dump()
-                    for prompt in self.session.prompt_registry.values()
-                ]
-            except Exception as exc:
-                msg = "Failed to list prompts"
-                logger.exception(msg)
-                raise exceptions.ProcessorError(msg) from exc
+                tools = []
+                for tool in self.session.tool_registry.values():
+                    logger.debug("Processing tool: %s", tool)
+                    schema = tool.get_schema()
+                    tools.append(
+                        Tool(
+                            name=schema["function"]["name"],
+                            description=schema["function"]["description"],
+                            inputSchema=schema["function"]["parameters"],
+                        )
+                    )
+                logger.debug("Returning tools: %s", tools)
+                return tools
+            except Exception:
+                logger.exception("Error listing tools")
+                raise
 
         @self.mcp_server.get_prompt()
         async def handle_get_prompt(
@@ -238,10 +220,9 @@ class LLMLingMCPServer:
                 error_msg = f"Failed to get prompt: {exc}"
                 raise exceptions.ProcessorError(error_msg) from exc
 
-        @self.mcp_server.list_tools()
-        @logfire.instrument("Listing available tools")
+        @self.server.list_tools()
         async def handle_list_tools() -> list[Tool]:
-            """List available tools."""
+            """Handle tools/list request."""
             try:
                 tools = []
                 for tool in self.session.tool_registry.values():
@@ -253,61 +234,18 @@ class LLMLingMCPServer:
                             inputSchema=schema["function"]["parameters"],
                         )
                     )
-            except Exception as exc:
-                msg = "Failed to list tools"
-                logger.exception(msg)
-                raise exceptions.ProcessorError(msg) from exc
+            except Exception:
+                logger.exception("Error listing tools")
+                raise
             else:
                 return tools
 
-        @self.mcp_server.call_tool()
-        @logfire.instrument("Calling tool: {name}")
+        @self.server.call_tool()
         async def handle_call_tool(
             name: str, arguments: dict[str, Any] | None = None
-        ) -> ServerResult:
-            """Execute a tool."""
-            try:
-                # Extract meta from arguments if present
-                arguments = arguments or {}
-                meta = arguments.pop("_meta", {})
-                progress_token = meta.get("progressToken")
-                session = self.mcp_server.request_context.session
-                # Track progress if token exists
-                if progress_token:
-                    await session.send_progress_notification(
-                        progress_token=progress_token,
-                        progress=0.0,
-                        total=1.0,
-                    )
-
-                try:
-                    # Execute tool
-                    result = await self.session.tool_registry.execute(name, **arguments)
-
-                    # Complete progress if token exists
-                    if progress_token:
-                        await session.send_progress_notification(
-                            progress_token=progress_token,
-                            progress=1.0,
-                            total=1.0,
-                        )
-
-                    # Convert result to MCP content
-                    content = [TextContent(type="text", text=str(result))]
-                    return ServerResult(
-                        root=CallToolResult(content=content, isError=False)
-                    )
-
-                except ToolError as exc:
-                    content = [TextContent(type="text", text=str(exc))]
-                    return ServerResult(
-                        root=CallToolResult(content=content, isError=True)
-                    )
-
-            except Exception as exc:
-                logger.exception("Tool execution failed")
-                content = [TextContent(type="text", text=f"Error executing tool: {exc}")]
-                return ServerResult(root=CallToolResult(content=content, isError=True))
+        ) -> list[TextContent | ImageContent | EmbeddedResource]:
+            result = await self.session.tool_registry.execute(name, **(arguments or {}))
+            return [TextContent(type="text", text=str(result))]
 
     def _convert_to_mcp_content(
         self,
@@ -353,27 +291,32 @@ class LLMLingMCPServer:
         return [TextContent(type="text", text=str(content))]
 
     async def start(self, *, raise_exceptions: bool = False) -> None:
-        """Start MCP server.
-
-        Args:
-            raise_exceptions: Whether to raise exceptions instead of handling them
-        """
+        """Start MCP server."""
         try:
             await self.session.startup()
 
+            # Create proper initialization options
+            init_options = InitializationOptions(
+                server_name=self.name,
+                server_version="1.0.0",
+                capabilities=mcp.types.ServerCapabilities(
+                    tools=mcp.types.ToolsCapability(listChanged=True),
+                    prompts=mcp.types.PromptsCapability(listChanged=True),
+                    resources=mcp.types.ResourcesCapability(
+                        subscribe=True,
+                        listChanged=True,
+                    ),
+                    logging=mcp.types.LoggingCapability(),
+                ),
+            )
+
+            # Run server with initialization options
             async with mcp.stdio_server() as (read_stream, write_stream):
-                await self.mcp_server.run(
+                await self.server.run(
                     read_stream,
                     write_stream,
-                    self.mcp_server.create_initialization_options(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={},
-                    ),
+                    initialization_options=init_options,
                     raise_exceptions=raise_exceptions,
                 )
-        except Exception as exc:
-            logger.exception("Server startup failed")
-            msg = "Failed to start MCP server"
-            raise RuntimeError(msg) from exc
         finally:
             await self.session.close()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from typing import Any
 
 
 async def failing_tool(text: str) -> str:
@@ -36,3 +37,20 @@ async def analyze_ast(code: str) -> dict[str, int]:
         "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]),
         "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
     }
+
+
+class TestTool:
+    name = "test"
+    description = "A test tool"
+
+    async def execute(self, **kwargs: Any) -> str:
+        return "Test tool executed"
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {"type": "object", "properties": {}},
+            }
+        }

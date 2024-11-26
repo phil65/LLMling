@@ -5,13 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import logfire
-from mcp.server import stdio_server
 
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import (
-    ResourceLoaderRegistry,
     default_registry as default_resource_registry,
 )
 from llmling.server.mcp_server import LLMLingMCPServer
@@ -28,43 +26,24 @@ logger = get_logger(__name__)
 
 
 class LLMLingServer:
-    """Main server class combining session and MCP functionality."""
+    """Main server class."""
 
     def __init__(
         self,
         config: Config,
-        name: str = "llmling-server",  # Add default name
-        *,
-        resource_registry: ResourceLoaderRegistry | None = None,
-        processor_registry: ProcessorRegistry | None = None,
-        prompt_registry: PromptRegistry | None = None,
-        tool_registry: ToolRegistry | None = None,
+        name: str = "llmling-server",
     ) -> None:
-        """Initialize server with registries.
-
-        Args:
-            config: Server configuration
-            name: Server name (default: "llmling-server")
-            resource_registry: Optional custom resource registry
-            processor_registry: Optional custom processor registry
-            prompt_registry: Optional custom prompt registry
-            tool_registry: Optional custom tool registry
-        """
+        """Initialize server."""
         self.config = config
         self.name = name
-
-        # Create session with registries
         self.session = LLMLingSession(
             config=config,
-            resource_registry=resource_registry or default_resource_registry,
-            processor_registry=processor_registry or ProcessorRegistry(),
-            prompt_registry=prompt_registry or PromptRegistry(),
-            tool_registry=tool_registry or ToolRegistry(),
+            resource_registry=default_resource_registry,
+            processor_registry=ProcessorRegistry(),
+            prompt_registry=PromptRegistry(),
+            tool_registry=ToolRegistry(),
         )
-
-        # Create MCP server
         self.mcp_server = LLMLingMCPServer(name, config, self.session)
-        logger.info("Server initialized with name: %s", name)
 
     @property
     def registries(self) -> dict[str, Any]:
@@ -80,14 +59,8 @@ class LLMLingServer:
     async def start(self, *, raise_exceptions: bool = False) -> None:
         """Start the server."""
         try:
-            await self.session.startup()
-            async with stdio_server() as (read_stream, write_stream):
-                await self.mcp_server.mcp_server.run(
-                    read_stream,
-                    write_stream,
-                    self.mcp_server.mcp_server.create_initialization_options(),
-                    raise_exceptions=raise_exceptions,
-                )
+            # Let MCP server handle the startup exactly like reference
+            await self.mcp_server.start(raise_exceptions=raise_exceptions)
         except Exception as exc:
             logger.exception("Server startup failed")
             await self.shutdown()
@@ -96,14 +69,8 @@ class LLMLingServer:
 
     @logfire.instrument("Shutting down server")
     async def shutdown(self) -> None:
-        """Shutdown the server and cleanup resources."""
-        try:
-            await self.session.close()
-            logger.info("Server shutdown complete")
-        except Exception as exc:
-            logger.exception("Error during server shutdown")
-            msg = "Server shutdown failed"
-            raise RuntimeError(msg) from exc
+        """Shutdown the server."""
+        await self.session.close()
 
     async def __aenter__(self):
         """Async context manager entry."""

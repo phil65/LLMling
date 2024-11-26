@@ -9,25 +9,25 @@ import sys
 from llmling.server import create_server
 
 
+if sys.platform == "win32":
+    # Force WindowsSelectorEventLoopPolicy on Windows
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+
 async def main() -> None:
     """Run the LLMling server."""
-    # Use provided config path or default
     config_path = (
         sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
     )
-    logging_level = logging.DEBUG
-    # if verbose == 1:
-    #     logging_level = logging.INFO
-    # elif verbose >= 2:
-    #     logging_level = logging.DEBUG
-
-    logging.basicConfig(level=logging_level, stream=sys.stderr)
 
     try:
-        # Create and start server
         server = create_server(config_path)
-        async with server:
-            await server.start()
+        await server.start(raise_exceptions=True)
     except KeyboardInterrupt:
         print("\nServer stopped by user")
     except Exception as exc:  # noqa: BLE001
