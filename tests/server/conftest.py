@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import TYPE_CHECKING, Any
 
 from mcp.shared.memory import create_client_server_memory_streams
@@ -14,6 +15,7 @@ from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
 from llmling.server import LLMLingServer
 from llmling.testing.processors import multiply, uppercase_text
+from llmling.testing.testclient import HandshakeClient
 from llmling.testing.tools import analyze_ast, example_tool
 from llmling.tools.registry import ToolRegistry
 
@@ -96,15 +98,11 @@ async def running_server(
 ) -> AsyncGenerator[tuple[LLMLingServer, tuple[Any, Any]], None]:
     """Create and start test server with memory streams."""
     async with create_client_server_memory_streams() as (client_streams, server_streams):
-        # Start server
-        await server.session.startup()
-
-        # Start server in background task
         task = asyncio.create_task(
-            server.mcp_server.mcp_server.run(
+            server.server.run(
                 server_streams[0],
                 server_streams[1],
-                server.mcp_server.mcp_server.create_initialization_options(),
+                server.server.create_initialization_options(),
             )
         )
 
@@ -113,3 +111,9 @@ async def running_server(
         finally:
             task.cancel()
             await server.shutdown()
+
+
+@pytest.fixture
+async def client() -> HandshakeClient:
+    """Create a test client."""
+    return HandshakeClient([sys.executable, "-m", "llmling.server"])
