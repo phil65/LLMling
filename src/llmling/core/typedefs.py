@@ -8,6 +8,10 @@ from typing import Any, Literal, Protocol, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+T = TypeVar("T")
+ProcessorCallable = Callable[[str, Any], str | Awaitable[str]]
+MetadataDict = dict[str, Any]
+
 MessageContentType = Literal["text", "resource", "image_url", "image_base64"]
 
 # Our internal role type (could include more roles)
@@ -18,6 +22,9 @@ class SupportsStr(Protocol):
     """Protocol for objects that can be converted to string."""
 
     def __str__(self) -> str: ...
+
+
+ContentType = str | SupportsStr
 
 
 class ProcessingStep(BaseModel):  # type: ignore[no-redef]
@@ -140,9 +147,3 @@ class Message(BaseModel):
         return any(
             item.type in ("image_url", "image_base64") for item in self.content_items
         )
-
-
-T = TypeVar("T")
-ProcessorCallable = Callable[[str, Any], str | Awaitable[str]]
-ContentType = str | SupportsStr
-MetadataDict = dict[str, Any]
