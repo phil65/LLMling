@@ -8,7 +8,7 @@ from typing import Any, Literal, Protocol, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-MessageContentType = Literal["text", "image_url", "image_base64"]
+MessageContentType = Literal["text", "resource", "image_url", "image_base64"]
 MessageRole = Literal["system", "user", "assistant", "tool"]
 
 
@@ -32,11 +32,33 @@ class ProcessingStep(BaseModel):  # type: ignore[no-redef]
 class MessageContent(BaseModel):
     """Content item in a message."""
 
-    type: MessageContentType = "text"  # Default to text for backward compatibility
-    content: str
-    alt_text: str | None = None  # For image descriptions
+    type: MessageContentType
+    content: str  # The actual content (text/uri/url/base64)
+    alt_text: str | None = None  # For images or resource descriptions
 
     model_config = ConfigDict(frozen=True)
+
+    @classmethod
+    def text(cls, content: str) -> MessageContent:
+        """Create text content."""
+        return cls(type="text", content=content)
+
+    @classmethod
+    def resource(cls, uri: str, description: str | None = None) -> MessageContent:
+        """Create resource reference."""
+        return cls(type="resource", content=uri, alt_text=description)
+
+    @classmethod
+    def image(
+        cls,
+        url_or_data: str,
+        *,
+        is_base64: bool = False,
+        alt_text: str | None = None,
+    ) -> MessageContent:
+        """Create image content."""
+        type_ = "image_base64" if is_base64 else "image_url"
+        return cls(type=type_, content=url_or_data, alt_text=alt_text)
 
 
 class ToolCall(BaseModel):
