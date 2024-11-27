@@ -61,10 +61,7 @@ async def resolve_resources(
 
             # Load resource
             try:
-                resource = await loader.load(
-                    loader.context,
-                    processor_registry,
-                )
+                resource = await loader.load(loader.context, processor_registry)
             except Exception as exc:
                 msg = f"Failed to load resource {content.content}: {exc}"
                 raise exceptions.ResourceResolutionError(msg) from exc
@@ -122,9 +119,8 @@ async def render_prompt(
         for message in prompt.messages:
             # Handle string content
             if isinstance(message.content, str):
-                msg = PromptMessage(
-                    role=message.role, content=message.content.format(**arguments)
-                )
+                text = message.content.format(**arguments)
+                msg = PromptMessage(role=message.role, content=text)
                 rendered_messages.append(msg)
                 continue
 
@@ -135,9 +131,8 @@ async def render_prompt(
             for content in contents:
                 if content.type == "text":
                     # Format text content
-                    rendered_contents.append(
-                        MessageContent.text(content.content.format(**arguments))
-                    )
+                    text = content.content.format(**arguments)
+                    rendered_contents.append(MessageContent.text(text))
                 else:
                     # Keep other content types as-is
                     rendered_contents.append(content)
@@ -163,10 +158,7 @@ async def render_prompt(
 
         return PromptResult(
             messages=rendered_messages,
-            metadata={
-                "prompt_name": prompt.name,
-                "arguments": arguments,
-            },
+            metadata={"prompt_name": prompt.name, "arguments": arguments},
             resolved_at=now if resource_registry else None,
         )
 
