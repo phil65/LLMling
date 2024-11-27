@@ -22,22 +22,24 @@ logger = get_logger(__name__)
 
 
 class ServerObserver:
-    """Base observer with server reference."""
+    """Base observer with server reference and task tracking."""
 
     def __init__(self, server: LLMLingServer) -> None:
         """Initialize with server reference."""
         self.server = server
-        self._tasks: set[asyncio.Task[None]] = set()
+        self._tasks: set[asyncio.Task[Any]] = set()
 
-    def _create_notification_task(
-        self,
-        coro: Coroutine[None, None, None],
-        name: str,
-    ) -> None:
-        """Create and track a notification task."""
-        task: asyncio.Task[Any] = asyncio.create_task(coro, name=name)
+    def _create_tracked_task(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        """Create and track a task."""
+        task = asyncio.create_task(coro)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+        return task
+
+    async def cleanup(self) -> None:
+        """Wait for pending notifications to complete."""
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
 
 
 class ResourceObserver(ServerObserver):
@@ -56,26 +58,18 @@ class ResourceObserver(ServerObserver):
     def _handle_resource_changed(self, key: str, resource: Resource) -> None:
         """Handle individual resource changes."""
         try:
-            # Get appropriate loader to create URI
             loader = self.server.loader_registry.get_loader(resource)
             uri = loader.create_uri(name=key)
-            # Create and track notification task
-            self._create_notification_task(
-                self.server.notify_resource_change(uri),
-                f"notify_resource_change_{key}",
-            )
+            self._create_tracked_task(self.server.notify_resource_change(uri))
         except Exception:
             logger.exception("Failed to notify resource change")
 
     def _handle_list_changed(self, *args: object) -> None:
         """Handle changes that affect the resource list."""
         try:
-            self._create_notification_task(
-                self.server.notify_resource_list_changed(),
-                "notify_resource_list_changed",
-            )
+            self._create_tracked_task(self.server.notify_resource_list_changed())
         except Exception:
-            logger.exception("Failed to notify resource list change")
+            logger.exception("Failed to notify list change")
 
 
 class PromptObserver(ServerObserver):
@@ -94,10 +88,7 @@ class PromptObserver(ServerObserver):
     def _handle_list_changed(self, *args: object) -> None:
         """Handle any prompt changes."""
         try:
-            self._create_notification_task(
-                self.server.notify_prompt_list_changed(),
-                "notify_prompt_list_changed",
-            )
+            self._create_tracked_task(self.server.notify_prompt_list_changed())
         except Exception:
             logger.exception("Failed to notify prompt list change")
 
@@ -118,9 +109,6 @@ class ToolObserver(ServerObserver):
     def _handle_list_changed(self, *args: object) -> None:
         """Handle any tool changes."""
         try:
-            self._create_notification_task(
-                self.server.notify_tool_list_changed(),
-                "notify_tool_list_changed",
-            )
+            self._create_tracked_task(self.server.notify_tool_list_changed())
         except Exception:
             logger.exception("Failed to notify tool list change")

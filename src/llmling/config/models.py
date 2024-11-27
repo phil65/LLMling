@@ -7,10 +7,12 @@ import os  # noqa: TC003
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+import upath
 
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import Prompt  # noqa: TC001
+from llmling.resources.watching import WatchConfig  # noqa: TC001
 
 
 ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
@@ -39,7 +41,18 @@ class BaseResource(BaseModel):
     processors: list[ProcessingStep] = Field(
         default_factory=list
     )  # Optional with empty default
+    watch: WatchConfig | None = None
+
     model_config = ConfigDict(frozen=True)
+
+    @property
+    def supports_watching(self) -> bool:
+        """Whether this resource instance supports watching."""
+        return False
+
+    def is_watched(self) -> bool:
+        """Tell if this resource should be watched."""
+        return self.supports_watching and self.watch is not None and self.watch.enabled
 
 
 class PathResource(BaseResource):
@@ -47,6 +60,19 @@ class PathResource(BaseResource):
 
     resource_type: Literal["path"] = "path"
     path: str | os.PathLike[str]
+    watch: WatchConfig | None = None
+
+    @property
+    def supports_watching(self) -> bool:
+        """Whether this resource instance supports watching."""
+        path = upath.UPath(self.path)
+        if not path.exists():
+            import warnings
+
+            msg = f"Cannot watch non-existent path: {self.path}"
+            warnings.warn(msg, UserWarning, stacklevel=2)
+            return False
+        return True
 
     @model_validator(mode="after")
     def validate_path(self) -> PathResource:
@@ -136,8 +162,14 @@ class ImageResource(BaseResource):
     resource_type: Literal["image"] = "image"
     path: str  # Local path or URL
     alt_text: str | None = None
+    watch: WatchConfig | None = None
 
     model_config = ConfigDict(frozen=True)
+
+    @property
+    def supports_watching(self) -> bool:
+        """Whether this resource instance supports watching."""
+        return True
 
     @model_validator(mode="before")
     @classmethod

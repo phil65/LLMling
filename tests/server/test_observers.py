@@ -99,3 +99,37 @@ async def test_observer_task_cleanup() -> None:
 
     # Task should be removed
     assert len(observer._tasks) == 0
+
+
+@pytest.mark.asyncio
+async def test_prompt_observer_task_cleanup() -> None:
+    """Test that prompt observer tasks are properly tracked and cleaned up."""
+    server = Mock()
+
+    async def slow_notify(*args: object) -> None:
+        await asyncio.sleep(0.1)
+
+    server.notify_prompt_list_changed = slow_notify
+
+    observer = PromptObserver(server)
+    observer._handle_list_changed()
+    assert len(observer._tasks) == 1
+    await observer.cleanup()
+    assert len(observer._tasks) == 0
+
+
+@pytest.mark.asyncio
+async def test_tool_observer_task_cleanup() -> None:
+    """Test that tool observer tasks are properly tracked and cleaned up."""
+    server = Mock()
+
+    async def slow_notify(*args: object) -> None:
+        await asyncio.sleep(0.1)
+
+    server.notify_tool_list_changed = slow_notify
+
+    observer = ToolObserver(server)
+    observer._handle_list_changed()
+    assert len(observer._tasks) == 1
+    await observer.cleanup()
+    assert len(observer._tasks) == 0

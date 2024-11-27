@@ -1,0 +1,30 @@
+resources:
+  python_source:
+    type: path
+    path: "./src"
+    watch:
+      enabled: true
+      patterns:
+        - "*.py"
+        - "!**/__pycache__/**"
+        - "!**/*.pyc"
+      ignore_file: ".gitignore"
+
+  config_files:
+    type: path
+    path: "./config"
+    watch:
+      enabled: true
+      patterns:
+        - "*.yml"
+        - "*.yaml"
+        - "!.private/**"
+
+  documentation:
+    type: path
+    path: "./docs"
+    watch:
+      enabled: true
+      patterns:
+        - "**/*.md"
+        - "!**/drafts/**"

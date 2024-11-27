@@ -182,6 +182,12 @@ class LLMLingServer:
     async def shutdown(self) -> None:
         """Shutdown the server."""
         # Remove observers
+        if hasattr(self, "resource_observer"):
+            await self.resource_observer.cleanup()
+        if hasattr(self, "prompt_observer"):
+            await self.prompt_observer.cleanup()
+        if hasattr(self, "tool_observer"):
+            await self.tool_observer.cleanup()
         self.resource_registry.remove_observer(self.resource_observer.events)
         self.prompt_registry.remove_observer(self.prompt_observer.events)
         self.tool_registry.remove_observer(self.tool_observer.events)

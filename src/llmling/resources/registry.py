@@ -17,6 +17,7 @@ from llmling.config.models import (
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
+from llmling.resources.watching import ResourceWatcher
 
 
 if TYPE_CHECKING:
@@ -43,6 +44,40 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         # Cache by URI instead of name for consistency
         self._cache: dict[str, LoadedResource] = {}
         self._last_loaded: dict[str, datetime] = {}
+        self.watcher = ResourceWatcher(self)
+
+    def register(self, key: str, item: Resource | Any, replace: bool = False) -> None:
+        """Register an item."""
+        # Existing registration logic...
+        super().register(key, item, replace)
+
+        # Set up watching if needed
+        if self._items[key].is_watched():
+            self.watcher.add_watch(key, self._items[key])
+
+    def __delitem__(self, key: str) -> None:
+        """Remove item and its watch if present."""
+        if key in self._items:
+            # Remove watch first
+            self.watcher.remove_watch(key)
+        super().__delitem__(key)
+
+    async def startup(self) -> None:
+        """Initialize registry and start watcher."""
+        await super().startup()
+        # Start watcher
+        await self.watcher.start()
+        # Set up watches for existing resources
+        for name, resource in self._items.items():
+            if resource.is_watched():
+                self.watcher.add_watch(name, resource)
+
+    async def shutdown(self) -> None:
+        """Cleanup registry and stop watcher."""
+        # Stop watcher first
+        await self.watcher.stop()
+        # Then regular shutdown
+        await super().shutdown()
 
     @property
     def _error_class(self) -> type[exceptions.ResourceError]:
@@ -162,13 +197,3 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         """Clear all cached resources."""
         self._cache.clear()
         self._last_loaded.clear()
-
-    async def startup(self) -> None:
-        """Initialize registry."""
-        await super().startup()
-        self.clear_cache()
-
-    async def shutdown(self) -> None:
-        """Cleanup registry."""
-        self.clear_cache()
-        await super().shutdown()

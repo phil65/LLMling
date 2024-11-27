@@ -26,6 +26,17 @@ logger = get_logger(__name__)
 class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
     """Registry for context loaders."""
 
+    # def __init__(self) -> None:
+    #     """Initialize with default loaders."""
+    #     super().__init__()
+    #     # Always register defaults
+    #     self.register("image", ImageResourceLoader)
+    #     self.register("path", PathResourceLoader)
+    #     self.register("text", TextResourceLoader)
+    #     self.register("cli", CLIResourceLoader)
+    #     self.register("source", SourceResourceLoader)
+    #     self.register("callable", CallableResourceLoader)
+
     @property
     def _error_class(self) -> type[exceptions.LoaderError]:
         return exceptions.LoaderError
