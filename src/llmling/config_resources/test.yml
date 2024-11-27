@@ -92,7 +92,7 @@ contexts:
       - name: python_cleaner
 
 # Context groups
-context_groups:
+resource_groups:
   code_review_basic:
     - system_prompt
     - code_review_template

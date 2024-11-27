@@ -26,7 +26,7 @@ contexts:
         content: "Test content"
         description: "Test context"
 
-context_groups: {{}}
+resource_groups: {{}}
 """
 
 

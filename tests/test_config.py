@@ -44,7 +44,7 @@ def minimal_config_dict() -> dict[str, Any]:
             }
         },
         "context_processors": {},
-        "context_groups": {},
+        "resource_groups": {},
         "task_templates": {
             "test-task": {
                 "provider": "test-provider",
@@ -88,7 +88,7 @@ def test_validate_context_references(valid_config_dict: dict[str, Any]) -> None:
     """Test validation of context references in configuration."""
     # Modify config to include invalid context reference
     invalid_config = valid_config_dict.copy()
-    invalid_config["context_groups"] = {"invalid-group": ["non-existent-context"]}
+    invalid_config["resource_groups"] = {"invalid-group": ["non-existent-context"]}
 
     with pytest.raises(pydantic.ValidationError) as exc_info:
         config.Config.model_validate(invalid_config)
@@ -135,7 +135,7 @@ contexts:
         type: text
         content: test content
         description: test description
-context_groups: {}
+resource_groups: {}
 """
     )
 

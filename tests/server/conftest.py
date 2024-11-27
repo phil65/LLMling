@@ -32,7 +32,7 @@ def base_config() -> Config:
         global_settings=GlobalSettings(),
         contexts={},
         context_processors={},
-        context_groups={},
+        resource_groups={},
     )
 
 

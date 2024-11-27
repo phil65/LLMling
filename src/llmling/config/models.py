@@ -181,7 +181,7 @@ class Config(BaseModel):
     global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
     context_processors: dict[str, ProcessorConfig] = Field(default_factory=dict)
     contexts: dict[str, Context]  # Required: at least one context needed
-    context_groups: dict[str, list[str]] = Field(default_factory=dict)
+    resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
     # Add prompts support
     prompts: dict[str, Prompt] = Field(default_factory=dict)
@@ -195,8 +195,8 @@ class Config(BaseModel):
     def validate_references(self) -> Config:
         """Validate all references between components."""
         # Only validate if the optional components are present
-        if self.context_groups:
-            self._validate_context_groups()
+        if self.resource_groups:
+            self._validate_resource_groups()
         if self.context_processors:
             self._validate_processor_references()
         if self.prompts:
@@ -210,9 +210,9 @@ class Config(BaseModel):
                 msg = f"Prompt name mismatch: {prompt.name} != {name}"
                 raise ValueError(msg)
 
-    def _validate_context_groups(self) -> None:
+    def _validate_resource_groups(self) -> None:
         """Validate context references in groups."""
-        for group, contexts in self.context_groups.items():
+        for group, contexts in self.resource_groups.items():
             for context in contexts:
                 if context not in self.contexts:
                     msg = f"Context {context} referenced in group {group} not found"

@@ -49,7 +49,7 @@ class ConfigValidator:
 
         warnings.extend(
             f"Context {context} in group {group} not found"
-            for group, contexts in self.config.context_groups.items()
+            for group, contexts in self.config.resource_groups.items()
             for context in contexts
             if context not in self.config.contexts
         )

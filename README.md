@@ -66,7 +66,7 @@ contexts:  # dict[str, Context(PathResource | TextResource | CLIResource)]
     command: "git diff"
     description: "Changes"
 
-context_groups:  # dict[str, list[str]]
+resource_groups:  # dict[str, list[str]]
   review_contexts:
     - guidelines
     - prompt
