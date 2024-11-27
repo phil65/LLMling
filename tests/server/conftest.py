@@ -13,6 +13,7 @@ from llmling.config.models import Config, GlobalSettings
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
+from llmling.resources.registry import ResourceRegistry
 from llmling.server import LLMLingServer
 from llmling.testing.processors import multiply, uppercase_text
 from llmling.testing.testclient import HandshakeClient
@@ -37,9 +38,34 @@ def base_config() -> Config:
 
 
 @pytest.fixture
-def resource_registry() -> ResourceLoaderRegistry:
+def resource_registry(loader_registry, processor_registry) -> ResourceRegistry:
     """Create test resource registry."""
-    return ResourceLoaderRegistry()
+    return ResourceRegistry(
+        loader_registry=loader_registry, processor_registry=processor_registry
+    )
+
+
+@pytest.fixture
+def loader_registry() -> ResourceLoaderRegistry:
+    """Create test resource loader registry."""
+    registry = ResourceLoaderRegistry()
+    # Register standard loaders
+    from llmling.resources import (
+        CallableResourceLoader,
+        CLIResourceLoader,
+        ImageResourceLoader,
+        PathResourceLoader,
+        SourceResourceLoader,
+        TextResourceLoader,
+    )
+
+    registry["text"] = TextResourceLoader
+    registry["path"] = PathResourceLoader
+    registry["cli"] = CLIResourceLoader
+    registry["source"] = SourceResourceLoader
+    registry["callable"] = CallableResourceLoader
+    registry["image"] = ImageResourceLoader
+    return registry
 
 
 @pytest.fixture
@@ -71,7 +97,7 @@ def tool_registry() -> ToolRegistry:
 @pytest.fixture
 async def server(
     base_config: Config,
-    resource_registry: ResourceLoaderRegistry,
+    loader_registry: ResourceLoaderRegistry,
     processor_registry: ProcessorRegistry,
     prompt_registry: PromptRegistry,
     tool_registry: ToolRegistry,
@@ -80,7 +106,7 @@ async def server(
     server = LLMLingServer(
         config=base_config,
         name="test-server",
-        resource_registry=resource_registry,
+        loader_registry=loader_registry,
         processor_registry=processor_registry,
         prompt_registry=prompt_registry,
         tool_registry=tool_registry,

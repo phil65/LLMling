@@ -1,83 +1,174 @@
-"""Registry for context loaders."""
+"""Registry for managing resources."""
 
 from __future__ import annotations
 
-import os
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-import upath
-
-from llmling.config.models import PathResource, TextResource
+from llmling.config.models import (
+    CallableResource,
+    CLIResource,
+    ImageResource,
+    PathResource,
+    Resource,
+    SourceResource,
+    TextResource,
+)
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
-from llmling.resources.base import ResourceLoader
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Resource
+    from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.loaders.registry import ResourceLoaderRegistry
+    from llmling.resources.models import LoadedResource
 
 
 logger = get_logger(__name__)
 
 
-class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
-    """Registry for context loaders."""
+class ResourceRegistry(BaseRegistry[str, Resource]):
+    """Registry for managing configured resources."""
+
+    def __init__(
+        self,
+        loader_registry: ResourceLoaderRegistry,
+        processor_registry: ProcessorRegistry,
+    ) -> None:
+        """Initialize registry with required dependencies."""
+        super().__init__()
+        self.loader_registry = loader_registry
+        self.processor_registry = processor_registry
+        # Cache by URI instead of name for consistency
+        self._cache: dict[str, LoadedResource] = {}
+        self._last_loaded: dict[str, datetime] = {}
 
     @property
-    def _error_class(self) -> type[exceptions.LoaderError]:
-        return exceptions.LoaderError
+    def _error_class(self) -> type[exceptions.ResourceError]:
+        """Error class to use for this registry."""
+        return exceptions.ResourceError
 
-    def get_supported_schemes(self) -> list[str]:
-        """Get all supported URI schemes."""
-        return [loader.uri_scheme for loader in self._items.values()]
+    def _validate_item(self, item: Any) -> Resource:
+        """Validate and possibly transform items.
 
-    def get_uri_templates(self) -> list[dict[str, Any]]:
-        """Get URI templates for all registered loaders."""
-        return [
-            {
-                "scheme": loader.uri_scheme,
-                "template": loader.get_uri_template(),
-                "mimeTypes": loader.supported_mime_types,
-            }
-            for loader in self._items.values()
-        ]
+        Args:
+            item: Item to validate
 
-    def find_loader_for_uri(self, uri: str) -> ResourceLoader[Any]:
-        """Find appropriate loader for a URI."""
-        # Parse scheme from URI string
+        Returns:
+            Validated Resource
+
+        Raises:
+            ResourceError: If item is invalid
+        """
         try:
-            scheme = uri.split("://")[0]
-        except IndexError:
-            msg = f"Invalid URI format: {uri}"
-            raise exceptions.LoaderError(msg) from None
+            match item:
+                # Match against concrete resource types
+                case (
+                    PathResource()
+                    | TextResource()
+                    | CLIResource()
+                    | SourceResource()
+                    | CallableResource()
+                    | ImageResource()
+                ):
+                    return item
 
-        for loader in self._items.values():
-            if loader.uri_scheme == scheme:
-                return loader
+                case dict() if "resource_type" in item:
+                    # Map resource_type to appropriate class
+                    resource_classes: dict[str, type[Resource]] = {
+                        "path": PathResource,
+                        "text": TextResource,
+                        "cli": CLIResource,
+                        "source": SourceResource,
+                        "callable": CallableResource,
+                        "image": ImageResource,
+                    }
 
-        msg = f"No loader found for URI scheme: {scheme}"
-        raise exceptions.LoaderError(msg)
+                    resource_type = item["resource_type"]
+                    if resource_type not in resource_classes:
+                        msg = f"Unknown resource type: {resource_type}"
+                        raise exceptions.ResourceError(msg)  # noqa: TRY301
 
-    def _validate_item(self, item: Any) -> ResourceLoader[Any]:
-        """Validate and possibly transform item before registration."""
-        match item:
-            case str() if "\n" in item:  # Multiline string -> TextResource
-                from llmling.resources.loaders.text import TextResourceLoader
+                    # Validate using appropriate class
+                    return resource_classes[resource_type].model_validate(item)
 
-                return TextResourceLoader(TextResource(content=item))
-            case str() | os.PathLike() if upath.UPath(item).exists():
-                from llmling.resources.loaders.path import PathResourceLoader
+                case _:
+                    msg = f"Invalid resource type: {type(item)}"
+                    raise exceptions.ResourceError(msg)  # noqa: TRY301
 
-                return PathResourceLoader(PathResource(path=str(item)))
-            case type() as cls if issubclass(cls, ResourceLoader):
-                return cls()
-            case ResourceLoader():
-                return item
-            case _:
-                msg = f"Invalid context loader type: {type(item)}"
-                raise exceptions.LoaderError(msg)
+        except Exception as exc:
+            if isinstance(exc, exceptions.ResourceError):
+                raise
+            msg = f"Failed to validate resource: {exc}"
+            raise exceptions.ResourceError(msg) from exc
 
-    def get_loader(self, context: Resource) -> ResourceLoader[Any]:
-        """Get a loader instance for a context type."""
-        return self.get(context.resource_type)
+    def get_uri(self, name: str) -> str:
+        """Get URI for a resource by name."""
+        resource = self[name]
+        loader = self.loader_registry.get_loader(resource)
+        return loader.create_uri(name=name)
+
+    async def load(self, name: str, *, force_reload: bool = False) -> LoadedResource:
+        """Load a resource by name."""
+        try:
+            resource = self[name]
+            uri = self.get_uri(name)
+
+            # Check cache unless force reload
+            if not force_reload and uri in self._cache:
+                return self._cache[uri]
+
+            # Get loader and initialize with context
+            loader = self.loader_registry.get_loader(resource)
+            loader = loader.create(resource, name)  # Create with named context
+
+            loaded = await loader.load(
+                context=loader.context,  # Pass the context we created
+                processor_registry=self.processor_registry,
+            )
+
+            # Ensure the URI is set correctly
+            if loaded.metadata.uri != uri:
+                logger.warning(
+                    "Loader returned different URI than expected: %s != %s",
+                    loaded.metadata.uri,
+                    uri,
+                )
+                loaded.metadata.uri = uri
+
+            # Update cache using URI
+            self._cache[uri] = loaded
+            self._last_loaded[uri] = datetime.now()
+        except KeyError as exc:
+            msg = f"Resource not found: {name}"
+            raise exceptions.ResourceError(msg) from exc
+        except Exception as exc:
+            msg = f"Failed to load resource {name}: {exc}"
+            raise exceptions.ResourceError(msg) from exc
+        else:
+            return loaded
+
+    def invalidate(self, name: str) -> None:
+        """Invalidate cache for a resource."""
+        try:
+            uri = self.get_uri(name)
+            self._cache.pop(uri, None)
+            self._last_loaded.pop(uri, None)
+        except Exception:
+            logger.exception("Failed to invalidate resource: %s", name)
+
+    def clear_cache(self) -> None:
+        """Clear all cached resources."""
+        self._cache.clear()
+        self._last_loaded.clear()
+
+    async def startup(self) -> None:
+        """Initialize registry."""
+        await super().startup()
+        self.clear_cache()
+
+    async def shutdown(self) -> None:
+        """Cleanup registry."""
+        self.clear_cache()
+        await super().shutdown()

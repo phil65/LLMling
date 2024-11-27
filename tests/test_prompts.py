@@ -180,10 +180,11 @@ async def test_prompt_with_resources(
         def __init__(self) -> None:
             super().__init__(None)
 
-        async def load(
+        async def _load_impl(
             self,
-            context: None,
-            processor_registry: ProcessorRegistry,
+            resource: Any,
+            name: str,
+            processor_registry: ProcessorRegistry | None,
         ) -> LoadedResource:
             return loaded_resource
 

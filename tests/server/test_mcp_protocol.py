@@ -26,7 +26,7 @@ def test_config() -> Config:
         messages=[PromptMessage(role="system", content="test")],
     )
     resource = TextResource(
-        resource_type="text",  # Required field
+        resource_type="text",
         content="Test content",
         description="Test resource",
     )

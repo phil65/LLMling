@@ -9,7 +9,6 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
 from llmling.prompts.models import PromptMessage, PromptResult, ResolvedContent
-from llmling.resources.base import ResourceLoader
 
 
 if TYPE_CHECKING:
@@ -54,6 +53,8 @@ async def resolve_resources(
         try:
             # Find appropriate loader
             loader = resource_registry.find_loader_for_uri(content.content)
+            from llmling.resources.base import ResourceLoader
+
             if not isinstance(loader, ResourceLoader):
                 msg = f"Invalid loader type for {content.content}"
                 raise exceptions.ResourceResolutionError(msg)  # noqa: TRY301

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-import logfire
 from upath import UPath
 
 from llmling.config.models import PathResource
@@ -44,41 +43,28 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         normalized = name.replace("\\", "/").lstrip("/")
         return cls.get_uri_template().format(name=normalized)
 
-    @logfire.instrument("Loading context from path {context.path}")
-    async def load(
+    async def _load_impl(
         self,
-        context: PathResource,
-        processor_registry: ProcessorRegistry,
+        resource: PathResource,
+        name: str,
+        processor_registry: ProcessorRegistry | None,
     ) -> LoadedResource:
-        """Load content from a file or URL.
-
-        Args:
-            context: Path context configuration
-            processor_registry: Registry of available processors
-
-        Returns:
-            Loaded and processed context
-
-        Raises:
-            LoaderError: If loading fails
-        """
+        """Load content from a file or URL."""
         try:
-            path = UPath(context.path)
+            path = UPath(resource.path)
             content = path.read_text("utf-8")
-            uri = str(path.as_uri())
 
-            if procs := context.processors:
+            if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
-            # Size should go in core metadata, other fields in extra
             return create_loaded_resource(
                 content=content,
                 source_type="path",
-                uri=uri,
+                uri=self.create_uri(name=name),
                 mime_type=self.supported_mime_types[0],
-                name=path.name,
-                description=context.description,
+                name=resource.description or path.name,
+                description=resource.description,
                 additional_metadata={
                     "type": "path",
                     "path": str(path),
@@ -86,7 +72,7 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                 },
             )
         except Exception as exc:
-            msg = f"Failed to load content from {context.path}"
+            msg = f"Failed to load content from {resource.path}"
             raise exceptions.LoaderError(msg) from exc
 
 

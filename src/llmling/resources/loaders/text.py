@@ -23,31 +23,26 @@ class TextResourceLoader(ResourceLoader[TextResource]):
     uri_scheme = "text"
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
-    async def load(
+    async def _load_impl(
         self,
-        context: TextResource | None = None,
-        processor_registry: ProcessorRegistry | None = None,
+        resource: TextResource,
+        name: str,
+        processor_registry: ProcessorRegistry | None,
     ) -> LoadedResource:
-        """Load content from raw text."""
-        # Use provided context or fall back to initialized context
-        context_to_use = context or self.context
-        if not context_to_use:
-            msg = "No context provided"
-            raise exceptions.LoaderError(msg)
-
+        """Implement actual loading logic."""
         try:
-            content = context_to_use.content
-            if processor_registry and (procs := context_to_use.processors):
+            content = resource.content
+            if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
             return create_loaded_resource(
                 content=content,
                 source_type="text",
-                uri=self.create_uri(name="text-content"),
+                uri=self.create_uri(name=name),
                 mime_type=self.supported_mime_types[0],
-                name=context_to_use.description or "Text content",
-                description=context_to_use.description,
+                name=resource.description or name,
+                description=resource.description,
                 additional_metadata={"type": "text"},
             )
         except Exception as exc:

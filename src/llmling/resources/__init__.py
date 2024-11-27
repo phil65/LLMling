@@ -8,7 +8,8 @@ from llmling.resources.loaders import (
     SourceResourceLoader,
     TextResourceLoader,
 )
-from llmling.resources.registry import ResourceLoaderRegistry
+from llmling.resources.loaders.registry import ResourceLoaderRegistry
+from llmling.resources.registry import ResourceRegistry
 from llmling.resources.models import LoadedResource
 from llmling.resources.loaders.image import ImageResourceLoader
 
@@ -28,6 +29,7 @@ __all__ = [
     "PathResourceLoader",
     "ResourceLoader",
     "ResourceLoaderRegistry",
+    "ResourceRegistry",
     "SourceResourceLoader",
     "TextResourceLoader",
     "default_registry",

@@ -12,7 +12,7 @@ from llmling.prompts.rendering import render_prompt
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
-    from llmling.resources.registry import ResourceLoaderRegistry
+    from llmling.resources.loaders.registry import ResourceLoaderRegistry
 
 
 class PromptRegistry(BaseRegistry[str, Prompt]):

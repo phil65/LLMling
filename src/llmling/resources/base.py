@@ -3,24 +3,25 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 
+from llmling.config.models import BaseResource
 from llmling.core import exceptions
 from llmling.core.descriptors import classproperty
 from llmling.core.log import get_logger
-from llmling.core.typedefs import MessageContent
+from llmling.core.typedefs import MessageContent, MessageContentType
 from llmling.resources.models import LoadedResource, ResourceMetadata
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Resource
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
-TResource = TypeVar("TResource", bound="Resource")
+TResource = TypeVar("TResource", bound=BaseResource)
 
 
 def create_loaded_resource(
@@ -32,7 +33,7 @@ def create_loaded_resource(
     name: str | None = None,
     description: str | None = None,
     additional_metadata: dict[str, Any] | None = None,
-    content_type: str = "text",
+    content_type: MessageContentType = "text",
     content_items: list[MessageContent] | None = None,
 ) -> LoadedResource:
     """Create a LoadedResource with all required fields.
@@ -70,27 +71,39 @@ def create_loaded_resource(
     )
 
 
+@dataclass
+class LoaderContext[TResource]:
+    """Context for resource loading.
+
+    Provides all information needed to load and identify a resource.
+    """
+
+    resource: TResource
+    name: str
+
+    def __repr__(self) -> str:
+        """Show context details."""
+        # Cast to Protocol to make type checker happy
+        resource = cast(BaseResource, self.resource)
+        cls_name = self.__class__.__name__
+        return f"{cls_name}(name={self.name!r}, type={resource.resource_type})"
+
+
 class ResourceLoader[TResource](ABC):
-    """Base class for context loaders with associated context type."""
+    """Base class for resource loaders."""
 
     context_class: type[TResource]
-    uri_scheme: ClassVar[str]  # e.g., "file", "text", "git"
-
-    # Optional media types this loader supports
+    uri_scheme: ClassVar[str]
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
-    def __init__(self, context: TResource | None = None) -> None:
-        """Initialize loader with optional context.
-
-        Args:
-            context: Optional pre-configured context
-        """
+    def __init__(self, context: LoaderContext[TResource] | None = None) -> None:
+        """Initialize loader with optional context."""
         self.context = context
 
     @classmethod
-    def create(cls, context: TResource) -> ResourceLoader[TResource]:
-        """Create a loader instance for the given context."""
-        return cls(context)
+    def create(cls, resource: TResource, name: str) -> ResourceLoader[TResource]:
+        """Create a loader instance with named context."""
+        return cls(LoaderContext(resource=resource, name=name))
 
     @classmethod
     def supports_uri(cls, uri: str) -> bool:
@@ -117,35 +130,69 @@ class ResourceLoader[TResource](ABC):
         fields = self.context_class.model_fields  # type: ignore
         return fields["resource_type"].default  # type: ignore
 
-    @abstractmethod
+    @overload
+    async def load(
+        self,
+        context: LoaderContext[TResource],
+        processor_registry: ProcessorRegistry | None = None,
+    ) -> LoadedResource: ...
+
+    @overload
     async def load(
         self,
         context: TResource,
-        processor_registry: ProcessorRegistry,
+        processor_registry: ProcessorRegistry | None = None,
+    ) -> LoadedResource: ...
+
+    @overload
+    async def load(
+        self,
+        context: None = None,
+        processor_registry: ProcessorRegistry | None = None,
+    ) -> LoadedResource: ...
+
+    async def load(
+        self,
+        context: LoaderContext[TResource] | TResource | None = None,
+        processor_registry: ProcessorRegistry | None = None,
     ) -> LoadedResource:
-        """Load and process context content.
+        """Load and process content.
 
         Args:
-            context: The loading-context
-            processor_registry: Registry of available processors
+            context: Either a LoaderContext, direct Resource, or None (uses self.context)
+            processor_registry: Optional processor registry for content processing
 
         Returns:
-            Loaded and processed context
+            Loaded resource content
 
         Raises:
             LoaderError: If loading fails
         """
+        # Resolve the actual resource and name
+        match context:
+            case LoaderContext():
+                resource = context.resource
+                name = context.name
+            case self.context_class():
+                resource = context
+                name = "unnamed"  # fallback
+            case None if self.context:
+                resource = self.context.resource
+                name = self.context.name
+            case None:
+                msg = "No context provided"
+                raise exceptions.LoaderError(msg)
+            case _:
+                msg = f"Invalid context type: {type(context)}"
+                raise exceptions.LoaderError(msg)
 
-    async def _process_content(
+        return await self._load_impl(resource, name, processor_registry)
+
+    @abstractmethod
+    async def _load_impl(
         self,
-        content: str,
-        config: Any,
-        processor_registry: ProcessorRegistry,
-    ) -> str:
-        """Process content through configured processors."""
-        try:
-            # Will be implemented when processors are refactored
-            return content
-        except Exception as exc:
-            msg = "Failed to process content"
-            raise exceptions.ProcessorError(msg) from exc
+        resource: TResource,
+        name: str,
+        processor_registry: ProcessorRegistry | None,
+    ) -> LoadedResource:
+        """Implementation of actual loading logic."""

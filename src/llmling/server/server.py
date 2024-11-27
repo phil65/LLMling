@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-import sys
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
@@ -14,7 +12,9 @@ from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
+from llmling.resources.registry import ResourceRegistry
 from llmling.server import conversions
+from llmling.server.observers import PromptObserver, ResourceObserver, ToolObserver
 from llmling.tools.registry import ToolRegistry
 
 
@@ -30,7 +30,7 @@ class LLMLingServer:
         config: Config,
         *,
         name: str = "llmling-server",
-        resource_registry: ResourceLoaderRegistry | None = None,
+        loader_registry: ResourceLoaderRegistry | None = None,
         processor_registry: ProcessorRegistry | None = None,
         prompt_registry: PromptRegistry | None = None,
         tool_registry: ToolRegistry | None = None,
@@ -40,31 +40,52 @@ class LLMLingServer:
         self.name = name
 
         # Initialize registries
-        self.resource_registry = resource_registry or ResourceLoaderRegistry()
+        self.loader_registry = loader_registry or ResourceLoaderRegistry()
         self.processor_registry = processor_registry or ProcessorRegistry()
         self.prompt_registry = prompt_registry or PromptRegistry()
         self.tool_registry = tool_registry or ToolRegistry()
 
+        # Create resource registry with dependencies
+        self.resource_registry = ResourceRegistry(
+            loader_registry=self.loader_registry,
+            processor_registry=self.processor_registry,
+        )
+
         # Register default resource loaders if using new registry
-        if resource_registry is None:
+        if loader_registry is None:
             from llmling.resources import (
                 CallableResourceLoader,
                 CLIResourceLoader,
+                ImageResourceLoader,
                 PathResourceLoader,
                 SourceResourceLoader,
                 TextResourceLoader,
             )
 
-            self.resource_registry["text"] = TextResourceLoader
-            self.resource_registry["path"] = PathResourceLoader
-            self.resource_registry["cli"] = CLIResourceLoader
-            self.resource_registry["source"] = SourceResourceLoader
-            self.resource_registry["callable"] = CallableResourceLoader
+            self.loader_registry["text"] = TextResourceLoader
+            self.loader_registry["path"] = PathResourceLoader
+            self.loader_registry["cli"] = CLIResourceLoader
+            self.loader_registry["source"] = SourceResourceLoader
+            self.loader_registry["callable"] = CallableResourceLoader
+            self.loader_registry["image"] = ImageResourceLoader
 
         # Create MCP server
         self.server = Server(name)
         self._setup_handlers()
+        self._setup_observers()
         logger.debug("Server initialized with name: %s", name)
+
+    def _setup_observers(self) -> None:
+        """Set up registry observers."""
+        # Create observers
+        self.resource_observer = ResourceObserver(self)
+        self.prompt_observer = PromptObserver(self)
+        self.tool_observer = ToolObserver(self)
+
+        # Register with registries
+        self.resource_registry.add_observer(self.resource_observer.events)
+        self.prompt_registry.add_observer(self.prompt_observer.events)
+        self.tool_registry.add_observer(self.tool_observer.events)
 
     def _setup_handlers(self) -> None:
         """Register MCP protocol handlers."""
@@ -109,38 +130,17 @@ class LLMLingServer:
             """Handle resources/list request."""
             resources = []
 
-            for name, context in self.config.resources.items():
+            # Use registry directly since we already registered resources in startup
+            for name in self.resource_registry:
                 try:
-                    msg = "Loading resource %r of type %s"
-                    logger.debug(msg, name, context.resource_type)
-                    loader = self.resource_registry[context.resource_type]
-                    result = await loader.load(
-                        context=context,
-                        processor_registry=self.processor_registry,
-                    )
-                    resources.append(conversions.to_mcp_resource(result))
+                    loaded = await self.resource_registry.load(name)
+                    resources.append(conversions.to_mcp_resource(loaded))
                 except Exception:
                     logger.exception("Failed to load resource %r", name)
-                    # Continue with other resources
                     continue
 
-            logger.debug("Returning %d resources", len(resources))
+            logger.debug("Found %d resources", len(resources))
             return resources
-
-        @self.server.read_resource()
-        async def handle_read_resource(uri: mcp.types.AnyUrl) -> str:
-            """Handle read_resource request."""
-            try:
-                loader = self.resource_registry.find_loader_for_uri(str(uri))
-                result = await loader.load(
-                    context=loader.context,
-                    processor_registry=self.processor_registry,
-                )
-            except Exception as exc:
-                logger.exception("Failed to read resource: %s", uri)
-                return f"Error reading resource: {exc}"
-            else:
-                return result.content
 
     @classmethod
     def from_config_file(
@@ -157,8 +157,15 @@ class LLMLingServer:
             # Initialize registries
             await self.processor_registry.startup()
             await self.tool_registry.startup()
+            await self.resource_registry.startup()
+
+            # Register tools from config
             for name, tool_config in self.config.tools.items():
                 self.tool_registry[name] = tool_config
+
+            # Register resources from config
+            for name, resource in self.config.resources.items():
+                self.resource_registry.register(name, resource)
 
             # Start MCP server
             options = self.server.create_initialization_options()
@@ -174,8 +181,15 @@ class LLMLingServer:
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
+        # Remove observers
+        self.resource_registry.remove_observer(self.resource_observer.events)
+        self.prompt_registry.remove_observer(self.prompt_observer.events)
+        self.tool_registry.remove_observer(self.tool_observer.events)
+
+        # Shutdown registries
         await self.processor_registry.shutdown()
         await self.tool_registry.shutdown()
+        await self.resource_registry.shutdown()
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
@@ -184,6 +198,51 @@ class LLMLingServer:
     async def __aexit__(self, *exc: object) -> None:
         """Async context manager exit."""
         await self.shutdown()
+
+    @property
+    def current_session(self) -> mcp.ServerSession:
+        """Get current session from request context."""
+        try:
+            return self.server.request_context.session
+        except LookupError as exc:
+            msg = "No active request context"
+            raise RuntimeError(msg) from exc
+
+    async def notify_resource_list_changed(self) -> None:
+        """Notify clients about resource list changes."""
+        try:
+            await self.current_session.send_resource_list_changed()
+        except RuntimeError:
+            logger.debug("No active session for notification")
+        except Exception:
+            logger.exception("Failed to send resource list change notification")
+
+    async def notify_resource_change(self, uri: str) -> None:
+        """Notify clients about resource changes."""
+        try:
+            await self.current_session.send_resource_updated(uri)
+        except RuntimeError:
+            logger.debug("No active session for notification")
+        except Exception:
+            logger.exception("Failed to send resource change notification")
+
+    async def notify_prompt_list_changed(self) -> None:
+        """Notify clients about prompt list changes."""
+        try:
+            await self.current_session.send_prompt_list_changed()
+        except RuntimeError:
+            logger.debug("No active session for notification")
+        except Exception:
+            logger.exception("Failed to send prompt list change notification")
+
+    async def notify_tool_list_changed(self) -> None:
+        """Notify clients about tool list changes."""
+        try:
+            await self.current_session.send_tool_list_changed()
+        except RuntimeError:
+            logger.debug("No active session for notification")
+        except Exception:
+            logger.exception("Failed to send tool list change notification")
 
 
 async def serve(config_path: str | None = None) -> None:
@@ -207,6 +266,9 @@ async def serve(config_path: str | None = None) -> None:
 
 
 if __name__ == "__main__":
+    import asyncio
+    import sys
+
     config_path = (
         sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
     )

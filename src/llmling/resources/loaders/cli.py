@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
-import logfire
-
 from llmling.config.models import CLIResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -28,78 +26,63 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
     uri_scheme = "cli"
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
-    @logfire.instrument("Executing CLI command {context.command}")
-    async def load(
+    async def _load_impl(
         self,
-        context: CLIResource,
-        processor_registry: ProcessorRegistry,
+        resource: CLIResource,
+        name: str,
+        processor_registry: ProcessorRegistry | None,
     ) -> LoadedResource:
-        """Load content from CLI command execution.
-
-        Args:
-            context: CLI context configuration
-            processor_registry: Registry of available processors
-
-        Returns:
-            Loaded and processed context
-
-        Raises:
-            LoaderError: If command execution fails or context type is invalid
-        """
+        """Execute command and load output."""
         try:
             cmd = (
-                context.command
-                if isinstance(context.command, str)
-                else " ".join(context.command)
+                resource.command
+                if isinstance(resource.command, str)
+                else " ".join(resource.command)
             )
 
-            if context.shell:
-                # Use create_subprocess_shell when shell=True
+            if resource.shell:
                 proc = await asyncio.create_subprocess_shell(
                     cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
-                    cwd=context.cwd,
+                    cwd=resource.cwd,
                 )
             else:
-                # Use create_subprocess_exec when shell=False
-                if isinstance(context.command, str):
-                    cmd_parts = cmd.split()
-                else:
-                    cmd_parts = list(context.command)
-
+                cmd_parts = cmd.split() if isinstance(cmd, str) else list(cmd)
                 proc = await asyncio.create_subprocess_exec(
                     *cmd_parts,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
-                    cwd=context.cwd,
+                    cwd=resource.cwd,
                 )
 
             stdout, stderr = await asyncio.wait_for(
                 proc.communicate(),
-                timeout=context.timeout,
+                timeout=resource.timeout,
             )
 
             if proc.returncode != 0:
-                msg = (
-                    f"Command failed with code {proc.returncode}: "
-                    f"{stderr.decode().strip()}"
-                )
+                error = stderr.decode().strip()
+                msg = f"Command failed with code {proc.returncode}: {error}"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
             content = stdout.decode()
 
-            if procs := context.processors:
+            if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
             return create_loaded_resource(
                 content=content,
                 source_type="cli",
-                uri=self.create_uri(name=cmd.replace(" ", "-")),
-                name=f"CLI Output: {cmd}",
-                description=context.description,
-                additional_metadata={"command": cmd, "exit_code": proc.returncode},
+                uri=self.create_uri(name=name),
+                mime_type=self.supported_mime_types[0],
+                name=resource.description or f"CLI Output: {cmd}",
+                description=resource.description,
+                additional_metadata={
+                    "command": cmd,
+                    "exit_code": proc.returncode,
+                },
             )
         except Exception as exc:
             msg = "CLI command execution failed"

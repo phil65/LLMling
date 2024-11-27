@@ -24,43 +24,34 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
     uri_scheme = "callable"
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
-    async def load(
+    async def _load_impl(
         self,
-        context: CallableResource,
-        processor_registry: ProcessorRegistry,
+        resource: CallableResource,
+        name: str,
+        processor_registry: ProcessorRegistry | None,
     ) -> LoadedResource:
-        """Load content from callable execution.
-
-        Args:
-            context: Callable context configuration
-            processor_registry: Registry of available processors
-
-        Returns:
-            Loaded and processed context
-
-        Raises:
-            LoaderError: If callable execution fails or context type is invalid
-        """
+        """Execute callable and load result."""
         try:
             content = await calling.execute_callable(
-                context.import_path, **context.keyword_args
+                resource.import_path,
+                **resource.keyword_args,
             )
 
-            if procs := context.processors:
+            if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
             return create_loaded_resource(
                 content=content,
                 source_type="callable",
-                uri=self.create_uri(name=context.import_path),
-                name=context.import_path,
-                description=context.description,
+                uri=self.create_uri(name=name),
+                name=resource.description or resource.import_path,
+                description=resource.description,
                 additional_metadata={
-                    "import_path": context.import_path,
-                    "args": context.keyword_args,
+                    "import_path": resource.import_path,
+                    "args": resource.keyword_args,
                 },
             )
         except Exception as exc:
-            msg = f"Failed to execute callable {context.import_path}"
+            msg = f"Failed to execute callable {resource.import_path}"
             raise exceptions.LoaderError(msg) from exc
