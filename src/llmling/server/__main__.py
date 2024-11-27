@@ -1,21 +1,18 @@
-"""Main entry point for the LLMling server."""
-
 from __future__ import annotations
 
 import asyncio
 import logging
 import sys
 
-from llmling.server import create_server
+from llmling.server import serve
 
 
 if sys.platform == "win32":
-    # Force WindowsSelectorEventLoopPolicy on Windows
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
 
@@ -26,8 +23,7 @@ async def main() -> None:
     )
 
     try:
-        server = create_server(config_path)
-        await server.start(raise_exceptions=True)
+        await serve(config_path)
     except KeyboardInterrupt:
         print("\nServer stopped by user")
     except Exception as exc:  # noqa: BLE001

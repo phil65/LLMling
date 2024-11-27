@@ -165,17 +165,18 @@ class HandshakeClient:
         )
 
     async def close(self) -> None:
-        """Stop server process."""
-        if self._stderr_task:
+        """Stop the server."""
+        if hasattr(self, "_stderr_task"):
             self._stderr_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._stderr_task
 
         if self.process:
             try:
-                await self.send_request("shutdown", {}, timeout=2.0)
-                await self.send_notification("notifications/exit", {})
-                await asyncio.sleep(0.1)
+                # Just send shutdown notification instead of request
+                await self.send_notification("shutdown", {})
+                await self.send_notification("exit", {})
+                await asyncio.sleep(0.1)  # Give server time to process
             except Exception as e:
                 logger.warning("Error during shutdown: %s", e)
             finally:
