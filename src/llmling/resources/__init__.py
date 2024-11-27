@@ -25,6 +25,7 @@ default_registry["callable"] = CallableResourceLoader
 __all__ = [
     "CLIResourceLoader",
     "CallableResourceLoader",
+    "ImageResourceLoader",
     "LoadedResource",
     "PathResourceLoader",
     "ResourceLoader",
