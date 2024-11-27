@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from llmling.config.models import Config, TextResource, ToolConfig
+from llmling.prompts.models import Prompt, PromptMessage
 from llmling.testing.testclient import HandshakeClient
 
 
@@ -21,6 +22,13 @@ def test_config() -> Config:
     """Create test configuration."""
     return Config(
         version="1.0",
+        prompts={
+            "test": Prompt(
+                name="test",
+                description="test",
+                messages=[PromptMessage(role="system", content="test")],
+            )
+        },
         contexts={
             "test": TextResource(
                 context_type="text",  # Required field
@@ -42,14 +50,9 @@ def test_config() -> Config:
 async def config_file(tmp_path: Path, test_config: Config) -> Path:
     """Create temporary config file."""
     config_path = tmp_path / "test_config.yml"
-    # Use yaml.dump directly to ensure proper YAML formatting
     content = test_config.model_dump(exclude_none=True)
     with config_path.open("w") as f:
         yaml.dump(content, f)
-
-    # Debug output
-    print(f"\nCreated config file at: {config_path}")
-    print(f"Config content:\n{config_path.read_text()}")
     return config_path
 
 
@@ -105,6 +108,46 @@ async def test_mcp_error_handling(configured_client: HandshakeClient):
     assert "content" in response
     assert len(response["content"]) == 1
     assert "not found" in response["content"][0]["text"].lower()
+
+
+@pytest.mark.asyncio
+async def test_mcp_handshake(configured_client: HandshakeClient):
+    """Test MCP protocol handshake."""
+    # Do another handshake to explicitly test it
+    init_response = await configured_client.do_handshake()
+
+    # Verify server info
+    assert "serverInfo" in init_response
+    assert init_response["serverInfo"]["name"] == "llmling-server"
+
+    # Verify capabilities (they're on the root level, not in serverInfo)
+    assert "capabilities" in init_response
+    capabilities = init_response["capabilities"]
+
+    # Verify specific capabilities
+    assert "resources" in capabilities
+    assert "prompts" in capabilities
+    assert "tools" in capabilities
+
+
+@pytest.mark.asyncio
+async def test_mcp_prompt_operations(configured_client: HandshakeClient):
+    """Test MCP prompt operations."""
+    # List prompts
+    prompts = await configured_client.send_request("prompts/list")
+    assert "prompts" in prompts
+    assert isinstance(prompts["prompts"], list)
+
+    # Get specific prompt
+    # Add a test prompt if needed
+    if prompts["prompts"]:
+        test_prompt = prompts["prompts"][0]
+        result = await configured_client.send_request(
+            "prompts/get",
+            {"name": test_prompt["name"], "arguments": None},
+        )
+        assert "messages" in result
+        assert isinstance(result["messages"], list)
 
 
 if __name__ == "__main__":
