@@ -31,7 +31,7 @@ class GlobalSettings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class BaseContext(BaseModel):
+class BaseResource(BaseModel):
     """Base class for all context types."""
 
     context_type: ContextType = Field(...)
@@ -42,7 +42,7 @@ class BaseContext(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class PathResource(BaseContext):
+class PathResource(BaseResource):
     """Context loaded from a file or URL."""
 
     context_type: Literal["path"] = "path"
@@ -57,7 +57,7 @@ class PathResource(BaseContext):
         return self
 
 
-class TextResource(BaseContext):
+class TextResource(BaseResource):
     """Raw text context."""
 
     context_type: Literal["text"] = "text"
@@ -72,7 +72,7 @@ class TextResource(BaseContext):
         return self
 
 
-class CLIResource(BaseContext):
+class CLIResource(BaseResource):
     """Context from CLI command execution."""
 
     context_type: Literal["cli"] = "cli"
@@ -97,7 +97,7 @@ class CLIResource(BaseContext):
         return self
 
 
-class SourceResource(BaseContext):
+class SourceResource(BaseResource):
     """Context from Python source code."""
 
     context_type: Literal["source"] = "source"
@@ -114,7 +114,7 @@ class SourceResource(BaseContext):
         return self
 
 
-class CallableResource(BaseContext):
+class CallableResource(BaseResource):
     """Context from executing a Python callable."""
 
     context_type: Literal["callable"] = "callable"
@@ -130,7 +130,7 @@ class CallableResource(BaseContext):
         return self
 
 
-class ImageContext(BaseContext):
+class ImageContext(BaseResource):
     """Context for image input."""
 
     context_type: Literal["image"] = "image"
