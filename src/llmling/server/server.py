@@ -78,7 +78,9 @@ class LLMLingServer:
                 result = await self.tool_registry.execute(name, **(arguments or {}))
                 return [TextContent(type="text", text=str(result))]
             except Exception as exc:  # noqa: BLE001
-                return [TextContent(type="text", text=str(exc))]
+                logger.exception("Tool execution failed: %s", name)
+                error_msg = f"Tool execution failed: {exc}"
+                return [TextContent(type="text", text=error_msg)]
 
         @self.server.list_prompts()
         async def handle_list_prompts() -> list[mcp.types.Prompt]:
@@ -115,12 +117,17 @@ class LLMLingServer:
         @self.server.read_resource()
         async def handle_read_resource(uri: mcp.types.AnyUrl) -> str:
             """Handle read_resource request."""
-            loader = self.resource_registry.find_loader_for_uri(str(uri))
-            result = await loader.load(
-                context=loader.context,
-                processor_registry=self.processor_registry,
-            )
-            return result.content
+            try:
+                loader = self.resource_registry.find_loader_for_uri(str(uri))
+                result = await loader.load(
+                    context=loader.context,
+                    processor_registry=self.processor_registry,
+                )
+            except Exception as exc:
+                logger.exception("Failed to read resource: %s", uri)
+                return f"Error reading resource: {exc}"
+            else:
+                return result.content
 
     @classmethod
     def from_config_file(
@@ -137,6 +144,8 @@ class LLMLingServer:
             # Initialize registries
             await self.processor_registry.startup()
             await self.tool_registry.startup()
+            for name, tool_config in self.config.tools.items():
+                self.tool_registry[name] = tool_config
 
             # Start MCP server
             options = self.server.create_initialization_options()
