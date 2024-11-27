@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Self
 import mcp
 from mcp.server import Server
 from mcp.types import GetPromptResult, TextContent
+from pydantic import AnyUrl
 
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
@@ -226,7 +227,8 @@ class LLMLingServer:
     async def notify_resource_change(self, uri: str) -> None:
         """Notify clients about resource changes."""
         try:
-            await self.current_session.send_resource_updated(uri)
+            url = AnyUrl(uri)
+            await self.current_session.send_resource_updated(url)
         except RuntimeError:
             logger.debug("No active session for notification")
         except Exception:

@@ -15,6 +15,8 @@ from llmling.resources.watching.utils import debounce
 
 
 if TYPE_CHECKING:
+    from watchdog.observers.api import BaseObserver
+
     from llmling.config.models import Resource
     from llmling.resources.registry import ResourceRegistry
 
@@ -72,7 +74,7 @@ class ResourceWatcher:
             registry: Registry to notify of changes
         """
         self.registry = registry
-        self.observer: Observer | None = None
+        self.observer: BaseObserver | None = None
         self.handlers: dict[str, ResourceEventHandler] = {}
         # Track watch directories to avoid duplicates
         self._watched_paths: set[str] = set()
@@ -124,7 +126,7 @@ class ResourceWatcher:
             if hasattr(resource, "path"):
                 path = upath.UPath(resource.path).parent  # type: ignore
                 if path not in self._watched_paths:
-                    self.observer.schedule(handler, path, recursive=True)
+                    self.observer.schedule(handler, str(path), recursive=True)
                     self._watched_paths.add(str(path))
                     logger.debug("Added watch for: %s -> %s", name, path)
 
