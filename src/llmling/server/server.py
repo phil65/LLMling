@@ -25,8 +25,6 @@ logger = get_logger(__name__)
 
 
 class LLMLingServer:
-    """MCP server implementation."""
-
     def __init__(
         self,
         config: Config,
@@ -37,16 +35,7 @@ class LLMLingServer:
         prompt_registry: PromptRegistry | None = None,
         tool_registry: ToolRegistry | None = None,
     ) -> None:
-        """Initialize server.
-
-        Args:
-            config: Server configuration
-            name: Server name
-            resource_registry: Optional resource registry
-            processor_registry: Optional processor registry
-            prompt_registry: Optional prompt registry
-            tool_registry: Optional tool registry
-        """
+        """Initialize server."""
         self.config = config
         self.name = name
 
@@ -55,6 +44,22 @@ class LLMLingServer:
         self.processor_registry = processor_registry or ProcessorRegistry()
         self.prompt_registry = prompt_registry or PromptRegistry()
         self.tool_registry = tool_registry or ToolRegistry()
+
+        # Register default resource loaders if using new registry
+        if resource_registry is None:
+            from llmling.resources import (
+                CallableResourceLoader,
+                CLIResourceLoader,
+                PathResourceLoader,
+                SourceResourceLoader,
+                TextResourceLoader,
+            )
+
+            self.resource_registry["text"] = TextResourceLoader
+            self.resource_registry["path"] = PathResourceLoader
+            self.resource_registry["cli"] = CLIResourceLoader
+            self.resource_registry["source"] = SourceResourceLoader
+            self.resource_registry["callable"] = CallableResourceLoader
 
         # Create MCP server
         self.server = Server(name)
@@ -77,7 +82,7 @@ class LLMLingServer:
             try:
                 result = await self.tool_registry.execute(name, **(arguments or {}))
                 return [TextContent(type="text", text=str(result))]
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.exception("Tool execution failed: %s", name)
                 error_msg = f"Tool execution failed: {exc}"
                 return [TextContent(type="text", text=error_msg)]
@@ -105,13 +110,24 @@ class LLMLingServer:
         async def handle_list_resources() -> list[mcp.types.Resource]:
             """Handle resources/list request."""
             resources = []
-            for context in self.config.contexts.values():
-                loader = self.resource_registry[context.context_type]
-                result = await loader.load(
-                    context=context,
-                    processor_registry=self.processor_registry,
-                )
-                resources.append(conversions.to_mcp_resource(result))
+
+            for name, context in self.config.contexts.items():
+                try:
+                    logger.debug(
+                        "Loading resource %r of type %s", name, context.context_type
+                    )
+                    loader = self.resource_registry[context.context_type]
+                    result = await loader.load(
+                        context=context,
+                        processor_registry=self.processor_registry,
+                    )
+                    resources.append(conversions.to_mcp_resource(result))
+                except Exception:
+                    logger.exception("Failed to load resource %r", name)
+                    # Continue with other resources
+                    continue
+
+            logger.debug("Returning %d resources", len(resources))
             return resources
 
         @self.server.read_resource()
@@ -188,8 +204,8 @@ async def serve(config_path: str | None = None) -> None:
 
     try:
         await server.start(raise_exceptions=True)
-    except Exception as exc:
-        logger.exception("Server error: %s", exc)
+    except Exception:
+        logger.exception("Server error")
         raise
 
 

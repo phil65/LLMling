@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import subprocess
+import sys
 from typing import Any
 
 from llmling.core.log import get_logger
@@ -17,14 +18,30 @@ logger = get_logger(__name__)
 class HandshakeClient:
     """Test client for MCP protocol."""
 
-    def __init__(self, server_command: list[str]) -> None:
-        self.server_command = server_command
+    def __init__(
+        self, server_command: list[str] | None = None, config_path: str | None = None
+    ) -> None:
+        """Initialize client.
+
+        Args:
+            server_command: Command to start server (default: python -m llmling.server)
+            config_path: Path to config file to use
+        """
+        cmd = [sys.executable, "-m", "llmling.server"]
+        if config_path:
+            cmd.append(config_path)
+        self.server_command = cmd
         self.process: subprocess.Popen[bytes] | None = None
         self._stderr_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
-        """Start server process and do handshake."""
-        env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+        """Start the server process."""
+        env = {
+            **os.environ,
+            "PYTHONUNBUFFERED": "1",
+            "LOGFIRE_LEVEL": "DEBUG",  # Enable debug logging
+        }
+        logger.debug("Starting server with command: %s", self.server_command)
         self.process = subprocess.Popen(
             self.server_command,
             stdin=subprocess.PIPE,
@@ -34,18 +51,25 @@ class HandshakeClient:
             env=env,
         )
 
-        # Start stderr reader
+        # Start stderr reader for debugging
         async def read_stderr():
-            while self.process and self.process.stderr:
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, self.process.stderr.readline
-                )
-                if not line:
-                    break
-                logger.debug("Server stderr: %s", line.decode().strip())
+            assert self.process
+            assert self.process.stderr
+            while True:
+                try:
+                    line = await asyncio.get_event_loop().run_in_executor(
+                        None, self.process.stderr.readline
+                    )
+                    if not line:
+                        break
+                    print(
+                        f"Server stderr: {line.decode().strip()}"
+                    )  # Print directly for visibility
+                except Exception as e:  # noqa: BLE001
+                    print(f"Error reading stderr: {e}")
 
         self._stderr_task = asyncio.create_task(read_stderr())
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1.0)  # Give server more time to start
 
     async def _read_response(self) -> dict[str, Any]:
         """Read JSON-RPC response from server."""
@@ -166,6 +190,7 @@ class HandshakeClient:
 
     async def close(self) -> None:
         """Stop the server."""
+        assert self._stderr_task
         if hasattr(self, "_stderr_task"):
             self._stderr_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -177,7 +202,7 @@ class HandshakeClient:
                 await self.send_notification("shutdown", {})
                 await self.send_notification("exit", {})
                 await asyncio.sleep(0.1)  # Give server time to process
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Error during shutdown: %s", e)
             finally:
                 self.process.terminate()
