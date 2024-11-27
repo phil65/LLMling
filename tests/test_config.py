@@ -36,7 +36,7 @@ def minimal_config_dict() -> dict[str, Any]:
             "max_retries": 3,
             "temperature": 0.7,
         },
-        "contexts": {
+        "resources": {
             "test-context": {
                 "type": "text",
                 "content": "test content",
@@ -45,13 +45,6 @@ def minimal_config_dict() -> dict[str, Any]:
         },
         "context_processors": {},
         "resource_groups": {},
-        "task_templates": {
-            "test-task": {
-                "provider": "test-provider",
-                "context": "test-context",
-                "settings": {},
-            }
-        },
     }
 
 
@@ -66,7 +59,7 @@ def test_load_minimal_config(minimal_config_dict: dict[str, Any]) -> None:
     """Test loading a minimal valid configuration."""
     cfg = config.Config.model_validate(minimal_config_dict)
     assert cfg.version == "1.0"
-    assert len(cfg.contexts) == 1
+    assert len(cfg.resources) == 1
 
 
 def test_validate_processor_config() -> None:
@@ -130,7 +123,7 @@ global_settings:
     max_retries: 3
     temperature: 0.7
 context_processors: {}
-contexts:
+resources:
     test-context:
         type: text
         content: test content
@@ -142,7 +135,7 @@ resource_groups: {}
     cfg = config.load_config(config_path)
     assert isinstance(cfg, config.Config)
     assert cfg.version == "1.0"
-    assert "test-context" in cfg.contexts
+    assert "test-context" in cfg.resources
 
 
 if __name__ == "__main__":

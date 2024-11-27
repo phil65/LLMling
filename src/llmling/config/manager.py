@@ -31,18 +31,18 @@ class ConfigManager:
         """
         self.config = config
 
-    def register_context(
+    def register_resource(
         self,
         name: str,
-        context: Resource,
+        resource: Resource,
         *,
         replace: bool = False,
     ) -> None:
-        """Register a new context."""
-        if name in self.config.contexts and not replace:
+        """Register a new resource."""
+        if name in self.config.resources and not replace:
             msg = f"Resource already exists: {name}"
             raise exceptions.ConfigError(msg)
-        self.config.contexts[name] = context
+        self.config.resources[name] = resource
 
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> ConfigManager:
@@ -86,10 +86,10 @@ class ConfigManager:
         Returns:
             List of validation warnings
         """
-        # Check context references
+        # Check resource references
         return [
-            f"Resource {context} in group {group} not found"
-            for group, contexts in self.config.resource_groups.items()
-            for context in contexts
-            if context not in self.config.contexts
+            f"Resource {resource} in group {group} not found"
+            for group, resources in self.config.resource_groups.items()
+            for resource in resources
+            if resource not in self.config.resources
         ]

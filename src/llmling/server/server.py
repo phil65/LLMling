@@ -109,11 +109,11 @@ class LLMLingServer:
             """Handle resources/list request."""
             resources = []
 
-            for name, context in self.config.contexts.items():
+            for name, context in self.config.resources.items():
                 try:
                     msg = "Loading resource %r of type %s"
-                    logger.debug(msg, name, context.context_type)
-                    loader = self.resource_registry[context.context_type]
+                    logger.debug(msg, name, context.resource_type)
+                    loader = self.resource_registry[context.resource_type]
                     result = await loader.load(
                         context=context,
                         processor_registry=self.processor_registry,

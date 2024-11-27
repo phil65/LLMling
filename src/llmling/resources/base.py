@@ -109,13 +109,13 @@ class ResourceLoader[TResource](ABC):
 
     def __repr__(self) -> str:
         """Show loader type and context."""
-        return f"{self.__class__.__name__}(context_type={self.context_type!r})"
+        return f"{self.__class__.__name__}(resource_type={self.resource_type!r})"
 
     @classproperty  # type: ignore
-    def context_type(self) -> str:
+    def resource_type(self) -> str:
         """Infer context type from context class."""
         fields = self.context_class.model_fields  # type: ignore
-        return fields["context_type"].default  # type: ignore
+        return fields["resource_type"].default  # type: ignore
 
     @abstractmethod
     async def load(

@@ -42,7 +42,7 @@ def test_config() -> Config:
     return Config(
         version="1.0.0",
         global_settings=GlobalSettings(),
-        contexts={
+        resources={
             "test-resource": TextResource(
                 content="test content", description="Test resource"
             ),
@@ -65,45 +65,12 @@ def test_config() -> Config:
 
 
 @pytest.fixture
-def prompt_fixture(server: LLMLingServer) -> None:
-    """Configure server prompt registry for testing."""
-    server.session.prompt_registry.register(
-        "test",
-        {
-            "name": "test",
-            "description": "Test prompt",
-            "messages": [{"role": "user", "content": "Test message"}],
-        },
-    )
-
-
-@pytest.fixture
-async def test_session(server_session_fixture: None) -> None:
-    """Set up test session."""
-    # The fixture will handle session configuration
-
-
-@pytest.fixture
-def server_session_fixture(server: LLMLingServer) -> None:
-    """Configure server session for testing."""
-    # Add test prompt to server's session registry
-    server.session.prompt_registry.register(
-        "test-prompt",
-        {
-            "name": "test-prompt",
-            "description": "Test prompt",
-            "messages": [{"role": "user", "content": "Test message"}],
-        },
-    )
-
-
-@pytest.fixture
 async def server(test_config: Config) -> AsyncGenerator[LLMLingServer, None]:
     """Create and initialize a test server."""
     server = LLMLingServer(test_config)
 
     # Register test prompts
-    server.session.prompt_registry.register(
+    server.prompt_registry.register(
         "test-prompt",
         Prompt(
             name="test-prompt",
@@ -139,10 +106,10 @@ async def server(test_config: Config) -> AsyncGenerator[LLMLingServer, None]:
 
     # Start the server's MCP server in the background
     server_task = asyncio.create_task(
-        server.mcp_server.mcp_server.run(
+        server.server.run(
             receive_stream,
             send_stream,
-            server.mcp_server.mcp_server.create_initialization_options(),
+            server.server.create_initialization_options(),
         )
     )
 

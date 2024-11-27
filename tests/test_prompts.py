@@ -29,7 +29,7 @@ def test_config_with_prompts():
     config_data = {
         "version": "1.0",
         # Need to add required fields from Config model
-        "contexts": {},
+        "resources": {},
         "prompts": {
             "analyze": {
                 "name": "analyze",
@@ -55,7 +55,7 @@ def test_config_with_resource_prompts():
     """Test config with prompts using resources."""
     config_data = {
         "version": "1.0",
-        "contexts": {},  # Required field
+        "resources": {},  # Required field
         "prompts": {
             "review": {
                 "name": "review",

@@ -3,7 +3,7 @@ tools:
     import_path: "llmling.tools.browser.BrowserTool"
     description: "Browser automation tool for web research. Requires 'action' parameter for every call."
 
-contexts:
+resources:
   research_prompt:
     type: "text"
     content: |
@@ -14,13 +14,3 @@ contexts:
       2. Then call: {"action": "read"}
 
       Never omit parameters or modify this format.
-
-task_templates:
-  web_research:
-    provider: llama
-    context: research_prompt
-    inherit_tools: true
-    tools: ["browser"]
-    settings:
-      temperature: 0.7
-      max_tokens: 1000

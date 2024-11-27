@@ -32,9 +32,9 @@ class GlobalSettings(BaseModel):
 
 
 class BaseResource(BaseModel):
-    """Base class for all context types."""
+    """Base class for all resource types."""
 
-    context_type: ResourceType = Field(...)
+    resource_type: ResourceType = Field(...)
     description: str = ""
     processors: list[ProcessingStep] = Field(
         default_factory=list
@@ -45,7 +45,7 @@ class BaseResource(BaseModel):
 class PathResource(BaseResource):
     """Resource loaded from a file or URL."""
 
-    context_type: Literal["path"] = "path"
+    resource_type: Literal["path"] = "path"
     path: str | os.PathLike[str]
 
     @model_validator(mode="after")
@@ -58,9 +58,9 @@ class PathResource(BaseResource):
 
 
 class TextResource(BaseResource):
-    """Raw text context."""
+    """Raw text resource."""
 
-    context_type: Literal["text"] = "text"
+    resource_type: Literal["text"] = "text"
     content: str
 
     @model_validator(mode="after")
@@ -75,7 +75,7 @@ class TextResource(BaseResource):
 class CLIResource(BaseResource):
     """Resource from CLI command execution."""
 
-    context_type: Literal["cli"] = "cli"
+    resource_type: Literal["cli"] = "cli"
     command: str | TypingSequence[str]
     shell: bool = False
     cwd: str | None = None
@@ -100,7 +100,7 @@ class CLIResource(BaseResource):
 class SourceResource(BaseResource):
     """Resource from Python source code."""
 
-    context_type: Literal["source"] = "source"
+    resource_type: Literal["source"] = "source"
     import_path: str
     recursive: bool = False
     include_tests: bool = False
@@ -117,7 +117,7 @@ class SourceResource(BaseResource):
 class CallableResource(BaseResource):
     """Resource from executing a Python callable."""
 
-    context_type: Literal["callable"] = "callable"
+    resource_type: Literal["callable"] = "callable"
     import_path: str
     keyword_args: dict[str, Any] = Field(default_factory=dict)
 
@@ -133,7 +133,7 @@ class CallableResource(BaseResource):
 class ImageResource(BaseResource):
     """Resource for image input."""
 
-    context_type: Literal["image"] = "image"
+    resource_type: Literal["image"] = "image"
     path: str  # Local path or URL
     alt_text: str | None = None
 
@@ -144,7 +144,7 @@ class ImageResource(BaseResource):
     def validate_path(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Validate that path is not empty."""
         if isinstance(data, dict) and not data.get("path"):
-            msg = "Path cannot be empty for image context"
+            msg = "Path cannot be empty for image resource"
             raise ValueError(msg)
         return data
 
@@ -180,7 +180,7 @@ class Config(BaseModel):
     version: str = "1.0"
     global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
     context_processors: dict[str, ProcessorConfig] = Field(default_factory=dict)
-    contexts: dict[str, Resource]  # Required: at least one context needed
+    resources: dict[str, Resource] = Field(default_factory=dict)
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
     # Add prompts support
@@ -211,17 +211,17 @@ class Config(BaseModel):
                 raise ValueError(msg)
 
     def _validate_resource_groups(self) -> None:
-        """Validate context references in groups."""
-        for group, contexts in self.resource_groups.items():
-            for context in contexts:
-                if context not in self.contexts:
-                    msg = f"Resource {context} referenced in group {group} not found"
+        """Validate resource references in groups."""
+        for group, resources in self.resource_groups.items():
+            for resource in resources:
+                if resource not in self.resources:
+                    msg = f"Resource {resource} referenced in group {group} not found"
                     raise ValueError(msg)
 
     def _validate_processor_references(self) -> None:
-        """Validate processor references in contexts."""
-        for context in self.contexts.values():
-            for processor in context.processors:
+        """Validate processor references in resources."""
+        for resource in self.resources.values():
+            for processor in resource.processors:
                 if processor.name not in self.context_processors:
                     msg = f"Processor {processor.name!r} not found"
                     raise ValueError(msg)

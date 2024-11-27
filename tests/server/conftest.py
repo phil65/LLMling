@@ -30,7 +30,7 @@ def base_config() -> Config:
     return Config(
         version="1.0.0",
         global_settings=GlobalSettings(),
-        contexts={},
+        resources={},
         context_processors={},
         resource_groups={},
     )

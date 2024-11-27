@@ -26,7 +26,7 @@ def test_config() -> Config:
         messages=[PromptMessage(role="system", content="test")],
     )
     resource = TextResource(
-        context_type="text",  # Required field
+        resource_type="text",  # Required field
         content="Test content",
         description="Test resource",
     )
@@ -38,7 +38,7 @@ def test_config() -> Config:
     return Config(
         version="1.0",
         prompts={"test": prompt},
-        contexts={"test": resource},
+        resources={"test": resource},
         tools={"example": tool_cfg},
     )
 

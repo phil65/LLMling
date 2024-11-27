@@ -35,12 +35,12 @@ class ConfigValidator:
             List of validation warnings
         """
         warnings = []
-        warnings.extend(self._validate_contexts())
+        warnings.extend(self._validate_resources())
         warnings.extend(self._validate_processors())
         return warnings
 
-    def _validate_contexts(self) -> list[str]:
-        """Validate context configuration.
+    def _validate_resources(self) -> list[str]:
+        """Validate resource configuration.
 
         Returns:
             List of validation warnings
@@ -48,16 +48,16 @@ class ConfigValidator:
         warnings: list[str] = []
 
         warnings.extend(
-            f"Resource {context} in group {group} not found"
-            for group, contexts in self.config.resource_groups.items()
-            for context in contexts
-            if context not in self.config.contexts
+            f"Resource {resource} in group {group} not found"
+            for group, resources in self.config.resource_groups.items()
+            for resource in resources
+            if resource not in self.config.resources
         )
 
         warnings.extend(
-            f"Processor {processor} in context {name} not found"
-            for name, context in self.config.contexts.items()
-            for processor in context.processors
+            f"Processor {processor} in resource {name} not found"
+            for name, resource in self.config.resources.items()
+            for processor in resource.processors
             if processor.name not in self.config.context_processors
         )
 

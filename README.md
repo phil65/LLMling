@@ -47,7 +47,7 @@ context_processors:  # dict[str, ProcessorConfig]
     type: template
     template: "{{ content }}\n---"
 
-contexts:  # dict[str, Context(PathResource | TextResource | CLIResource)]
+resources:  # dict[str, Resource(PathResource | TextResource | CLIResource)]
   guidelines:
     type: path  # PathResource
     path: "./guide.md"
@@ -67,6 +67,6 @@ contexts:  # dict[str, Context(PathResource | TextResource | CLIResource)]
     description: "Changes"
 
 resource_groups:  # dict[str, list[str]]
-  review_contexts:
+  review_resources:
     - guidelines
     - prompt

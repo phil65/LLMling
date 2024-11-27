@@ -23,7 +23,7 @@ tools:
     description: "Analyze Python code structure"
 
 # Resource definitions
-contexts:
+resources:
   python_guidelines:
     type: path
     path: "https://example.com/python-guidelines.md"

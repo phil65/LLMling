@@ -59,8 +59,8 @@ def load_config(path: str | os.PathLike[str], *, validate: bool = True) -> Confi
         msg = f"Failed to load configuration from {path}"
         raise exceptions.ConfigError(msg) from exc
     else:
-        msg = "Loaded configuration: version=%s, contexts=%d"
-        logger.info(msg, config.version, len(config.contexts))
+        msg = "Loaded configuration: version=%s, resources=%d"
+        logger.info(msg, config.version, len(config.resources))
         return config
 
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yml"
         config = load_config(config_path)
         print(f"Loaded configuration version: {config.version}")
-        print(f"Number of contexts: {len(config.contexts)}")
+        print(f"Number of resources: {len(config.resources)}")
     except exceptions.ConfigError as e:
         print(f"Error loading config: {e}", file=sys.stderr)
         sys.exit(1)

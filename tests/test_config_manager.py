@@ -20,7 +20,7 @@ EXPECTED_WARNING_COUNT = 2
 CONFIG_YAML = f"""
 version: "{VERSION}"
 context_processors: {{}}
-contexts:
+resources:
     test-context:
         type: text
         content: "Test content"
