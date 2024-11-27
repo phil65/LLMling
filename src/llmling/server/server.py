@@ -101,10 +101,8 @@ class LLMLingServer:
         ) -> GetPromptResult:
             """Handle prompts/get request."""
             result = await self.prompt_registry.render(name, arguments or {})
-            return GetPromptResult(
-                description=f"Prompt: {name}",
-                messages=[conversions.to_mcp_message(msg) for msg in result.messages],
-            )
+            messages = [conversions.to_mcp_message(msg) for msg in result.messages]
+            return GetPromptResult(description=f"Prompt: {name}", messages=messages)
 
         @self.server.list_resources()
         async def handle_list_resources() -> list[mcp.types.Resource]:
@@ -113,9 +111,8 @@ class LLMLingServer:
 
             for name, context in self.config.contexts.items():
                 try:
-                    logger.debug(
-                        "Loading resource %r of type %s", name, context.context_type
-                    )
+                    msg = "Loading resource %r of type %s"
+                    logger.debug(msg, name, context.context_type)
                     loader = self.resource_registry[context.context_type]
                     result = await loader.load(
                         context=context,

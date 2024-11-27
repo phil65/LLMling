@@ -20,29 +20,26 @@ if TYPE_CHECKING:
 @pytest.fixture
 def test_config() -> Config:
     """Create test configuration."""
+    prompt = Prompt(
+        name="test",
+        description="test",
+        messages=[PromptMessage(role="system", content="test")],
+    )
+    resource = TextResource(
+        context_type="text",  # Required field
+        content="Test content",
+        description="Test resource",
+    )
+    tool_cfg = ToolConfig(
+        import_path="llmling.testing.tools.example_tool",
+        name="example",
+        description="Test tool",
+    )
     return Config(
         version="1.0",
-        prompts={
-            "test": Prompt(
-                name="test",
-                description="test",
-                messages=[PromptMessage(role="system", content="test")],
-            )
-        },
-        contexts={
-            "test": TextResource(
-                context_type="text",  # Required field
-                content="Test content",
-                description="Test resource",
-            )
-        },
-        tools={
-            "example": ToolConfig(
-                import_path="llmling.testing.tools.example_tool",
-                name="example",
-                description="Test tool",
-            )
-        },
+        prompts={"test": prompt},
+        contexts={"test": resource},
+        tools={"example": tool_cfg},
     )
 
 
