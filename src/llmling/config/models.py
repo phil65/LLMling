@@ -36,7 +36,7 @@ class GlobalSettings(BaseModel):
 class BaseResource(BaseModel):
     """Base class for all resource types."""
 
-    resource_type: ResourceType = Field(...)
+    resource_type: str = Field(init=False)
     description: str = ""
     processors: list[ProcessingStep] = Field(
         default_factory=list
@@ -58,7 +58,7 @@ class BaseResource(BaseModel):
 class PathResource(BaseResource):
     """Resource loaded from a file or URL."""
 
-    resource_type: Literal["path"] = "path"
+    resource_type: Literal["path"] = Field(default="path", init=False)
     path: str | os.PathLike[str]
     watch: WatchConfig | None = None
 
@@ -86,7 +86,7 @@ class PathResource(BaseResource):
 class TextResource(BaseResource):
     """Raw text resource."""
 
-    resource_type: Literal["text"] = "text"
+    resource_type: Literal["text"] = Field(default="text", init=False)
     content: str
 
     @model_validator(mode="after")
@@ -101,7 +101,7 @@ class TextResource(BaseResource):
 class CLIResource(BaseResource):
     """Resource from CLI command execution."""
 
-    resource_type: Literal["cli"] = "cli"
+    resource_type: Literal["cli"] = Field(default="cli", init=False)
     command: str | TypingSequence[str]
     shell: bool = False
     cwd: str | None = None
@@ -126,7 +126,7 @@ class CLIResource(BaseResource):
 class SourceResource(BaseResource):
     """Resource from Python source code."""
 
-    resource_type: Literal["source"] = "source"
+    resource_type: Literal["source"] = Field(default="source", init=False)
     import_path: str
     recursive: bool = False
     include_tests: bool = False
@@ -143,7 +143,7 @@ class SourceResource(BaseResource):
 class CallableResource(BaseResource):
     """Resource from executing a Python callable."""
 
-    resource_type: Literal["callable"] = "callable"
+    resource_type: Literal["callable"] = Field(default="callable", init=False)
     import_path: str
     keyword_args: dict[str, Any] = Field(default_factory=dict)
 
@@ -159,7 +159,7 @@ class CallableResource(BaseResource):
 class ImageResource(BaseResource):
     """Resource for image input."""
 
-    resource_type: Literal["image"] = "image"
+    resource_type: Literal["image"] = Field(default="image", init=False)
     path: str  # Local path or URL
     alt_text: str | None = None
     watch: WatchConfig | None = None
