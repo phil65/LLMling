@@ -13,7 +13,7 @@ from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import Prompt  # noqa: TC001
 
 
-ContextType = Literal["path", "text", "cli", "source", "callable", "image"]
+ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
 
 
 class GlobalSettings(BaseModel):
@@ -34,7 +34,7 @@ class GlobalSettings(BaseModel):
 class BaseResource(BaseModel):
     """Base class for all context types."""
 
-    context_type: ContextType = Field(...)
+    context_type: ResourceType = Field(...)
     description: str = ""
     processors: list[ProcessingStep] = Field(
         default_factory=list
@@ -43,7 +43,7 @@ class BaseResource(BaseModel):
 
 
 class PathResource(BaseResource):
-    """Context loaded from a file or URL."""
+    """Resource loaded from a file or URL."""
 
     context_type: Literal["path"] = "path"
     path: str | os.PathLike[str]
@@ -73,7 +73,7 @@ class TextResource(BaseResource):
 
 
 class CLIResource(BaseResource):
-    """Context from CLI command execution."""
+    """Resource from CLI command execution."""
 
     context_type: Literal["cli"] = "cli"
     command: str | TypingSequence[str]
@@ -98,7 +98,7 @@ class CLIResource(BaseResource):
 
 
 class SourceResource(BaseResource):
-    """Context from Python source code."""
+    """Resource from Python source code."""
 
     context_type: Literal["source"] = "source"
     import_path: str
@@ -115,7 +115,7 @@ class SourceResource(BaseResource):
 
 
 class CallableResource(BaseResource):
-    """Context from executing a Python callable."""
+    """Resource from executing a Python callable."""
 
     context_type: Literal["callable"] = "callable"
     import_path: str
@@ -130,8 +130,8 @@ class CallableResource(BaseResource):
         return self
 
 
-class ImageContext(BaseResource):
-    """Context for image input."""
+class ImageResource(BaseResource):
+    """Resource for image input."""
 
     context_type: Literal["image"] = "image"
     path: str  # Local path or URL
@@ -149,13 +149,13 @@ class ImageContext(BaseResource):
         return data
 
 
-Context = (
+Resource = (
     PathResource
     | TextResource
     | CLIResource
     | SourceResource
     | CallableResource
-    | ImageContext
+    | ImageResource
 )
 
 
@@ -180,7 +180,7 @@ class Config(BaseModel):
     version: str = "1.0"
     global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
     context_processors: dict[str, ProcessorConfig] = Field(default_factory=dict)
-    contexts: dict[str, Context]  # Required: at least one context needed
+    contexts: dict[str, Resource]  # Required: at least one context needed
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
     # Add prompts support
@@ -215,7 +215,7 @@ class Config(BaseModel):
         for group, contexts in self.resource_groups.items():
             for context in contexts:
                 if context not in self.contexts:
-                    msg = f"Context {context} referenced in group {group} not found"
+                    msg = f"Resource {context} referenced in group {group} not found"
                     raise ValueError(msg)
 
     def _validate_processor_references(self) -> None:

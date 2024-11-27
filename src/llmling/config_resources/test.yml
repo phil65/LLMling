@@ -1,4 +1,4 @@
-# Context processors definitions
+# Resource processors definitions
 context_processors:
   python_cleaner:
     type: function
@@ -22,7 +22,7 @@ tools:
     import_path: "llmling.testing.tools.analyze_ast"
     description: "Analyze Python code structure"
 
-# Context definitions
+# Resource definitions
 contexts:
   python_guidelines:
     type: path
@@ -91,7 +91,7 @@ contexts:
     processors:
       - name: python_cleaner
 
-# Context groups
+# Resource groups
 resource_groups:
   code_review_basic:
     - system_prompt

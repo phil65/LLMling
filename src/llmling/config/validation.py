@@ -48,7 +48,7 @@ class ConfigValidator:
         warnings: list[str] = []
 
         warnings.extend(
-            f"Context {context} in group {group} not found"
+            f"Resource {context} in group {group} not found"
             for group, contexts in self.config.resource_groups.items()
             for context in contexts
             if context not in self.config.contexts

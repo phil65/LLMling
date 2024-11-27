@@ -14,13 +14,13 @@ from llmling.resources.models import LoadedResource, ResourceMetadata
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Context
+    from llmling.config.models import Resource
     from llmling.processors.registry import ProcessorRegistry
 
 
 logger = get_logger(__name__)
 
-TContext = TypeVar("TContext", bound="Context")
+TResource = TypeVar("TResource", bound="Resource")
 
 
 def create_loaded_resource(
@@ -70,16 +70,16 @@ def create_loaded_resource(
     )
 
 
-class ResourceLoader[TContext](ABC):
+class ResourceLoader[TResource](ABC):
     """Base class for context loaders with associated context type."""
 
-    context_class: type[TContext]
+    context_class: type[TResource]
     uri_scheme: ClassVar[str]  # e.g., "file", "text", "git"
 
     # Optional media types this loader supports
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
-    def __init__(self, context: TContext | None = None) -> None:
+    def __init__(self, context: TResource | None = None) -> None:
         """Initialize loader with optional context.
 
         Args:
@@ -88,7 +88,7 @@ class ResourceLoader[TContext](ABC):
         self.context = context
 
     @classmethod
-    def create(cls, context: TContext) -> ResourceLoader[TContext]:
+    def create(cls, context: TResource) -> ResourceLoader[TResource]:
         """Create a loader instance for the given context."""
         return cls(context)
 
@@ -120,7 +120,7 @@ class ResourceLoader[TContext](ABC):
     @abstractmethod
     async def load(
         self,
-        context: TContext,
+        context: TResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load and process context content.

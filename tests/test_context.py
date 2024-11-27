@@ -11,8 +11,8 @@ import upath
 from llmling.config.models import (
     CallableResource,
     CLIResource,
-    Context,
     PathResource,
+    Resource,
     SourceResource,
     TextResource,
 )
@@ -253,7 +253,7 @@ async def test_all_loaders_with_processors(
     processor_registry.register("reverse", cfg)
     processors = [ProcessingStep(name="upper"), ProcessingStep(name="reverse")]
 
-    contexts: list[Context] = [
+    contexts: list[Resource] = [
         TextResource(content=SAMPLE_TEXT, description="Test text", processors=processors),
         PathResource(path=str(tmp_file), description="Test file", processors=processors),
         CLIResource(

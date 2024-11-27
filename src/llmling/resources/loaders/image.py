@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 import upath
 
-from llmling.config.models import ImageContext
+from llmling.config.models import ImageResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
@@ -21,10 +21,10 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ImageResourceLoader(ResourceLoader[ImageContext]):
+class ImageResourceLoader(ResourceLoader[ImageResource]):
     """Loads image content from files or URLs."""
 
-    context_class = ImageContext
+    context_class = ImageResource
     uri_scheme = "image"
     supported_mime_types: ClassVar[list[str]] = ["image/jpeg", "image/png", "image/gif"]
 
@@ -41,7 +41,7 @@ class ImageResourceLoader(ResourceLoader[ImageContext]):
 
     async def load(
         self,
-        context: ImageContext,
+        context: ImageResource,
         processor_registry: ProcessorRegistry,
     ) -> LoadedResource:
         """Load and process image content.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from llmling.config.manager import ConfigManager
 from llmling.config.models import (
     Config,
-    Context,
+    Resource,
     GlobalSettings,
     CallableResource,
     SourceResource,
@@ -19,8 +19,8 @@ __all__ = [
     "Config",
     "ConfigManager",
     "ConfigValidator",
-    "Context",
     "GlobalSettings",
+    "Resource",
     "SourceResource",
     "load_config",
 ]

@@ -1,4 +1,4 @@
-"""Context loader implementations."""
+"""Resource loader implementations."""
 
 from llmling.resources.loaders.callable import CallableResourceLoader
 from llmling.resources.loaders.cli import CLIResourceLoader

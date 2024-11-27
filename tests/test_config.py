@@ -92,7 +92,7 @@ def test_validate_context_references(valid_config_dict: dict[str, Any]) -> None:
 
     with pytest.raises(pydantic.ValidationError) as exc_info:
         config.Config.model_validate(invalid_config)
-    assert "Context non-existent-context" in str(exc_info.value)
+    assert "Resource non-existent-context" in str(exc_info.value)
 
 
 def test_validate_source_context() -> None:

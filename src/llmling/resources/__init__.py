@@ -1,4 +1,4 @@
-"""Context loading functionality."""
+"""Resource loading functionality."""
 
 from llmling.resources.base import ResourceLoader
 from llmling.resources.loaders import (
