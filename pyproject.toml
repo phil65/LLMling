@@ -49,6 +49,9 @@ dependencies = [
     "mcp>=1.0.0",
 ]
 
+[project.scripts]
+mcp-server-llmling = "llmling.server.__main__:run"
+
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
 
