@@ -47,6 +47,8 @@ dependencies = [
     "diskcache>=5.6.3",
     "epregistry>=1.2.0",
     "mcp>=1.0.0",
+    "pathspec",
+    "watchdog",
 ]
 
 [project.scripts]
