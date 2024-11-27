@@ -9,16 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from llmling.core.typedefs import MessageContent
 
 
-class BaseContext(BaseModel):
-    """Base class for all context types."""
-
-    context_type: type | None = None
-    content: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    model_config = ConfigDict(frozen=True)
-
-
 class ProcessingContext(BaseModel):  # type: ignore[no-redef]
     """Context for processor execution."""
 
