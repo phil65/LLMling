@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-import upath
 from upath import UPath
 
 from llmling.config.models import PathResource
@@ -41,9 +40,27 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                 msg = f"Unsupported URI scheme: {uri}"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            path = upath.UPath(uri).path
-            # Remove leading slashes and normalize
-            return str(path).lstrip("/").replace("\\", "/")
+            # Extract path part after file://
+            _, path = uri.split("file://", 1)
+
+            # Handle absolute paths (three slashes)
+            if path.startswith("///"):
+                path = path[3:]
+
+            # Remove ./ and ../ prefixes
+            path = path.lstrip("/")
+            while path.startswith(("./", "../")):
+                if path.startswith("./"):
+                    path = path[2:]
+                elif path.startswith("../"):
+                    path = path[3:]
+
+            # Handle Windows drive letter (e.g., C:/ or D:/)
+            if len(path) >= 2 and path[1] == ":":  # noqa: PLR2004
+                path = path[2:]  # Skip drive letter and colon
+
+            # Normalize separators and remove any leading slashes
+            return path.replace("\\", "/").lstrip("/")
 
         except Exception as exc:
             msg = f"Invalid file URI: {uri}"

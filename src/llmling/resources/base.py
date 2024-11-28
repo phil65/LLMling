@@ -138,16 +138,8 @@ class ResourceLoader[TResource](ABC):
             # Split "scheme://name" and get name part
             _, name = uri.split("://", 1)
 
-            # Handle special cases
-            match cls.uri_scheme:
-                case "file":
-                    # Remove leading slashes for file paths
-                    return name.lstrip("/")
-                case "resource":
-                    # Remove "local/" prefix if present (MCP convention)
-                    return name.replace("local/", "", 1)
-                case _:
-                    return name
+            # Normalize path separators
+            return name.replace("\\", "/").lstrip("/")
 
         except Exception as exc:
             msg = f"Invalid URI format: {uri}"
