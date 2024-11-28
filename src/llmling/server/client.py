@@ -66,12 +66,13 @@ class TestClient:
         try:
             response = json.loads(line.decode())
             logger.debug("Received JSON: %s", response)
-            return response
         except json.JSONDecodeError:
             # Log non-JSON lines as debug messages
             logger.debug("Server stdout: %s", line.decode().strip())
             # Keep reading until we get JSON
             return await self._read_response()
+        else:
+            return response
 
     async def send_request(
         self, method: str, params: dict[str, Any] | None = None
@@ -106,7 +107,7 @@ class TestClient:
                         return response.get("result")
         except TimeoutError:
             msg = "Timeout waiting for server response"
-            logger.error(msg)
+            logger.exception(msg)
             raise
 
     async def send_notification(
@@ -166,7 +167,7 @@ class TestClient:
             try:
                 await self.send_request("shutdown", {})
                 await self.send_notification("exit", {})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Error during shutdown: %s", e)
             finally:
                 self.process.terminate()
@@ -188,8 +189,8 @@ async def main() -> None:
         await client.start()
         tools = await client.list_tools()
         print("\nAvailable tools:", tools)
-    except Exception as e:
-        logger.error("Error: %s", e)
+    except Exception:
+        logger.exception("Error")
     finally:
         await client.close()
 
