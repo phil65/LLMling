@@ -8,6 +8,7 @@ import mcp
 from mcp.server import Server
 from mcp.types import GetPromptResult, TextContent
 
+from llmling import config_resources
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
@@ -19,10 +20,12 @@ from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:
+    import os
+
     from llmling.config.models import Config
 
 logger = get_logger(__name__)
-DEFAULT_CONFIG = "src/llmling/config_resources/test.yml"
+
 DEFAULT_NAME = "llmling-server"
 
 
@@ -146,7 +149,7 @@ class LLMLingServer:
 
     @classmethod
     def from_config_file(
-        cls, config_path: str, *, name: str = "llmling-server"
+        cls, config_path: str | os.PathLike[str], *, name: str = "llmling-server"
     ) -> LLMLingServer:
         """Create server from config file."""
         from llmling.config.loading import load_config
@@ -253,7 +256,7 @@ class LLMLingServer:
             logger.exception("Failed to send tool list change notification")
 
 
-async def serve(config_path: str | None = None) -> None:
+async def serve(config_path: str | os.PathLike[str] | None = None) -> None:
     """Serve LLMling via MCP protocol.
 
     Args:
@@ -262,7 +265,7 @@ async def serve(config_path: str | None = None) -> None:
     logger = get_logger(__name__)
 
     # Create server instance
-    server = LLMLingServer.from_config_file(config_path or DEFAULT_CONFIG)
+    server = LLMLingServer.from_config_file(config_path or config_resources.TEST_CONFIG)
 
     try:
         await server.start(raise_exceptions=True)
@@ -275,5 +278,5 @@ if __name__ == "__main__":
     import asyncio
     import sys
 
-    config_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG
+    config_path = sys.argv[1] if len(sys.argv) > 1 else config_resources.TEST_CONFIG
     asyncio.run(serve(config_path))

@@ -6,6 +6,7 @@ import sys
 
 import logfire
 
+from llmling import config_resources
 from llmling.server import serve
 
 
@@ -24,9 +25,7 @@ def configure_logging(enable_logfire: bool = True) -> None:
 
 async def main() -> None:
     """Run the LLMling server."""
-    config_path = (
-        sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
-    )
+    config_path = sys.argv[1] if len(sys.argv) > 1 else config_resources.TEST_CONFIG
 
     configure_logging(enable_logfire=True)  # Enable for CLI usage
 

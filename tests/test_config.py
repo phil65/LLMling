@@ -9,7 +9,7 @@ import pytest
 from upath import UPath
 import yamling
 
-from llmling import config
+from llmling import config, config_resources
 from llmling.processors.base import ProcessorConfig
 
 
@@ -20,10 +20,7 @@ if TYPE_CHECKING:
 @pytest.fixture
 def valid_config_dict() -> dict[str, Any]:
     """Create a valid configuration dictionary for testing."""
-    test_yaml_path = (
-        UPath(__file__).parent.parent / "src/llmling/config_resources/test.yml"
-    )
-    return yamling.load_yaml_file(test_yaml_path)
+    return yamling.load_yaml_file(config_resources.TEST_CONFIG)
 
 
 @pytest.fixture

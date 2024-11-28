@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 import upath
 
+from llmling import config_resources
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import Prompt  # noqa: TC001
@@ -271,7 +272,7 @@ if __name__ == "__main__":
     from llmling.config.loading import load_config
 
     try:
-        config = load_config("src/llmling/config_resources/test.yml")  # type: ignore[has-type]
+        config = load_config(config_resources.TEST_CONFIG)  # type: ignore[has-type]
         print(config)
     except ValidationError as e:
         print(e)
