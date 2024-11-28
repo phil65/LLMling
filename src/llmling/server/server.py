@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
@@ -15,6 +16,7 @@ from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
 from llmling.server import conversions
+from llmling.server.log import configure_server_logging, run_logging_processor
 from llmling.server.observers import PromptObserver, ResourceObserver, ToolObserver
 from llmling.tools.registry import ToolRegistry
 
@@ -171,10 +173,15 @@ class LLMLingServer:
             # Register resources from config
             for name, resource in self.config.resources.items():
                 self.resource_registry.register(name, resource)
-
             # Start MCP server
+            handler = configure_server_logging(self.server)
             options = self.server.create_initialization_options()
-            async with mcp.stdio_server() as (read_stream, write_stream):
+            async with (
+                mcp.stdio_server() as (read_stream, write_stream),
+                asyncio.TaskGroup() as tg,
+            ):
+                tg.create_task(run_logging_processor(handler))
+                # Run server
                 await self.server.run(
                     read_stream,
                     write_stream,
