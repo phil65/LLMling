@@ -83,19 +83,31 @@ def to_mcp_prompt(prompt: InternalPrompt) -> types.Prompt:
 
 
 def to_mcp_uri(uri: str) -> types.AnyUrl:
-    """Convert internal URI to MCP-compatible AnyUrl."""
+    """Convert internal URI to MCP-compatible AnyUrl.
+
+    Examples:
+        file:///path/to/file -> file:///path/to/file
+        http://example.com -> http://example.com
+        resource://name -> resource://local/name
+    """
     try:
         scheme = uri.split("://", 1)[0] if "://" in uri else ""
 
         match scheme:
             case "http" | "https":
                 return types.AnyUrl(uri)
+
             case "file":
-                path = uri.split(":", 1)[1].lstrip("/")
-                return types.AnyUrl(f"file://localhost/{path}")
-            case _:
-                name = uri.split("://", 1)[1]
-                return types.AnyUrl(f"resource://local/{name}")
+                # Remove file:// prefix and normalize path
+                path = uri.replace("file://", "", 1).lstrip("/")
+                # Use a dummy host as required by pydantic
+                return types.AnyUrl(f"file://host/{path}")
+
+            case _:  # resource:// or other schemes
+                # Extract name and use resource://host/name format
+                name = uri.split("://", 1)[1] if "://" in uri else uri
+                return types.AnyUrl(f"resource://host/{name}")
+
     except Exception as exc:
         msg = f"Failed to convert URI {uri!r} to MCP format"
         raise ValueError(msg) from exc
@@ -106,15 +118,19 @@ def from_mcp_uri(uri: str) -> str:
     try:
         if uri.startswith(("http://", "https://")):
             return uri
+
         if uri.startswith("file://"):
-            # Strip file:// prefix and decode
-            path = uri.replace("file://", "", 1)
+            # Remove file://host/ prefix and decode
+            path = uri.replace("file://host/", "", 1)
             return urllib.parse.unquote(path)
+
         if uri.startswith("resource://"):
-            # Extract resource name from resource://local/name
-            return uri.split("/", 3)[-1]
+            # Extract resource name from resource://host/name
+            return uri.split("/", 4)[-1]
+
         msg = f"Unsupported URI scheme: {uri}"
         raise ValueError(msg)  # noqa: TRY301
+
     except Exception as exc:
         msg = f"Failed to convert URI {uri!r}"
         raise ValueError(msg) from exc
