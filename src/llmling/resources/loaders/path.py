@@ -1,23 +1,18 @@
-"""Path context loader implementation."""
-
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, ClassVar
 
 from upath import UPath
 
 from llmling.config.models import PathResource
 from llmling.core import exceptions
-from llmling.core.log import get_logger
 from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
 if TYPE_CHECKING:
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
-
-
-logger = get_logger(__name__)
 
 
 class PathResourceLoader(ResourceLoader[PathResource]):
@@ -31,51 +26,89 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         "text/markdown",
         "text/yaml",
     ]
+    # Invalid path characters (Windows + Unix)
+    invalid_chars_pattern = re.compile(r'[\x00-\x1F<>:"|?*\\]')
+
+    @classmethod
+    def supports_uri(cls, uri: str) -> bool:
+        """Check if this loader supports a given URI using upath's protocol system."""
+        try:
+            # Let UPath handle protocol support
+            UPath(uri)
+        except (ValueError, NotImplementedError):
+            return False
+        else:
+            return True
 
     @classmethod
     def get_name_from_uri(cls, uri: str) -> str:
-        """Handle file:/// URIs properly."""
+        """Extract the normalized path from a URI."""
         try:
             if not cls.supports_uri(uri):
-                msg = f"Unsupported URI scheme: {uri}"
+                msg = f"Unsupported URI: {uri}"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Extract path part after file://
-            _, path = uri.split("file://", 1)
+            path = UPath(uri)
 
-            # Handle absolute paths (three slashes)
-            if path.startswith("///"):
-                path = path[3:]
+            # Get parts excluding protocol info
+            parts = [part for part in path.parts if not cls._is_ignorable_part(str(part))]
 
-            # Remove ./ and ../ prefixes
-            path = path.lstrip("/")
-            while path.startswith(("./", "../")):
-                if path.startswith("./"):
-                    path = path[2:]
-                elif path.startswith("../"):
-                    path = path[3:]
+            if not parts:
+                msg = "Empty path after normalization"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Handle Windows drive letter (e.g., C:/ or D:/)
-            if len(path) >= 2 and path[1] == ":":  # noqa: PLR2004
-                path = path[2:]  # Skip drive letter and colon
+            # Validate path components
+            for part in parts:
+                if cls.invalid_chars_pattern.search(str(part)):
+                    msg = f"Invalid characters in path component: {part}"
+                    raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Normalize separators and remove any leading slashes
-            return path.replace("\\", "/").lstrip("/")
+            # Join with forward slashes and normalize consecutive slashes
+            joined = "/".join(str(p) for p in parts)
+            return re.sub(
+                r"/+", "/", joined
+            )  # Replace multiple slashes with single slash
 
         except Exception as exc:
-            msg = f"Invalid file URI: {uri}"
+            if isinstance(exc, exceptions.LoaderError):
+                raise
+            msg = f"Invalid URI: {uri}"
             raise exceptions.LoaderError(msg) from exc
 
-    @classmethod
-    def get_uri_template(cls) -> str:
-        """File URIs need three slashes for absolute paths."""
-        return "file:///{name}"
+    @staticmethod
+    def _is_ignorable_part(part: str) -> bool:
+        """Check if a path component should be ignored."""
+        return (
+            not part
+            or part in {".", ".."}
+            or (len(part) == 2 and part[1] == ":")  # Drive letter  # noqa: PLR2004
+            or part in {"/", "\\"}
+        )
 
     @classmethod
     def create_uri(cls, *, name: str) -> str:
-        """Handle file paths properly."""
-        normalized = name.replace("\\", "/").lstrip("/")
-        return cls.get_uri_template().format(name=normalized)
+        """Create a URI from a path or URL."""
+        try:
+            # Validate path
+            if cls.invalid_chars_pattern.search(name):
+                msg = f"Invalid characters in path: {name}"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
+
+            # Use UPath for handling
+            path = UPath(name)
+
+            # If it already has a protocol, use it as-is
+            if path.protocol:
+                return str(path)
+
+            # Otherwise, treat as local file
+            return f"file:///{str(path).lstrip('/')}"
+
+        except Exception as exc:
+            if isinstance(exc, exceptions.LoaderError):
+                raise
+            msg = f"Failed to create URI from {name}"
+            raise exceptions.LoaderError(msg) from exc
 
     async def _load_impl(
         self,
