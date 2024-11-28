@@ -227,13 +227,19 @@ class LLMLingServer:
     async def notify_resource_change(self, uri: str) -> None:
         """Notify clients about resource changes."""
         try:
-            # Ensure file URIs are properly formatted with three slashes
-            if uri.startswith("file:"):
-                # Normalize to file:/// format
+            # Handle different URI types according to MCP spec
+            if uri.startswith(("http://", "https://")):
+                # Pass through remote URLs that clients can access directly
+                mcp_uri = uri
+            elif uri.startswith("file:"):
+                # Ensure proper file:/// format for MCP
                 path = uri.split(":", 1)[1].lstrip("/")
-                uri = f"file:///{path}"
+                mcp_uri = f"file:///{path}"
+            else:
+                logger.warning("Unsupported URI scheme: %s", uri)
+                return
 
-            url = AnyUrl(uri)
+            url = AnyUrl(mcp_uri)
             await self.current_session.send_resource_updated(url)
         except RuntimeError:
             logger.debug("No active session for notification")
