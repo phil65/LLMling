@@ -16,7 +16,7 @@ from llmling.prompts.models import (
     PromptResult,
 )
 from llmling.prompts.rendering import render_prompt
-from llmling.resources.base import ResourceLoader
+from llmling.resources.base import LoaderContext, ResourceLoader
 from llmling.resources.models import LoadedResource, ResourceMetadata
 
 
@@ -174,11 +174,7 @@ async def test_prompt_with_resources(
             return "processed content"
 
     class MockLoader(ResourceLoader[None]):
-        context_class = type(None)
         uri_scheme = "source"
-
-        def __init__(self) -> None:
-            super().__init__(None)
 
         async def _load_impl(
             self,
@@ -188,8 +184,14 @@ async def test_prompt_with_resources(
         ) -> LoadedResource:
             return loaded_resource
 
+        async def load(
+            self,
+            context: LoaderContext[None] | None = None,
+            processor_registry: ProcessorRegistry | None = None,
+        ) -> LoadedResource:
+            return loaded_resource
+
     class MockResourceRegistry:
-        # Changed to sync method to match the actual interface
         def find_loader_for_uri(self, uri: str) -> ResourceLoader[Any]:
             return MockLoader()
 
@@ -199,7 +201,6 @@ async def test_prompt_with_resources(
         resource_registry=MockResourceRegistry(),
         processor_registry=MockProcessorRegistry(),
     )
-
     assert len(result.messages) == 1
     msg = result.messages[0]
     assert isinstance(msg.content, list)

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 
+import logfire
+
 from llmling.config.models import BaseResource
 from llmling.core import exceptions
 from llmling.core.descriptors import classproperty
@@ -185,8 +187,12 @@ class ResourceLoader[TResource](ABC):
             case _:
                 msg = f"Invalid context type: {type(context)}"
                 raise exceptions.LoaderError(msg)
-
-        return await self._load_impl(resource, name, processor_registry)
+        with logfire.span(
+            "Loading resource",
+            resource_type=self.resource_type,
+            name=name,
+        ):
+            return await self._load_impl(resource, name, processor_registry)
 
     @abstractmethod
     async def _load_impl(
