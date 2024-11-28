@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 import sys
 from typing import TYPE_CHECKING, Literal
@@ -13,10 +14,10 @@ from upath import UPath
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-
 # Get platform-specific log directory
 LOG_DIR = UPath(platformdirs.user_log_dir("llmling", "llmling"))
-LOG_FILE = LOG_DIR / "llmling.log"
+# Include date in log filename for parallel runs
+LOG_FILE = LOG_DIR / f"llmling_{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
 
 # Maximum log file size in bytes (10MB)
 MAX_LOG_SIZE = 10 * 1024 * 1024
