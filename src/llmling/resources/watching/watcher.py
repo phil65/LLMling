@@ -15,6 +15,8 @@ from llmling.resources.watching.utils import debounce
 
 
 if TYPE_CHECKING:
+    import os
+
     from watchdog.observers.api import BaseObserver
 
     from llmling.config.models import Resource
@@ -22,6 +24,18 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
+
+
+def is_watchable_path(path: str | os.PathLike[str]) -> bool:
+    """Check if a path can be watched with watchdog.
+
+    Args:
+        path: Path to check
+
+    Returns:
+        True if path is local and can be watched
+    """
+    return upath.UPath(path).protocol in ("file", "")
 
 
 class ResourceEventHandler(FileSystemEventHandler):
@@ -109,6 +123,12 @@ class ResourceWatcher:
             logger.exception("Error stopping file system watcher")
 
     def add_watch(self, name: str, resource: Resource) -> None:
+        """Add a watch for a resource.
+
+        Args:
+            name: Resource name
+            resource: Resource to watch
+        """
         if not self.observer:
             return
 
@@ -122,14 +142,21 @@ class ResourceWatcher:
             )
             self.handlers[name] = handler
 
-            # Schedule directory watching
+            # Schedule directory watching for local paths only
             if hasattr(resource, "path"):
-                path = upath.UPath(resource.path).parent  # type: ignore
-                if path not in self._watched_paths:
-                    self.observer.schedule(handler, str(path), recursive=True)
-                    self._watched_paths.add(str(path))
-                    logger.debug("Added watch for: %s -> %s", name, path)
-
+                path = upath.UPath(resource.path)  # type: ignore
+                if is_watchable_path(path):
+                    watch_path = str(path.parent)
+                    if watch_path not in self._watched_paths:
+                        self.observer.schedule(handler, watch_path, recursive=True)
+                        self._watched_paths.add(watch_path)
+                        logger.debug("Added watch for: %s -> %s", name, watch_path)
+                else:
+                    logger.debug(
+                        "Skipping watch for non-local path: %s -> %s",
+                        name,
+                        path,
+                    )
         except Exception:
             logger.exception("Failed to add watch for: %s", name)
 
