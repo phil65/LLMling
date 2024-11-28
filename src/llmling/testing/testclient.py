@@ -15,7 +15,7 @@ from llmling.core.log import get_logger
 logger = get_logger(__name__)
 
 
-class HandshakeClient:
+class MCPInProcSession:
     """Test client for MCP protocol."""
 
     def __init__(

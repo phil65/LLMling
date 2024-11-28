@@ -16,7 +16,7 @@ from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
 from llmling.server import LLMLingServer
 from llmling.testing.processors import multiply, uppercase_text
-from llmling.testing.testclient import HandshakeClient
+from llmling.testing.testclient import MCPInProcSession
 from llmling.testing.tools import analyze_ast, example_tool
 from llmling.tools.registry import ToolRegistry
 
@@ -140,6 +140,6 @@ async def running_server(
 
 
 @pytest.fixture
-async def client() -> HandshakeClient:
+async def client() -> MCPInProcSession:
     """Create a test client."""
-    return HandshakeClient([sys.executable, "-m", "llmling.server"])
+    return MCPInProcSession([sys.executable, "-m", "llmling.server"])

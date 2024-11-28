@@ -14,7 +14,7 @@ import pytest
 
 if TYPE_CHECKING:
     from llmling.server import LLMLingServer
-    from llmling.testing.testclient import HandshakeClient
+    from llmling.testing.testclient import MCPInProcSession
 
 
 # Initialize logfire to avoid warnings
@@ -22,8 +22,8 @@ logfire.configure()
 
 
 @pytest.mark.asyncio
-async def test_server_lifecycle_handshake_client(client: HandshakeClient) -> None:
-    """Test server lifecycle using HandshakeClient."""
+async def test_server_lifecycle_handshake_client(client: MCPInProcSession) -> None:
+    """Test server lifecycle using MCPInProcSession."""
     try:
         await client.start()
         await asyncio.sleep(0.5)

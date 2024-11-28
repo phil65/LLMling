@@ -201,18 +201,25 @@ class LLMLingServer:
         async def handle_read_resource(uri: mcp.types.AnyUrl) -> str | bytes:
             """Handle direct resource content requests."""
             try:
-                # Convert MCP URI to our format
+                # Convert MCP URI to our format and load
                 internal_uri = conversions.from_mcp_uri(str(uri))
-                resource = await self.resource_registry.load_by_uri(internal_uri)
+                logger.debug("Loading resource from internal URI: %s", internal_uri)
+
+                # For plain resource names, load by name first
+                if "://" not in internal_uri:
+                    resource = await self.resource_registry.load(internal_uri)
+                else:
+                    resource = await self.resource_registry.load_by_uri(internal_uri)
 
                 # Handle different content types
                 if resource.metadata.mime_type.startswith("text/"):
                     return resource.content
                 # For binary content (like images), return raw bytes
                 return resource.content_items[0].content.encode()
+
             except Exception as exc:
                 msg = f"Failed to read resource: {exc}"
-                raise mcp.McpError(msg) from exc
+                raise mcp.McpError(INTERNAL_ERROR, msg) from exc
 
         @self.server.completion()
         async def handle_completion(

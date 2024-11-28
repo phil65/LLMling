@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from llmling.testing.testclient import HandshakeClient  # Our working client
+from llmling.testing.testclient import MCPInProcSession  # Our working client
 
 
 # Configure logfire to suppress warnings
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.asyncio
 async def test_resource_to_tool_workflow() -> None:
     """Test loading a resource and using it with a tool."""
-    client = HandshakeClient([sys.executable, "-m", "llmling.server"])
+    client = MCPInProcSession([sys.executable, "-m", "llmling.server"])
     try:
         # Start server
         await client.start()

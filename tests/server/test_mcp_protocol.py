@@ -9,7 +9,7 @@ import yaml
 
 from llmling.config.models import Config, TextResource, ToolConfig
 from llmling.prompts.models import Prompt, PromptMessage
-from llmling.testing.testclient import HandshakeClient
+from llmling.testing.testclient import MCPInProcSession
 
 
 if TYPE_CHECKING:
@@ -54,9 +54,9 @@ async def config_file(tmp_path: Path, test_config: Config) -> Path:
 
 
 @pytest.fixture
-async def configured_client(config_file: Path) -> AsyncGenerator[HandshakeClient, None]:
+async def configured_client(config_file: Path) -> AsyncGenerator[MCPInProcSession, None]:
     """Create client with test configuration."""
-    client = HandshakeClient(config_path=str(config_file))
+    client = MCPInProcSession(config_path=str(config_file))
     try:
         await client.start()
         response = await client.do_handshake()
@@ -67,7 +67,7 @@ async def configured_client(config_file: Path) -> AsyncGenerator[HandshakeClient
 
 
 @pytest.mark.asyncio
-async def test_mcp_resource_operations(configured_client: HandshakeClient):
+async def test_mcp_resource_operations(configured_client: MCPInProcSession):
     """Test MCP resource operations."""
     response = await configured_client.send_request("resources/list")
     assert "resources" in response
@@ -77,7 +77,7 @@ async def test_mcp_resource_operations(configured_client: HandshakeClient):
 
 
 @pytest.mark.asyncio
-async def test_mcp_tool_operations(configured_client: HandshakeClient):
+async def test_mcp_tool_operations(configured_client: MCPInProcSession):
     """Test MCP tool operations."""
     # First verify tool exists
     tools = await configured_client.send_request("tools/list")
@@ -99,7 +99,7 @@ async def test_mcp_tool_operations(configured_client: HandshakeClient):
 
 
 @pytest.mark.asyncio
-async def test_mcp_error_handling(configured_client: HandshakeClient):
+async def test_mcp_error_handling(configured_client: MCPInProcSession):
     """Test MCP error response format."""
     response = await configured_client.send_request("tools/call", {"name": "nonexistent"})
     assert "content" in response
@@ -108,7 +108,7 @@ async def test_mcp_error_handling(configured_client: HandshakeClient):
 
 
 @pytest.mark.asyncio
-async def test_mcp_handshake(configured_client: HandshakeClient):
+async def test_mcp_handshake(configured_client: MCPInProcSession):
     """Test MCP protocol handshake."""
     # Do another handshake to explicitly test it
     init_response = await configured_client.do_handshake()
@@ -128,7 +128,7 @@ async def test_mcp_handshake(configured_client: HandshakeClient):
 
 
 @pytest.mark.asyncio
-async def test_mcp_prompt_operations(configured_client: HandshakeClient):
+async def test_mcp_prompt_operations(configured_client: MCPInProcSession):
     """Test MCP prompt operations."""
     # List prompts
     prompts = await configured_client.send_request("prompts/list")
