@@ -227,6 +227,12 @@ class LLMLingServer:
     async def notify_resource_change(self, uri: str) -> None:
         """Notify clients about resource changes."""
         try:
+            # Ensure file URIs are properly formatted with three slashes
+            if uri.startswith("file:"):
+                # Normalize to file:/// format
+                path = uri.split(":", 1)[1].lstrip("/")
+                uri = f"file:///{path}"
+
             url = AnyUrl(uri)
             await self.current_session.send_resource_updated(url)
         except RuntimeError:
