@@ -87,6 +87,9 @@ Issues = "https://github.com/phil65/llmling/issues"
 Discussions = "https://github.com/phil65/llmling/discussions"
 "Code coverage" = "https://app.codecov.io/gh/phil65/llmling"
 
+[tool.logfire]
+ignore_no_config = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 log_cli = true
