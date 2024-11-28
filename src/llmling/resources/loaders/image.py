@@ -41,6 +41,24 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
         normalized = name.replace("\\", "/").lstrip("/")
         return cls.get_uri_template().format(name=normalized)
 
+    @classmethod
+    def get_name_from_uri(cls, uri: str) -> str:
+        """Handle image URIs which might be URLs."""
+        try:
+            if not cls.supports_uri(uri):
+                msg = f"Unsupported URI scheme: {uri}"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
+
+            if uri.startswith(("http://", "https://")):
+                # For URLs, use the full URL as name
+                return uri
+            # For local files, use normalized path
+            return super().get_name_from_uri(uri)
+
+        except Exception as exc:
+            msg = f"Invalid image URI: {uri}"
+            raise exceptions.LoaderError(msg) from exc
+
     async def _load_impl(
         self,
         resource: ImageResource,

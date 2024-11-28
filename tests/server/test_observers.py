@@ -13,6 +13,7 @@ from llmling.server.observers import PromptObserver, ResourceObserver, ToolObser
 def mock_server() -> Mock:
     """Create a mock server with required methods."""
     server = Mock()
+    server._create_task = Mock(side_effect=asyncio.create_task)
 
     # Add async notification methods
     async def notify_change(uri: str) -> None: ...
@@ -29,7 +30,7 @@ def mock_server() -> Mock:
 
 @pytest.mark.asyncio
 async def test_resource_observer_notifications(mock_server: Mock) -> None:
-    """Test that resource observer creates notification tasks."""
+    """Test that resource observer triggers server notifications."""
     observer = ResourceObserver(mock_server)
     resource = TextResource(content="test")
 
@@ -37,99 +38,63 @@ async def test_resource_observer_notifications(mock_server: Mock) -> None:
     observer._handle_resource_changed("test_key", resource)
     observer._handle_list_changed()
 
-    # Wait for tasks to complete
+    # Wait for event loop
     await asyncio.sleep(0)
 
     # Check notifications were triggered
     mock_server.notify_resource_change.assert_called_once_with("test://uri")
     mock_server.notify_resource_list_changed.assert_called_once()
 
+    # Verify tasks were created
+    assert mock_server._create_task.call_count == 2  # noqa: PLR2004
+
 
 @pytest.mark.asyncio
 async def test_prompt_observer_notifications(mock_server: Mock) -> None:
-    """Test that prompt observer creates notification tasks."""
+    """Test that prompt observer triggers server notifications."""
     observer = PromptObserver(mock_server)
 
     # Trigger event
     observer._handle_list_changed()
 
-    # Wait for tasks to complete
+    # Wait for event loop
     await asyncio.sleep(0)
 
     # Check notification was triggered
     mock_server.notify_prompt_list_changed.assert_called_once()
+    mock_server._create_task.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_tool_observer_notifications(mock_server: Mock) -> None:
-    """Test that tool observer creates notification tasks."""
+    """Test that tool observer triggers server notifications."""
     observer = ToolObserver(mock_server)
 
     # Trigger event
     observer._handle_list_changed()
 
-    # Wait for tasks to complete
+    # Wait for event loop
     await asyncio.sleep(0)
 
     # Check notification was triggered
     mock_server.notify_tool_list_changed.assert_called_once()
+    mock_server._create_task.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_observer_task_cleanup() -> None:
-    """Test that observer tasks are properly tracked and cleaned up."""
-    server = Mock()
+async def test_observer_error_handling(mock_server: Mock) -> None:
+    """Test that observer handles server errors gracefully."""
 
-    # Make notification hang for a bit
-    async def slow_notify(*args: object) -> None:
-        await asyncio.sleep(0.1)
+    async def failing_notify(*args: object) -> None:
+        msg = "Test error"
+        raise RuntimeError(msg)
 
-    server.notify_resource_list_changed = slow_notify
+    mock_server.notify_resource_list_changed = Mock(side_effect=failing_notify)
+    observer = ResourceObserver(mock_server)
 
-    observer = ResourceObserver(server)
-
-    # Create a notification task
+    # Should not raise
     observer._handle_list_changed()
+    await asyncio.sleep(0)
 
-    # Should have one task
-    assert len(observer._tasks) == 1
-
-    # Wait for task to complete
-    await asyncio.sleep(0.2)
-
-    # Task should be removed
-    assert len(observer._tasks) == 0
-
-
-@pytest.mark.asyncio
-async def test_prompt_observer_task_cleanup() -> None:
-    """Test that prompt observer tasks are properly tracked and cleaned up."""
-    server = Mock()
-
-    async def slow_notify(*args: object) -> None:
-        await asyncio.sleep(0.1)
-
-    server.notify_prompt_list_changed = slow_notify
-
-    observer = PromptObserver(server)
-    observer._handle_list_changed()
-    assert len(observer._tasks) == 1
-    await observer.cleanup()
-    assert len(observer._tasks) == 0
-
-
-@pytest.mark.asyncio
-async def test_tool_observer_task_cleanup() -> None:
-    """Test that tool observer tasks are properly tracked and cleaned up."""
-    server = Mock()
-
-    async def slow_notify(*args: object) -> None:
-        await asyncio.sleep(0.1)
-
-    server.notify_tool_list_changed = slow_notify
-
-    observer = ToolObserver(server)
-    observer._handle_list_changed()
-    assert len(observer._tasks) == 1
-    await observer.cleanup()
-    assert len(observer._tasks) == 0
+    # Verify task was created despite error
+    mock_server._create_task.assert_called_once()

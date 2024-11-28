@@ -187,6 +187,22 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         else:
             return loaded
 
+    async def load_by_uri(self, uri: str) -> LoadedResource:
+        """Load a resource by URI."""
+        try:
+            # Find loader that supports this URI
+            loader = self.loader_registry.find_loader_for_uri(uri)
+
+            # Get resource name from URI
+            name = loader.get_name_from_uri(uri)
+
+            # Load resource
+            return await self.load(name)
+
+        except Exception as exc:
+            msg = f"Failed to load resource from URI {uri}"
+            raise exceptions.ResourceError(msg) from exc
+
     def invalidate(self, name: str) -> None:
         """Invalidate cache for a resource."""
         try:

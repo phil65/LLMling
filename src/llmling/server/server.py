@@ -10,8 +10,10 @@ from mcp.server import Server
 from mcp.types import GetPromptResult, TextContent
 
 from llmling import config_resources
+from llmling.config.models import PathResource, SourceResource
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
+from llmling.prompts.models import ArgumentType, Prompt
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
@@ -22,6 +24,7 @@ from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     import os
 
     from llmling.config.models import Config
@@ -81,6 +84,14 @@ class LLMLingServer:
         self._setup_handlers()
         self._setup_observers()
         logger.debug("Server initialized with name: %s", name)
+        self._tasks: set[asyncio.Task[Any]] = set()
+
+    def _create_task(self, coro: Coroutine[None, None, Any]) -> asyncio.Task[Any]:
+        """Create and track an asyncio task."""
+        task: asyncio.Task[Any] = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
 
     def _setup_observers(self) -> None:
         """Set up registry observers."""
@@ -149,6 +160,65 @@ class LLMLingServer:
             logger.debug("Found %d resources", len(resources))
             return resources
 
+        @self.server.read_resource()
+        async def handle_read_resource(uri: mcp.types.AnyUrl) -> str | bytes:
+            """Handle direct resource content requests."""
+            try:
+                # Convert MCP URI to our format
+                internal_uri = conversions.from_mcp_uri(str(uri))
+                resource = await self.resource_registry.load_by_uri(internal_uri)
+
+                # Handle different content types
+                if resource.metadata.mime_type.startswith("text/"):
+                    return resource.content
+                # For binary content (like images), return raw bytes
+                return resource.content_items[0].content.encode()
+            except Exception as exc:
+                msg = f"Failed to read resource: {exc}"
+                raise mcp.McpError(msg) from exc
+
+        @self.server.completion()
+        async def handle_completion(
+            ref: mcp.types.PromptReference | mcp.types.ResourceReference,
+            argument: mcp.types.CompletionArgument,
+        ) -> mcp.types.Completion:
+            """Handle completion requests."""
+            try:
+                match ref:
+                    case mcp.types.PromptReference():
+                        # Complete prompt arguments
+                        prompt = self.prompt_registry[ref.name]
+                        return await self._complete_prompt_argument(
+                            prompt, argument.name, argument.value
+                        )
+
+                    case mcp.types.ResourceReference():
+                        # Complete resource paths/values
+                        return await self._complete_resource(ref.uri, argument)
+
+                    case _:
+                        msg = f"Unsupported reference type: {type(ref)}"
+                        raise ValueError(msg)  # noqa: TRY301
+
+            except Exception:
+                logger.exception("Completion failed")
+                # Return empty completion on error
+                return mcp.types.Completion(values=[], total=0, hasMore=False)
+
+        @self.server.progress_notification()
+        async def handle_progress(
+            token: str | int,
+            progress: float,
+            total: float | None,
+        ) -> None:
+            """Handle progress notifications from client."""
+            logger.debug(
+                "Progress notification: %s %.1f/%.1f",
+                token,
+                progress,
+                total or 0.0,
+            )
+
     @classmethod
     def from_config_file(
         cls, config_path: str | os.PathLike[str], *, name: str = "llmling-server"
@@ -193,21 +263,31 @@ class LLMLingServer:
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
-        # Remove observers
-        if hasattr(self, "resource_observer"):
-            await self.resource_observer.cleanup()
-        if hasattr(self, "prompt_observer"):
-            await self.prompt_observer.cleanup()
-        if hasattr(self, "tool_observer"):
-            await self.tool_observer.cleanup()
-        self.resource_registry.remove_observer(self.resource_observer.events)
-        self.prompt_registry.remove_observer(self.prompt_observer.events)
-        self.tool_registry.remove_observer(self.tool_observer.events)
+        try:
+            # Cancel all pending tasks
+            if self._tasks:
+                for task in self._tasks:
+                    task.cancel()
+                await asyncio.gather(*self._tasks, return_exceptions=True)
 
-        # Shutdown registries
-        await self.processor_registry.shutdown()
-        await self.tool_registry.shutdown()
-        await self.resource_registry.shutdown()
+            # Remove observers
+            if hasattr(self, "resource_observer"):
+                await self.resource_observer.cleanup()
+            if hasattr(self, "prompt_observer"):
+                await self.prompt_observer.cleanup()
+            if hasattr(self, "tool_observer"):
+                await self.tool_observer.cleanup()
+            self.resource_registry.remove_observer(self.resource_observer.events)
+            self.prompt_registry.remove_observer(self.prompt_observer.events)
+            self.tool_registry.remove_observer(self.tool_observer.events)
+
+            # Shutdown registries
+            await self.processor_registry.shutdown()
+            await self.tool_registry.shutdown()
+            await self.resource_registry.shutdown()
+
+        finally:
+            self._tasks.clear()
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
@@ -226,6 +306,39 @@ class LLMLingServer:
             msg = "No active request context"
             raise RuntimeError(msg) from exc
 
+    def notify_progress(
+        self,
+        token: str,
+        progress: float,
+        total: float | None = None,
+        description: str | None = None,
+    ) -> None:
+        """Send progress notification to client."""
+        try:
+            # Get current session
+            session = self.current_session
+
+            # Create and track the progress notification task
+            self._create_task(
+                session.send_progress_notification(
+                    progress_token=token,
+                    progress=progress,
+                    total=total,
+                )
+            )
+
+            # Optionally send description as log message
+            if description:
+                self._create_task(
+                    session.send_log_message(
+                        level="info",
+                        data=description,
+                    )
+                )
+
+        except Exception:
+            logger.exception("Failed to send progress notification")
+
     async def notify_resource_list_changed(self) -> None:
         """Notify clients about resource list changes."""
         try:
@@ -238,7 +351,9 @@ class LLMLingServer:
     async def notify_resource_change(self, uri: str) -> None:
         """Notify clients about resource changes."""
         try:
-            await self.current_session.send_resource_updated(conversions.to_mcp_uri(uri))
+            url = conversions.to_mcp_uri(uri)
+            self._create_task(self.current_session.send_resource_updated(url))
+            self._create_task(self.current_session.send_resource_list_changed())
         except RuntimeError:
             logger.debug("No active session for notification")
         except Exception:
@@ -247,7 +362,7 @@ class LLMLingServer:
     async def notify_prompt_list_changed(self) -> None:
         """Notify clients about prompt list changes."""
         try:
-            await self.current_session.send_prompt_list_changed()
+            self._create_task(self.current_session.send_prompt_list_changed())
         except RuntimeError:
             logger.debug("No active session for notification")
         except Exception:
@@ -256,11 +371,92 @@ class LLMLingServer:
     async def notify_tool_list_changed(self) -> None:
         """Notify clients about tool list changes."""
         try:
-            await self.current_session.send_tool_list_changed()
+            self._create_task(self.current_session.send_tool_list_changed())
         except RuntimeError:
             logger.debug("No active session for notification")
         except Exception:
             logger.exception("Failed to send tool list change notification")
+
+    async def _complete_prompt_argument(
+        self,
+        prompt: Prompt,
+        arg_name: str,
+        current_value: str,
+    ) -> mcp.types.Completion:
+        """Generate completions for prompt arguments."""
+        # Find the argument definition
+        arg_def = next(
+            (arg for arg in prompt.arguments if arg.name == arg_name),
+            None,
+        )
+        if not arg_def:
+            return mcp.types.Completion(values=[], total=0, hasMore=False)
+
+        values: list[str] = []
+        match arg_def.type:
+            case ArgumentType.ENUM:
+                # Filter enum values based on current input
+                values = [
+                    v for v in arg_def.enum_values or [] if v.startswith(current_value)
+                ]
+
+            case ArgumentType.RESOURCE:
+                # Complete resource names
+                values = [
+                    name
+                    for name in self.resource_registry.list_items()
+                    if name.startswith(current_value)
+                ]
+
+            case ArgumentType.FILE:
+                # Complete file paths
+                import glob
+
+                pattern = f"{current_value}*"
+                values = list(glob.glob(pattern))  # noqa: PTH207
+
+        return mcp.types.Completion(
+            values=values[:100],  # Limit to 100 items
+            total=len(values),
+            hasMore=len(values) > 100,  # noqa: PLR2004
+        )
+
+    async def _complete_resource(
+        self,
+        uri: mcp.types.AnyUrl,
+        argument: mcp.types.CompletionArgument,
+    ) -> mcp.types.Completion:
+        """Generate completions for resource fields."""
+        try:
+            resource = await self.resource_registry.load_by_uri(str(uri))
+            values: list[str] = []
+
+            # Different completion logic based on resource type
+            match resource:
+                case PathResource():
+                    # Complete paths
+                    import glob
+
+                    pattern = f"{argument.value}*"
+                    values = list(glob.glob(pattern))  # noqa: PTH207
+
+                case SourceResource():
+                    # Complete Python import paths
+                    values = [
+                        name
+                        for name in self._get_importable_names()
+                        if name.startswith(argument.value)
+                    ]
+
+            return mcp.types.Completion(
+                values=values[:100],
+                total=len(values),
+                hasMore=len(values) > 100,  # noqa: PLR2004
+            )
+
+        except Exception:
+            logger.exception("Resource completion failed")
+            return mcp.types.Completion(values=[], total=0, hasMore=False)
 
 
 async def serve(config_path: str | os.PathLike[str] | None = None) -> None:

@@ -118,8 +118,55 @@ class ResourceLoader[TResource](ABC):
         return f"{cls.uri_scheme}://{{name}}"
 
     @classmethod
+    def get_name_from_uri(cls, uri: str) -> str:
+        """Extract resource name from URI.
+
+        Args:
+            uri: URI in format "{scheme}://{name}"
+
+        Returns:
+            Resource name
+
+        Raises:
+            LoaderError: If URI format is invalid
+        """
+        try:
+            if not cls.supports_uri(uri):
+                msg = f"Unsupported URI scheme: {uri}"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
+
+            # Split "scheme://name" and get name part
+            _, name = uri.split("://", 1)
+
+            # Handle special cases
+            match cls.uri_scheme:
+                case "file":
+                    # Remove leading slashes for file paths
+                    return name.lstrip("/")
+                case "resource":
+                    # Remove "local/" prefix if present (MCP convention)
+                    return name.replace("local/", "", 1)
+                case _:
+                    return name
+
+        except Exception as exc:
+            msg = f"Invalid URI format: {uri}"
+            raise exceptions.LoaderError(msg) from exc
+
+    @classmethod
     def create_uri(cls, *, name: str) -> str:
-        """Create a valid URI for this resource type."""
+        """Create a valid URI for this resource type.
+
+        Args:
+            name: Resource name or identifier
+
+        Returns:
+            URI in format "{scheme}://{name}"
+        """
+        # Remove any existing scheme
+        if "://" in name:
+            name = name.split("://", 1)[1]
+
         return cls.get_uri_template().format(name=name)
 
     def __repr__(self) -> str:

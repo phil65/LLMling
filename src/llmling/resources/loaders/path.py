@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+import upath
 from upath import UPath
 
 from llmling.config.models import PathResource
@@ -31,6 +32,22 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         "text/markdown",
         "text/yaml",
     ]
+
+    @classmethod
+    def get_name_from_uri(cls, uri: str) -> str:
+        """Handle file:/// URIs properly."""
+        try:
+            if not cls.supports_uri(uri):
+                msg = f"Unsupported URI scheme: {uri}"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
+
+            path = upath.UPath(uri).path
+            # Remove leading slashes and normalize
+            return str(path).lstrip("/").replace("\\", "/")
+
+        except Exception as exc:
+            msg = f"Invalid file URI: {uri}"
+            raise exceptions.LoaderError(msg) from exc
 
     @classmethod
     def get_uri_template(cls) -> str:

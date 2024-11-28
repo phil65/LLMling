@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+import urllib.parse
 
 from mcp import types
 
@@ -97,4 +98,23 @@ def to_mcp_uri(uri: str) -> types.AnyUrl:
                 return types.AnyUrl(f"resource://local/{name}")
     except Exception as exc:
         msg = f"Failed to convert URI {uri!r} to MCP format"
+        raise ValueError(msg) from exc
+
+
+def from_mcp_uri(uri: str) -> str:
+    """Convert MCP URI to internal format."""
+    try:
+        if uri.startswith(("http://", "https://")):
+            return uri
+        if uri.startswith("file://"):
+            # Strip file:// prefix and decode
+            path = uri.replace("file://", "", 1)
+            return urllib.parse.unquote(path)
+        if uri.startswith("resource://"):
+            # Extract resource name from resource://local/name
+            return uri.split("/", 3)[-1]
+        msg = f"Unsupported URI scheme: {uri}"
+        raise ValueError(msg)  # noqa: TRY301
+    except Exception as exc:
+        msg = f"Failed to convert URI {uri!r}"
         raise ValueError(msg) from exc
