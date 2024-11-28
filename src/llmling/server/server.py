@@ -143,7 +143,9 @@ class LLMLingServer:
                     logger=self.name,
                 )
             except Exception as exc:
-                raise mcp.McpError(INTERNAL_ERROR, str(exc)) from exc
+                error = mcp.McpError("Error setting the log level")
+                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
+                raise error from exc
 
         @self.server.list_tools()
         async def handle_list_tools() -> list[mcp.types.Tool]:
@@ -221,7 +223,9 @@ class LLMLingServer:
                 error_msg = f"Failed to read resource: {exc}"
                 logger.exception(error_msg)
                 # Use proper MCP error response
-                raise mcp.McpError(mcp.types.INTERNAL_ERROR, error_msg) from exc
+                error = mcp.McpError(error_msg)
+                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
+                raise error from exc
 
         @self.server.completion()
         async def handle_completion(
@@ -243,15 +247,18 @@ class LLMLingServer:
                             AnyUrl(ref.uri), argument
                         )
                     case _:
-                        raise mcp.McpError(  # noqa: TRY301
-                            INVALID_PARAMS, f"Invalid reference type: {type(ref)}"
-                        )
+                        msg = f"Invalid reference type: {type(ref)}"
+                        error = mcp.McpError(msg)
+                        error.error = mcp.ErrorData(code=INVALID_PARAMS, message=msg)
+                        raise error  # noqa: TRY301
 
                 return CompleteResult(completion=completion)
 
             except Exception as exc:
                 logger.exception("Completion failed")
-                raise mcp.McpError(INTERNAL_ERROR, str(exc)) from exc
+                error = mcp.McpError(msg)
+                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
+                raise error from exc
 
         @self.server.progress_notification()
         async def handle_progress(
