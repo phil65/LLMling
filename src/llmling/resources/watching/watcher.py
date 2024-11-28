@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import pathlib
+import time
 from typing import TYPE_CHECKING
 
 import pathspec
@@ -15,8 +18,6 @@ from llmling.resources.watching.utils import debounce
 
 
 if TYPE_CHECKING:
-    import os
-
     from watchdog.observers.api import BaseObserver
 
     from llmling.config.models import Resource
@@ -56,24 +57,37 @@ class ResourceEventHandler(FileSystemEventHandler):
             patterns,
         )
         self._debounced_notify = debounce(wait=0.1)(self._notify_change)
+        self._last_notification = 0.0  # Track last notification time
 
     def on_any_event(self, event: FileSystemEvent) -> None:
+        """Handle any file system event."""
+        if event.is_directory:
+            return
+
         path = (
             event.src_path.decode()
             if isinstance(event.src_path, bytes)
             else event.src_path
         )
+
+        # Convert to relative path for matching
+        path = os.path.relpath(path, start=pathlib.Path(path).parent)
+
         if self.spec.match_file(path):
-            # Use loop directly
-            self.loop.call_soon_threadsafe(
-                self.registry.invalidate,
-                self.resource_name,
-            )
+            # Use loop directly for thread-safety
+            self.loop.call_soon_threadsafe(self._notify_change)
 
     def _notify_change(self) -> None:
         """Notify registry of resource change."""
         try:
+            now = time.time()
+            # Debounce notifications
+            if now - self._last_notification < 0.1:  # noqa: PLR2004
+                return
+
             self.registry.invalidate(self.resource_name)
+            self._last_notification = now
+
         except Exception:
             logger.exception("Failed to notify change for %s", self.resource_name)
 

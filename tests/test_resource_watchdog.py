@@ -14,14 +14,20 @@ from llmling.resources.registry import ResourceRegistry
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Generator
 
 
 @pytest.fixture
 async def resource_registry() -> AsyncGenerator[ResourceRegistry, None]:
     """Create a test resource registry."""
+    loader_registry = ResourceLoaderRegistry()
+    # Explicitly register the path loader
+    from llmling.resources.loaders.path import PathResourceLoader
+
+    loader_registry["path"] = PathResourceLoader
+
     registry = ResourceRegistry(
-        loader_registry=ResourceLoaderRegistry(),
+        loader_registry=loader_registry,
         processor_registry=ProcessorRegistry(),
     )
     await registry.startup()
@@ -30,7 +36,7 @@ async def resource_registry() -> AsyncGenerator[ResourceRegistry, None]:
 
 
 @pytest.fixture
-def temp_dir() -> Path:
+def temp_dir() -> Generator[Path, None, None]:
     """Create a temporary directory."""
     with tempfile.TemporaryDirectory() as tmp:
         yield Path(tmp)
@@ -89,38 +95,48 @@ async def test_watch_disabled(
     assert "test" not in resource_registry.watcher.handlers
 
 
-# async def test_watch_patterns(
-#     resource_registry: ResourceRegistry, temp_dir: Path
-# ) -> None:
-#     """Test watch patterns are respected."""
-#     # Create test files
-#     (temp_dir / "test.py").write_text("python")
-#     (temp_dir / "test.txt").write_text("text")
+async def test_watch_patterns(
+    resource_registry: ResourceRegistry, temp_dir: Path
+) -> None:
+    """Test watch patterns are respected."""
+    # Create test files
+    (temp_dir / "test.py").write_text("python")
+    (temp_dir / "test.txt").write_text("text")
 
-#     # Create watched resource with pattern
-#     # Only watch Python files
-#     cfg = WatchConfig(enabled=True, patterns=["*.py"])
-#     resource = PathResource(path=str(temp_dir), watch=cfg)
-#     resource_registry.register("test", resource)
-#     # Set up event tracking
-#     events = []
-#     original_invalidate = resource_registry.invalidate
+    # Create watched resource with pattern
+    cfg = WatchConfig(enabled=True, patterns=["*.py"])
+    resource = PathResource(path=str(temp_dir), watch=cfg)
 
-#     def on_invalidate(name: str) -> None:
-#         original_invalidate(name)
-#         events.append(name)
+    # Use an event to track changes
+    event = asyncio.Event()
+    events: list[str] = []
 
-#     resource_registry.invalidate = on_invalidate  # type: ignore
+    def on_invalidate(name: str) -> None:
+        events.append(name)
+        event.set()
 
-#     # Modify both files
-#     (temp_dir / "test.py").write_text("python modified")
-#     await asyncio.sleep(0.5)  # Let watchdog process
-#     (temp_dir / "test.txt").write_text("text modified")
-#     await asyncio.sleep(0.5)  # Let watchdog process
+    resource_registry.invalidate = on_invalidate  # type: ignore
 
-#     # Should only get one event for the Python file
-#     assert len(events) == 1
-#     assert "test" in events
+    # Register after setting up tracking
+    resource_registry.register("test", resource)
+
+    # Modify python file first
+    (temp_dir / "test.py").write_text("python modified")
+    try:
+        await asyncio.wait_for(event.wait(), timeout=2.0)
+    except TimeoutError:
+        pytest.fail("Timeout waiting for Python file change")
+    event.clear()
+
+    # Modify text file - should not trigger
+    (temp_dir / "test.txt").write_text("text modified")
+    try:
+        await asyncio.wait_for(event.wait(), timeout=0.5)
+        pytest.fail("Received unexpected notification for .txt file")
+    except TimeoutError:
+        pass  # Expected - no notification for .txt file
+
+    assert len(events) == 1, f"Expected 1 event, got {len(events)}: {events}"
 
 
 async def test_watch_cleanup(resource_registry: ResourceRegistry, temp_dir: Path) -> None:
