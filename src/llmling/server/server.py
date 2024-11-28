@@ -8,7 +8,16 @@ from typing import TYPE_CHECKING, Any, Self
 
 import mcp
 from mcp.server import Server
-from mcp.types import GetPromptResult, TextContent
+from mcp.types import (
+    INTERNAL_ERROR,
+    INVALID_PARAMS,
+    CompleteResult,
+    Completion,
+    CompletionArgument,
+    GetPromptResult,
+    TextContent,
+)
+from pydantic import AnyUrl
 
 from llmling import config_resources
 from llmling.config.models import PathResource, SourceResource
@@ -110,23 +119,31 @@ class LLMLingServer:
         """Register MCP protocol handlers."""
 
         @self.server.set_logging_level()
-        async def handle_set_level(level: mcp.types.LoggingLevel) -> None:
-            """Handle logging/setLevel request."""
-            # Convert MCP level to Python logging level
+        async def handle_set_level(level: mcp.LoggingLevel) -> None:
+            """Handle logging level changes."""
+            # Map MCP levels to Python logging levels
             level_map = {
                 "debug": logging.DEBUG,
                 "info": logging.INFO,
-                "notice": logging.INFO,  # Map notice to INFO
+                "notice": logging.INFO,
                 "warning": logging.WARNING,
                 "error": logging.ERROR,
                 "critical": logging.CRITICAL,
-                "alert": logging.CRITICAL,  # Map alert to CRITICAL
-                "emergency": logging.CRITICAL,  # Map emergency to CRITICAL
+                "alert": logging.CRITICAL,
+                "emergency": logging.CRITICAL,
             }
+            try:
+                python_level = level_map[level]
+                logger.setLevel(python_level)
 
-            python_level = level_map[level]
-            logger.setLevel(python_level)
-            logger.info("Log level set to %s", level)
+                # Notify via log message
+                await self.current_session.send_log_message(
+                    level="info",
+                    data=f"Log level set to {level}",
+                    logger=self.name,
+                )
+            except Exception as exc:
+                raise mcp.McpError(INTERNAL_ERROR, str(exc)) from exc
 
         @self.server.list_tools()
         async def handle_list_tools() -> list[mcp.types.Tool]:
@@ -201,29 +218,31 @@ class LLMLingServer:
         async def handle_completion(
             ref: mcp.types.PromptReference | mcp.types.ResourceReference,
             argument: mcp.types.CompletionArgument,
-        ) -> mcp.types.Completion:
+        ) -> CompleteResult:
             """Handle completion requests."""
             try:
+                completion: Completion
                 match ref:
                     case mcp.types.PromptReference():
-                        # Complete prompt arguments
-                        prompt = self.prompt_registry[ref.name]
-                        return await self._complete_prompt_argument(
-                            prompt, argument.name, argument.value
+                        completion = await self._complete_prompt_argument(
+                            self.prompt_registry[ref.name],
+                            argument.name,
+                            argument.value,
+                        )
+                    case mcp.types.ResourceReference():
+                        completion = await self._complete_resource(
+                            AnyUrl(ref.uri), argument
+                        )
+                    case _:
+                        raise mcp.McpError(  # noqa: TRY301
+                            INVALID_PARAMS, f"Invalid reference type: {type(ref)}"
                         )
 
-                    case mcp.types.ResourceReference():
-                        # Complete resource paths/values
-                        return await self._complete_resource(ref.uri, argument)
+                return CompleteResult(completion=completion)
 
-                    case _:
-                        msg = f"Unsupported reference type: {type(ref)}"
-                        raise ValueError(msg)  # noqa: TRY301
-
-            except Exception:
+            except Exception as exc:
                 logger.exception("Completion failed")
-                # Return empty completion on error
-                return mcp.types.Completion(values=[], total=0, hasMore=False)
+                raise mcp.McpError(INTERNAL_ERROR, str(exc)) from exc
 
         @self.server.progress_notification()
         async def handle_progress(
@@ -402,7 +421,7 @@ class LLMLingServer:
         prompt: Prompt,
         arg_name: str,
         current_value: str,
-    ) -> mcp.types.Completion:
+    ) -> Completion:
         """Generate completions for prompt arguments."""
         # Find the argument definition
         arg_def = next(
@@ -410,14 +429,14 @@ class LLMLingServer:
             None,
         )
         if not arg_def:
-            return mcp.types.Completion(values=[], total=0, hasMore=False)
+            return Completion(values=[], total=0, hasMore=False)
 
         values: list[str] = []
         match arg_def.type:
             case ArgumentType.ENUM:
                 # Filter enum values based on current input
                 values = [
-                    v for v in arg_def.enum_values or [] if v.startswith(current_value)
+                    v for v in (arg_def.enum_values or []) if v.startswith(current_value)
                 ]
 
             case ArgumentType.RESOURCE:
@@ -435,7 +454,7 @@ class LLMLingServer:
                 pattern = f"{current_value}*"
                 values = list(glob.glob(pattern))  # noqa: PTH207
 
-        return mcp.types.Completion(
+        return Completion(
             values=values[:100],  # Limit to 100 items
             total=len(values),
             hasMore=len(values) > 100,  # noqa: PLR2004
@@ -443,12 +462,14 @@ class LLMLingServer:
 
     async def _complete_resource(
         self,
-        uri: mcp.types.AnyUrl,
-        argument: mcp.types.CompletionArgument,
-    ) -> mcp.types.Completion:
+        uri: AnyUrl,
+        argument: CompletionArgument,
+    ) -> Completion:
         """Generate completions for resource fields."""
         try:
-            resource = await self.resource_registry.load_by_uri(str(uri))
+            # Convert AnyUrl to string for resource lookup
+            str_uri = str(uri)
+            resource = await self.resource_registry.load_by_uri(str_uri)
             values: list[str] = []
 
             # Different completion logic based on resource type
@@ -468,7 +489,7 @@ class LLMLingServer:
                         if name.startswith(argument.value)
                     ]
 
-            return mcp.types.Completion(
+            return Completion(
                 values=values[:100],
                 total=len(values),
                 hasMore=len(values) > 100,  # noqa: PLR2004
@@ -476,7 +497,7 @@ class LLMLingServer:
 
         except Exception:
             logger.exception("Resource completion failed")
-            return mcp.types.Completion(values=[], total=0, hasMore=False)
+            return Completion(values=[], total=0, hasMore=False)
 
 
 async def serve(config_path: str | os.PathLike[str] | None = None) -> None:
