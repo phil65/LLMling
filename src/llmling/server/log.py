@@ -1,13 +1,10 @@
-"""Server-specific logging configuration."""
-
 from __future__ import annotations
 
 import asyncio
 import logging
 import queue
+import sys
 from typing import TYPE_CHECKING, Any
-
-from llmling.core.log import setup_logging
 
 
 if TYPE_CHECKING:
@@ -43,7 +40,8 @@ class MCPHandler(logging.Handler):
             try:
                 _ = self.server.request_context  # Check if we have a context
             except LookupError:
-                # No active session - only use file logging
+                # No active session - fall back to stderr
+                print(self.format(record), file=sys.stderr)
                 return
 
             # Convert Python logging level to MCP level
@@ -67,52 +65,49 @@ class MCPHandler(logging.Handler):
 
                 # Process all available messages
                 while not self.queue.empty():
-                    level, data, logger_name = self.queue.get_nowait()
+                    level, data, logger = self.queue.get_nowait()
                     await session.send_log_message(
                         level=level,
                         data=data,
-                        logger=logger_name,
+                        logger=logger,
                     )
                     self.queue.task_done()
 
             except LookupError:
                 # No active session - messages will stay in queue
                 pass
-            except Exception:
-                # Log processing error to file only
-                logger = logging.getLogger(__name__)
-                logger.exception("Error processing log messages")
+            except Exception:  # noqa: BLE001
+                # Log processing error to stderr
+                print("Error processing log messages", file=sys.stderr)
 
             # Wait before next attempt
             await asyncio.sleep(0.1)
 
 
+async def run_logging_processor(handler: MCPHandler) -> None:
+    """Run the logging processor."""
+    await handler.process_queue()
+
+
 def configure_server_logging(mcp_server: Server) -> MCPHandler:
-    """Configure server logging to use file and MCP protocol (no stdout).
+    """Configure logging to use MCP protocol.
 
     Args:
         mcp_server: The MCP server instance to use for logging
 
     Returns:
-        The configured MCP handler for queue processing
+        The configured handler for queue processing
     """
-    # Setup core logging in server mode (no stdout)
-    setup_logging(
-        level=logging.INFO,
-        mode="server",  # This ensures no stdout handlers are created
-    )
+    root = logging.getLogger()
+
+    # Remove existing handlers
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
 
     # Add MCP handler
-    mcp_handler = MCPHandler(mcp_server)
-    mcp_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    handler = MCPHandler(mcp_server)
+    handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    root.addHandler(handler)
+    root.setLevel(logging.INFO)
 
-    # Add to root logger
-    root = logging.getLogger()
-    root.addHandler(mcp_handler)
-
-    return mcp_handler
-
-
-async def run_logging_processor(handler: MCPHandler) -> None:
-    """Run the logging processor."""
-    await handler.process_queue()
+    return handler

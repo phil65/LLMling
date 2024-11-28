@@ -1,10 +1,11 @@
-"""Core logging configuration for llmling."""
+"""Logging configuration for llmling."""
 
 from __future__ import annotations
 
 import logging
+import queue
 import sys
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any
 
 import platformdirs
 from upath import UPath
@@ -13,6 +14,18 @@ from upath import UPath
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from mcp import types
+    from mcp.server import Server
+
+
+# Map Python logging levels to MCP logging levels
+LEVEL_MAP: dict[int, types.LoggingLevel] = {
+    logging.DEBUG: "debug",
+    logging.INFO: "info",
+    logging.WARNING: "warning",
+    logging.ERROR: "error",
+    logging.CRITICAL: "critical",
+}
 
 # Get platform-specific log directory
 LOG_DIR = UPath(platformdirs.user_log_dir("llmling", "llmling"))
@@ -30,19 +43,14 @@ def setup_logging(
     handlers: Sequence[logging.Handler] | None = None,
     format_string: str | None = None,
     log_to_file: bool = True,
-    mode: Literal["client", "server"] = "client",
-) -> list[logging.Handler]:
-    """Configure core logging for llmling.
+) -> None:
+    """Configure logging for llmling.
 
     Args:
         level: The logging level for console output
         handlers: Optional sequence of handlers to add
         format_string: Optional custom format string
         log_to_file: Whether to log to file in addition to stdout
-        mode: Whether running as client or server (affects stdout usage)
-
-    Returns:
-        List of configured handlers
     """
     # Configure logfire first
     import logfire
@@ -52,23 +60,18 @@ def setup_logging(
     logger = logging.getLogger("llmling")
     logger.setLevel(logging.DEBUG)  # Always set root logger to DEBUG
 
-    # Remove any existing handlers
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-
     if not format_string:
         format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     formatter = logging.Formatter(format_string)
-    configured_handlers: list[logging.Handler] = []
 
     if not handlers:
-        # Add stdout handler only in client mode
-        if mode == "client":
-            stdout_handler = logging.StreamHandler(sys.stdout)
-            stdout_handler.setFormatter(formatter)
-            stdout_handler.setLevel(level)
-            configured_handlers.append(stdout_handler)
+        handlers = []
+        # Add stdout handler with user-specified level
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)
+        stdout_handler.setLevel(level)
+        handlers.append(stdout_handler)
 
         # Add file handler if requested (always DEBUG level)
         if log_to_file:
@@ -87,34 +90,61 @@ def setup_logging(
                 )
                 file_handler.setFormatter(formatter)
                 file_handler.setLevel(logging.DEBUG)  # Always DEBUG for file
-                configured_handlers.append(file_handler)
+                handlers.append(file_handler)
             except Exception as exc:  # noqa: BLE001
-                if mode == "client":  # Only print to stderr in client mode
-                    print(
-                        f"Failed to setup file logging at {LOG_FILE}: {exc}",
-                        file=sys.stderr,
-                    )
-    else:
-        configured_handlers.extend(handlers)
-        for handler in configured_handlers:
-            if not handler.formatter:
-                handler.setFormatter(formatter)
+                print(
+                    f"Failed to setup file logging at {LOG_FILE}: {exc}",
+                    file=sys.stderr,
+                )
 
-    # Add all handlers to logger
-    for handler in configured_handlers:
+    for handler in handlers:
+        if not handler.formatter:
+            handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-    # Log startup info (will only go to appropriate handlers)
+    # Log startup info with both handlers' levels
     logger.info("Logging initialized")
     if log_to_file:
         logger.debug(
-            "Mode: %s, Console logging level: %s, File logging level: DEBUG (%s)",
-            mode,
+            "Console logging level: %s, File logging level: DEBUG (%s)",
             logging.getLevelName(level),
             LOG_FILE,
         )
 
-    return configured_handlers
+
+class MCPHandler(logging.Handler):
+    """Handler that sends logs via MCP protocol."""
+
+    def __init__(self, mcp_server: Server) -> None:
+        """Initialize handler with MCP server instance."""
+        super().__init__()
+        self.server = mcp_server
+        self.queue: queue.Queue[tuple[types.LoggingLevel, Any, str | None]] = (
+            queue.Queue()
+        )
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Queue log message for async sending."""
+        try:
+            # Try to get current session from server's request context
+            try:
+                _ = self.server.request_context  # Check if we have a context
+            except LookupError:
+                # No active session - fall back to stderr
+                print(self.format(record), file=sys.stderr)
+                return
+
+            # Convert Python logging level to MCP level
+            level = LEVEL_MAP.get(record.levelno, "info")
+
+            # Format message
+            message: Any = self.format(record)
+
+            # Queue for async processing
+            self.queue.put((level, message, record.name))
+
+        except Exception:  # noqa: BLE001
+            self.handleError(record)
 
 
 def get_logger(name: str) -> logging.Logger:
