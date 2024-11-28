@@ -1,11 +1,8 @@
 # Resource processors definitions
 context_processors:
-  python_cleaner:
+  uppercase:
     type: function
     import_path: llmling.testing.processors.uppercase_text
-  sanitize:
-    type: function
-    import_path: llmling.testing.processors.multiply
 
   add_metadata:
     type: template
@@ -26,45 +23,18 @@ tools:
 resources:
   python_guidelines:
     type: path
-    path: "https://example.com/python-guidelines.md"
+    path: "https://raw.githubusercontent.com/phil65/LLMling/refs/heads/main/README.md"
     description: "Python coding standards and best practices"
-    processors:
-      - name: sanitize
-        keyword_args: { remove_emails: true }
-      - name: add_metadata
-        keyword_args:
-          source: "company guidelines"
-          version: "1.2.3"
 
   my_utils:
     type: source
-    import_path: "my_project.utils"
+    import_path: "llmling.core"
     description: "Utility module source code"
-    recursive: true
-    processors:
-      - name: python_cleaner
-
-  single_module:
-    type: source
-    import_path: "my_project.models.user"
-    description: "User model implementation"
-    recursive: false
-    include_tests: false
 
   system_info:
     type: callable
-    import_path: "my_project.utils.system_diagnostics.get_info"
+    import_path: "getpass.getuser"
     description: "Current system information"
-    keyword_args:
-      include_memory: true
-      include_disk: true
-
-  code_review_template:
-    type: path
-    path: "./templates/code_review.txt"
-    description: "Template for code review prompts"
-    processors:
-      - name: python_cleaner
 
   system_prompt:
     type: text
@@ -89,16 +59,9 @@ resources:
     description: "Current git changes"
     shell: true
     processors:
-      - name: python_cleaner
+      - name: uppercase
 
 # Resource groups
 resource_groups:
   code_review_basic:
     - system_prompt
-    - code_review_template
-
-  code_review_advanced:
-    - system_prompt
-    - code_review_template
-    - python_guidelines
-    - git_diff
