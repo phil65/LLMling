@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from llmling.config.models import Config
 
 logger = get_logger(__name__)
+DEFAULT_CONFIG = "src/llmling/config_resources/test.yml"
+DEFAULT_NAME = "llmling-server"
 
 
 class LLMLingServer:
@@ -29,7 +31,7 @@ class LLMLingServer:
         self,
         config: Config,
         *,
-        name: str = "llmling-server",
+        name: str = DEFAULT_NAME,
         loader_registry: ResourceLoaderRegistry | None = None,
         processor_registry: ProcessorRegistry | None = None,
         prompt_registry: PromptRegistry | None = None,
@@ -260,9 +262,7 @@ async def serve(config_path: str | None = None) -> None:
     logger = get_logger(__name__)
 
     # Create server instance
-    server = LLMLingServer.from_config_file(
-        config_path or "src/llmling/config_resources/test.yml"
-    )
+    server = LLMLingServer.from_config_file(config_path or DEFAULT_CONFIG)
 
     try:
         await server.start(raise_exceptions=True)
@@ -275,7 +275,5 @@ if __name__ == "__main__":
     import asyncio
     import sys
 
-    config_path = (
-        sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
-    )
+    config_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG
     asyncio.run(serve(config_path))
