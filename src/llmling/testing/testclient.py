@@ -16,12 +16,19 @@ logger = get_logger(__name__)
 
 
 class MCPInProcSession:
-    """Test client for MCP protocol."""
+    """In-process MCP server-client session.
+
+    Provides a complete MCP protocol environment by:
+    - Spawning a local server process
+    - Managing client communication
+    - Handling the protocol lifecycle
+    - Managing stdio streams
+    """
 
     def __init__(
         self, server_command: list[str] | None = None, config_path: str | None = None
     ) -> None:
-        """Initialize client.
+        """Initialize server-client session.
 
         Args:
             server_command: Command to start server (default: python -m llmling.server)
