@@ -17,7 +17,7 @@ from llmling.processors.registry import ProcessorRegistry
 from llmling.server import LLMLingServer, serve
 
 
-__version__ = "0.5.8"
+__version__ = "0.6.0"
 
 __all__ = [
     "ConfigError",
