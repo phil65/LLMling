@@ -80,18 +80,25 @@ def test_find_loader_invalid_uri(resource_registry: ResourceLoaderRegistry) -> N
 @pytest.mark.parametrize(
     ("uri", "expected"),
     [
+        # Basic URIs
         ("text://hello", "hello"),
-        ("file:///path/to/file.txt", "path/to/file.txt"),
         ("cli://command", "command"),
         ("python://module.path", "module.path"),
         ("callable://func", "func"),
         ("image://test.png", "test.png"),
-        # Test windows-style paths
+        # Absolute file paths
+        ("file:///path/to/file.txt", "path/to/file.txt"),
+        ("file:///home/user/test.txt", "home/user/test.txt"),
+        # Windows paths
         ("file:///C:/path/to/file.txt", "path/to/file.txt"),
         ("file:///D:/test.txt", "test.txt"),
-        # Test relative paths
-        ("file://./relative/path.txt", "relative/path.txt"),
+        # Relative paths
+        ("file://relative/path.txt", "relative/path.txt"),
+        ("file://./current/path.txt", "current/path.txt"),
         ("file://../parent/path.txt", "parent/path.txt"),
+        # Paths with spaces and special chars
+        ("file:///path/to/my%20file.txt", "path/to/my%20file.txt"),
+        ("file:///path/with spaces/file.txt", "path/with spaces/file.txt"),
     ],
 )
 def test_get_name_from_uri(
