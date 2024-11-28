@@ -287,9 +287,6 @@ class LLMLingServer:
         """Start the server."""
         try:
             # Initialize registries
-            import logfire
-
-            logfire.configure()
             await self.processor_registry.startup()
             await self.tool_registry.startup()
             await self.resource_registry.startup()
