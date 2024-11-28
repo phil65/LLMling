@@ -74,7 +74,7 @@ class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
             processor._initialized = True  # type: ignore
         return processor
 
-    @logfire.instrument("Processing content")
+    @logfire.instrument("Processing content through steps")
     async def process(
         self,
         content: str,

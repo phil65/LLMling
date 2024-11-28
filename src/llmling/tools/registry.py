@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import logfire
+
 from llmling.config.models import ToolConfig
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
@@ -106,6 +108,7 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
         """
         return [self.get_schema(name) for name in self._items]
 
+    @logfire.instrument("Executing tool {name}")
     async def execute(self, name: str, **params: Any) -> Any:
         """Execute a registered function.
 

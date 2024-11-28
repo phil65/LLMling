@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+import logfire
+
 from llmling.config.models import (
     CallableResource,
     CLIResource,
@@ -144,6 +146,7 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         loader = self.loader_registry.get_loader(resource)
         return loader.create_uri(name=name)
 
+    @logfire.instrument("Loading resource {name}")
     async def load(self, name: str, *, force_reload: bool = False) -> LoadedResource:
         """Load a resource by name."""
         try:
