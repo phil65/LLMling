@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Self
 import mcp
 from mcp.server import Server
 from mcp.types import GetPromptResult, TextContent
-from pydantic import AnyUrl
 
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
@@ -227,20 +226,7 @@ class LLMLingServer:
     async def notify_resource_change(self, uri: str) -> None:
         """Notify clients about resource changes."""
         try:
-            # Handle different URI types according to MCP spec
-            if uri.startswith(("http://", "https://")):
-                # Pass through remote URLs that clients can access directly
-                mcp_uri = uri
-            elif uri.startswith("file:"):
-                # Ensure proper file:/// format for MCP
-                path = uri.split(":", 1)[1].lstrip("/")
-                mcp_uri = f"file:///{path}"
-            else:
-                logger.warning("Unsupported URI scheme: %s", uri)
-                return
-
-            url = AnyUrl(mcp_uri)
-            await self.current_session.send_resource_updated(url)
+            await self.current_session.send_resource_updated(conversions.to_mcp_uri(uri))
         except RuntimeError:
             logger.debug("No active session for notification")
         except Exception:

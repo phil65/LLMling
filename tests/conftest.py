@@ -23,6 +23,14 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 
+@pytest.fixture(autouse=True)
+def disable_logfire():
+    """Disable Logfire for all tests."""
+    import os
+
+    os.environ["LOGFIRE_IGNORE_NO_CONFIG"] = "1"
+
+
 @pytest.fixture
 def config_manager(test_config):
     """Get config manager with test configuration."""
