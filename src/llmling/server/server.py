@@ -218,8 +218,10 @@ class LLMLingServer:
                 return resource.content_items[0].content.encode()
 
             except Exception as exc:
-                msg = f"Failed to read resource: {exc}"
-                raise mcp.McpError(INTERNAL_ERROR, msg) from exc
+                error_msg = f"Failed to read resource: {exc}"
+                logger.exception(error_msg)
+                # Use proper MCP error response
+                raise mcp.McpError(mcp.types.INTERNAL_ERROR, error_msg) from exc
 
         @self.server.completion()
         async def handle_completion(
