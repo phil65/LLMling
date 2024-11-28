@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
@@ -107,6 +108,25 @@ class LLMLingServer:
 
     def _setup_handlers(self) -> None:
         """Register MCP protocol handlers."""
+
+        @self.server.set_logging_level()
+        async def handle_set_level(level: mcp.types.LoggingLevel) -> None:
+            """Handle logging/setLevel request."""
+            # Convert MCP level to Python logging level
+            level_map = {
+                "debug": logging.DEBUG,
+                "info": logging.INFO,
+                "notice": logging.INFO,  # Map notice to INFO
+                "warning": logging.WARNING,
+                "error": logging.ERROR,
+                "critical": logging.CRITICAL,
+                "alert": logging.CRITICAL,  # Map alert to CRITICAL
+                "emergency": logging.CRITICAL,  # Map emergency to CRITICAL
+            }
+
+            python_level = level_map[level]
+            logger.setLevel(python_level)
+            logger.info("Log level set to %s", level)
 
         @self.server.list_tools()
         async def handle_list_tools() -> list[mcp.types.Tool]:
