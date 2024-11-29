@@ -1,3 +1,5 @@
+"""Tests for server observers."""
+
 from __future__ import annotations
 
 import asyncio
@@ -23,8 +25,12 @@ def mock_server() -> Mock:
     server.notify_resource_list_changed = Mock(side_effect=notify_list_changed)
     server.notify_prompt_list_changed = Mock(side_effect=notify_list_changed)
     server.notify_tool_list_changed = Mock(side_effect=notify_list_changed)
-    # Mock loader registry
-    server.loader_registry.get_loader.return_value.create_uri.return_value = "test://uri"
+
+    # Mock runtime config
+    mock_runtime = Mock()
+    mock_runtime.get_resource_loader.return_value.create_uri.return_value = "test://uri"
+    server.runtime = mock_runtime
+
     return server
 
 

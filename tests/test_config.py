@@ -59,30 +59,43 @@ def test_load_minimal_config(minimal_config_dict: dict[str, Any]) -> None:
     assert len(cfg.resources) == 1
 
 
-def test_validate_processor_config() -> None:
-    """Test processor config validation."""
-    # Test function processor
+def test_processor_config_structure() -> None:
+    """Test processor config structural validation."""
+    # Test invalid type
     with pytest.raises(pydantic.ValidationError):
-        ProcessorConfig(type="function")  # Missing required import_path
+        ProcessorConfig(type="invalid")  # type: ignore
 
-    # Test template processor
-    with pytest.raises(pydantic.ValidationError):
-        ProcessorConfig(type="template")  # Missing required template
+    # Test valid types with empty strings (now allowed)
+    proc = ProcessorConfig(type="function")
+    assert proc.type == "function"
+    assert proc.import_path == ""
 
-    # Test valid configs
-    assert ProcessorConfig(type="function", import_path="test.func")
-    assert ProcessorConfig(type="template", template="{{ content }}")
+    proc = ProcessorConfig(type="template")
+    assert proc.type == "template"
+    assert proc.template == ""
+
+    # Test setting values
+    proc = ProcessorConfig(
+        type="function",
+        import_path="test.func",
+        async_execution=True,
+    )
+    assert proc.import_path == "test.func"
+    assert proc.async_execution
 
 
-def test_validate_context_references(valid_config_dict: dict[str, Any]) -> None:
-    """Test validation of context references in configuration."""
-    # Modify config to include invalid context reference
-    invalid_config = valid_config_dict.copy()
-    invalid_config["resource_groups"] = {"invalid-group": ["non-existent-context"]}
-
-    with pytest.raises(pydantic.ValidationError) as exc_info:
-        config.Config.model_validate(invalid_config)
-    assert "Resource non-existent-context" in str(exc_info.value)
+def test_processor_config_defaults() -> None:
+    """Test processor config default values."""
+    proc = ProcessorConfig(type="function")
+    assert proc.name is None
+    assert proc.description is None
+    assert proc.import_path == ""
+    assert not proc.async_execution
+    assert proc.template == ""
+    assert proc.template_engine == "jinja2"
+    assert not proc.validate_output
+    assert proc.validate_schema is None
+    assert proc.metadata == {}
 
 
 def test_validate_source_context() -> None:

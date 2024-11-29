@@ -10,6 +10,7 @@ from mcp.shared.memory import create_client_server_memory_streams
 import pytest
 
 from llmling.config.models import Config, GlobalSettings
+from llmling.config.runtime import RuntimeConfig
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
@@ -38,18 +39,24 @@ def base_config() -> Config:
 
 
 @pytest.fixture
-def resource_registry(loader_registry, processor_registry) -> ResourceRegistry:
-    """Create test resource registry."""
-    return ResourceRegistry(
-        loader_registry=loader_registry, processor_registry=processor_registry
+def runtime_config(base_config: Config) -> RuntimeConfig:
+    """Create test runtime configuration."""
+    # Create registries first
+    loader_registry = ResourceLoaderRegistry()
+    processor_registry = ProcessorRegistry()
+
+    # Create dependent registries
+    resource_registry = ResourceRegistry(
+        loader_registry=loader_registry,
+        processor_registry=processor_registry,
     )
+    prompt_registry = PromptRegistry(
+        loader_registry=loader_registry,
+        processor_registry=processor_registry,
+    )
+    tool_registry = ToolRegistry()
 
-
-@pytest.fixture
-def loader_registry() -> ResourceLoaderRegistry:
-    """Create test resource loader registry."""
-    registry = ResourceLoaderRegistry()
-    # Register standard loaders
+    # Register default loaders
     from llmling.resources import (
         CallableResourceLoader,
         CLIResourceLoader,
@@ -59,58 +66,35 @@ def loader_registry() -> ResourceLoaderRegistry:
         TextResourceLoader,
     )
 
-    registry["text"] = TextResourceLoader
-    registry["path"] = PathResourceLoader
-    registry["cli"] = CLIResourceLoader
-    registry["source"] = SourceResourceLoader
-    registry["callable"] = CallableResourceLoader
-    registry["image"] = ImageResourceLoader
-    return registry
+    loader_registry["text"] = TextResourceLoader
+    loader_registry["path"] = PathResourceLoader
+    loader_registry["cli"] = CLIResourceLoader
+    loader_registry["source"] = SourceResourceLoader
+    loader_registry["callable"] = CallableResourceLoader
+    loader_registry["image"] = ImageResourceLoader
 
-
-@pytest.fixture
-def processor_registry() -> ProcessorRegistry:
-    """Create test processor registry."""
-    registry = ProcessorRegistry()
     # Register test processors
-    registry.register("multiply", multiply)
-    registry.register("uppercase", uppercase_text)
-    return registry
+    processor_registry.register("multiply", multiply)
+    processor_registry.register("uppercase", uppercase_text)
 
-
-@pytest.fixture
-def prompt_registry() -> PromptRegistry:
-    """Create test prompt registry."""
-    return PromptRegistry()
-
-
-@pytest.fixture
-def tool_registry() -> ToolRegistry:
-    """Create test tool registry."""
-    registry = ToolRegistry()
     # Register test tools
-    registry.register("example", example_tool)
-    registry.register("analyze", analyze_ast)
-    return registry
+    tool_registry.register("example", example_tool)
+    tool_registry.register("analyze", analyze_ast)
 
-
-@pytest.fixture
-async def server(
-    base_config: Config,
-    loader_registry: ResourceLoaderRegistry,
-    processor_registry: ProcessorRegistry,
-    prompt_registry: PromptRegistry,
-    tool_registry: ToolRegistry,
-) -> AsyncGenerator[LLMLingServer, None]:
-    """Create configured test server."""
-    server = LLMLingServer(
+    return RuntimeConfig(
         config=base_config,
-        name="test-server",
         loader_registry=loader_registry,
         processor_registry=processor_registry,
+        resource_registry=resource_registry,
         prompt_registry=prompt_registry,
         tool_registry=tool_registry,
     )
+
+
+@pytest.fixture
+async def server(runtime_config: RuntimeConfig) -> AsyncGenerator[LLMLingServer, None]:
+    """Create configured test server."""
+    server = LLMLingServer(runtime=runtime_config, name="llmling-server")
 
     try:
         yield server

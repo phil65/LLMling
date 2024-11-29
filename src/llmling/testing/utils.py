@@ -62,7 +62,7 @@ async def create_test_server_session() -> AsyncGenerator[
         read_stream=recv_exc,  # Server reads (receives) from client's send stream
         write_stream=send_msg,  # Server writes (sends) to client's receive stream
         init_options=InitializationOptions(
-            server_name="test-server",
+            server_name="llmling-server",
             server_version="1.0.0",
             capabilities=ServerCapabilities(
                 resources=ResourcesCapability(

@@ -1,51 +1,180 @@
-"""Configuration management utilities."""
+"""Configuration management and validation.
+
+This module provides the ConfigManager class which handles all static configuration
+operations including loading, validation, and saving.
+"""
 
 from __future__ import annotations
 
+import importlib
 from typing import TYPE_CHECKING
 
+import logfire
 from upath import UPath
 import yamling
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.extensions.loaders import ToolsetLoader
-from llmling.tools.base import LLMCallableTool
-from llmling.utils import importing
 
 
 if TYPE_CHECKING:
     import os
 
-    from llmling.config.models import Config, Resource, ToolConfig
+    from llmling.config.models import Config
 
 
 logger = get_logger(__name__)
 
 
 class ConfigManager:
-    """Configuration management system."""
+    """Manages and validates static configuration.
+
+    This class handles all operations on the static configuration including
+    validation, saving, and loading. It ensures configuration integrity
+    before it gets transformed into runtime state.
+    """
 
     def __init__(self, config: Config) -> None:
         """Initialize with configuration.
 
         Args:
-            config: Application configuration
+            config: Configuration to manage
         """
         self.config = config
 
-    def register_resource(
+    def save(
         self,
-        name: str,
-        resource: Resource,
+        path: str | os.PathLike[str],
         *,
-        replace: bool = False,
+        validate: bool = True,
     ) -> None:
-        """Register a new resource."""
-        if name in self.config.resources and not replace:
-            msg = f"Resource already exists: {name}"
+        """Save configuration to file.
+
+        Args:
+            path: Path to save to
+            validate: Whether to validate before saving
+
+        Raises:
+            ConfigError: If validation or saving fails
+        """
+        try:
+            if validate:
+                self.validate_or_raise()
+
+            content = self.config.model_dump(exclude_none=True)
+            string = yamling.dump_yaml(content)
+            UPath(path).write_text(string)
+            logger.info("Configuration saved to %s", path)
+
+        except Exception as exc:
+            msg = f"Failed to save configuration to {path}"
+            raise exceptions.ConfigError(msg) from exc
+
+    @logfire.instrument("Validating configuration")
+    def validate(self) -> list[str]:
+        """Validate configuration.
+
+        Performs various validation checks on the configuration including:
+        - Resource reference validation
+        - Processor configuration validation
+        - Tool configuration validation
+
+        Returns:
+            List of validation warnings
+        """
+        warnings: list[str] = []
+        warnings.extend(self._validate_resources())
+        warnings.extend(self._validate_processors())
+        warnings.extend(self._validate_tools())
+        return warnings
+
+    def validate_or_raise(self) -> None:
+        """Run validations and raise on warnings.
+
+        Raises:
+            ConfigError: If any validation warnings are found
+        """
+        if warnings := self.validate():
+            msg = "Configuration validation failed:\n" + "\n".join(warnings)
             raise exceptions.ConfigError(msg)
-        self.config.resources[name] = resource
+
+    def _validate_resources(self) -> list[str]:
+        """Validate resource configuration.
+
+        Returns:
+            List of validation warnings
+        """
+        warnings: list[str] = []
+
+        # Check resource group references
+        warnings.extend(
+            f"Resource {resource} in group {group} not found"
+            for group, resources in self.config.resource_groups.items()
+            for resource in resources
+            if resource not in self.config.resources
+        )
+
+        # Check processor references in resources
+        warnings.extend(
+            f"Processor {proc.name} in resource {name} not found"
+            for name, resource in self.config.resources.items()
+            for proc in resource.processors
+            if proc.name not in self.config.context_processors
+        )
+
+        # Check resource paths exist for local resources
+        for resource in self.config.resources.values():
+            if hasattr(resource, "path"):
+                path = UPath(resource.path)
+                if not path.exists() and not path.as_uri().startswith((
+                    "http://",
+                    "https://",
+                )):
+                    warnings.append(f"Resource path not found: {path}")
+
+        return warnings
+
+    def _validate_processors(self) -> list[str]:
+        """Validate processor configuration."""
+        warnings = []
+        for name, processor in self.config.context_processors.items():
+            match processor.type:
+                case "function":
+                    if not processor.import_path:
+                        warnings.append(f"Processor {name} missing import_path")
+                    else:
+                        # Try to import the module
+                        try:
+                            importlib.import_module(processor.import_path.split(".")[0])
+                        except ImportError:
+                            path = processor.import_path
+                            warnings.append(
+                                f"Cannot import module for processor {name}: {path}"
+                            )
+                case "template":
+                    if not processor.template:
+                        warnings.append(f"Processor {name} missing template")
+        return warnings
+
+    def _validate_tools(self) -> list[str]:
+        """Validate tool configuration.
+
+        Returns:
+            List of validation warnings
+        """
+        warnings = []
+
+        for name, tool in self.config.tools.items():
+            if not tool.import_path:
+                warnings.append(f"Tool {name} missing import_path")
+                # Check for duplicate tool names
+            warnings.extend(
+                f"Tool {name} defined both explicitly and in toolset"
+                for toolset_tool in self.config.toolsets
+                if toolset_tool == name
+            )
+
+        return warnings
 
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> ConfigManager:
@@ -55,94 +184,16 @@ class ConfigManager:
             path: Path to configuration file
 
         Returns:
-            Configuration manager instance
+            ConfigManager instance
 
         Raises:
             ConfigError: If loading fails
         """
         from llmling.config.loading import load_config
 
-        config = load_config(path)
-        return cls(config)
-
-    def save(self, path: str | os.PathLike[str]) -> None:
-        """Save configuration to file.
-
-        Args:
-            path: Path to save configuration
-
-        Raises:
-            ConfigError: If saving fails
-        """
         try:
-            content = self.config.model_dump(exclude_none=True)
-            string = yamling.dump_yaml(content)
-            _ = UPath(path).write_text(string)
-
+            config = load_config(path)
+            return cls(config)
         except Exception as exc:
-            msg = f"Failed to save configuration to {path}"
+            msg = f"Failed to load configuration from {path}"
             raise exceptions.ConfigError(msg) from exc
-
-    def validate_references(self) -> list[str]:
-        """Validate all references in configuration.
-
-        Returns:
-            List of validation warnings
-        """
-        # Check resource references
-        return [
-            f"Resource {resource} in group {group} not found"
-            for group, resources in self.config.resource_groups.items()
-            for resource in resources
-            if resource not in self.config.resources
-        ]
-
-    def _create_tool(self, tool_config: ToolConfig) -> LLMCallableTool:
-        """Create tool instance from config.
-
-        Args:
-            tool_config: Tool configuration
-
-        Returns:
-            Configured tool instance
-
-        Raises:
-            ConfigError: If tool creation fails
-        """
-        try:
-            callable_obj = importing.import_callable(tool_config.import_path)
-            return LLMCallableTool.from_callable(
-                callable_obj,
-                name_override=tool_config.name,
-                description_override=tool_config.description,
-            )
-        except Exception as exc:
-            msg = f"Failed to create tool from {tool_config.import_path}"
-            raise exceptions.ConfigError(msg) from exc
-
-    def get_tools(self) -> dict[str, LLMCallableTool]:
-        """Get all tools from config and toolsets."""
-        tools = {}
-
-        # Load explicitly configured tools
-        for name, tool_config in self.config.tools.items():
-            try:
-                tools[name] = self._create_tool(tool_config)
-            except Exception:
-                logger.exception("Failed to create tool %s", name)
-
-        # Load tools from toolsets
-        if self.config.toolsets:
-            loader = ToolsetLoader()
-            toolset_tools = loader.load_items(self.config.toolsets)
-
-            # Handle potential name conflicts
-            for name, tool in toolset_tools.items():
-                if name in tools:
-                    logger.warning(
-                        "Tool %s from toolset overlaps with configured tool", name
-                    )
-                    continue
-                tools[name] = tool
-
-        return tools

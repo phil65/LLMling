@@ -1,10 +1,15 @@
+"""Server entry point."""
+
 from __future__ import annotations
 
 import asyncio
 import sys
 
-from llmling.server import serve
+from llmling.core.log import get_logger
+from llmling.server.factory import create_server
 
+
+logger = get_logger(__name__)
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -12,16 +17,15 @@ if sys.platform == "win32":
 
 async def main() -> None:
     """Run the LLMling server."""
-    config_path = (
-        sys.argv[1] if len(sys.argv) > 1 else "src/llmling/config_resources/test.yml"
-    )
+    config_path = sys.argv[1] if len(sys.argv) > 1 else None
 
     try:
-        await serve(config_path)
+        server = create_server(config_path)
+        await server.start(raise_exceptions=True)
     except KeyboardInterrupt:
-        print("\nServer stopped by user", file=sys.stderr)
-    except Exception as exc:  # noqa: BLE001
-        print(f"Fatal server error: {exc}", file=sys.stderr)
+        logger.info("Server stopped by user")
+    except Exception:
+        logger.exception("Fatal server error")
         sys.exit(1)
 
 

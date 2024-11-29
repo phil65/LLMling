@@ -10,7 +10,8 @@ from llmling.config.models import (
     CallableResource,
     SourceResource,
 )
-from llmling.config.validation import ConfigValidator
+
+# from llmling.config.runtime import RuntimeConfig
 from llmling.config.loading import load_config
 
 
@@ -18,9 +19,9 @@ __all__ = [
     "CallableResource",
     "Config",
     "ConfigManager",
-    "ConfigValidator",
     "GlobalSettings",
     "Resource",
+    # "RuntimeConfig",
     "SourceResource",
     "load_config",
 ]

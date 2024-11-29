@@ -69,22 +69,12 @@ class ProcessorConfig(BaseModel):
     streaming: bool = False
 
     @model_validator(mode="after")
-    def validate_config(self) -> ProcessorConfig:
-        """Validate processor configuration based on type."""
-        match self.type:
-            case "function":
-                if not self.import_path:
-                    msg = "import_path is required for function processors"
-                    raise ValueError(msg)
-                self.name = self.name or self.import_path.split(".")[-1]
-            case "template":
-                if not self.template:
-                    msg = "template is required for template processors"
-                    raise ValueError(msg)
-                self.name = self.name or "template_processor"
-            case _:
-                msg = f"Invalid processor type: {self.type}"
-                raise ValueError(msg)
+    def validate_basic_structure(self) -> ProcessorConfig:
+        """Validate basic structure only."""
+        # Only validate structure, not content
+        if self.type not in ("function", "template"):
+            msg = f"Invalid processor type: {self.type}"
+            raise ValueError(msg)
         return self
 
     def get_function_config(self) -> FunctionProcessorConfig:

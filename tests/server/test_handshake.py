@@ -13,6 +13,7 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from llmling.config.runtime import RuntimeConfig
     from llmling.server import LLMLingServer
     from llmling.server.mcp_inproc_session import MCPInProcSession
 
@@ -39,16 +40,21 @@ async def test_server_lifecycle_handshake_client(client: MCPInProcSession) -> No
         )
         assert isinstance(init_response, dict)
         assert "serverInfo" in init_response
-        assert init_response["serverInfo"]["name"] == "llmling-server"
+        server_info = init_response["serverInfo"]
+        assert server_info["name"] == "llmling-server"
+        assert "version" in server_info
+        assert "capabilities" in init_response
 
         # Send initialized notification
         await client.send_notification("notifications/initialized", {})
 
-        # Test tool listing
-        tools_response = await client.send_request("tools/list")
-        assert isinstance(tools_response, dict)
-        assert "tools" in tools_response
-        assert isinstance(tools_response["tools"], list)
+        # Test functionality
+        tools = await client.list_tools()
+        assert isinstance(tools, list)
+        resources = await client.list_resources()
+        assert isinstance(resources, list)
+        prompts = await client.list_prompts()
+        assert isinstance(prompts, list)
     finally:
         await client.close()
 
@@ -79,7 +85,9 @@ async def test_server_lifecycle_test_session(
     await client_write.send(init_request)
     response = await client_read.receive()
     assert "result" in response.root.model_dump()
-    assert "serverInfo" in response.root.result
+    result = response.root.result
+    assert "serverInfo" in result
+    assert result["serverInfo"]["name"] == "llmling-server"
 
     # Send initialized notification
     from mcp.types import JSONRPCNotification
@@ -93,7 +101,7 @@ async def test_server_lifecycle_test_session(
     )
     await client_write.send(notification)
 
-    # Test tools list
+    # Test functionality
     tools_request = JSONRPCMessage(
         JSONRPCRequest(
             jsonrpc="2.0",
@@ -108,18 +116,28 @@ async def test_server_lifecycle_test_session(
 
 
 @pytest.mark.asyncio
-async def test_server_lifecycle_direct(server: LLMLingServer) -> None:
+async def test_server_lifecycle_direct(
+    runtime_config: RuntimeConfig,
+    server: LLMLingServer,
+) -> None:
     """Test server lifecycle using direct method calls."""
     try:
-        # Start registries
-        await server.processor_registry.startup()
-        await server.tool_registry.startup()
+        # Start runtime components
+        await runtime_config.startup()
 
-        # Test registry contents directly
-        tools = list(server.tool_registry.values())
+        # Test direct access
+        tools = runtime_config.get_tools()
         assert isinstance(tools, list)
         assert len(tools) > 0  # Should have our test tools
+
+        resources = runtime_config.list_resources()
+        assert isinstance(resources, list)
+
+        prompts = runtime_config.list_prompts()
+        assert isinstance(prompts, list)
+
     finally:
+        await runtime_config.shutdown()
         await server.shutdown()
 
 
@@ -136,7 +154,7 @@ async def test_server_lifecycle_subprocess() -> None:
     )
 
     # Start stderr reader task
-    async def read_stderr():
+    async def read_stderr() -> None:
         assert process.stderr
         while True:
             line = await process.stderr.readline()
@@ -173,17 +191,24 @@ async def test_server_lifecycle_subprocess() -> None:
                 raise RuntimeError(msg)
 
             try:
-                _result = json.loads(response.decode())
-                break  # Valid JSON found
+                result = json.loads(response.decode())
+                assert "result" in result
+                assert "serverInfo" in result["result"]
+                assert result["result"]["serverInfo"]["name"] == "llmling-server"
+                break  # Valid response found
             except json.JSONDecodeError:
                 continue  # Skip non-JSON lines
 
-        # Rest of the test...
-
     finally:
+        # Cleanup
         stderr_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await stderr_task
+        process.terminate()
+        try:
+            await asyncio.wait_for(process.wait(), timeout=1.0)
+        except TimeoutError:
+            process.kill()
 
 
 if __name__ == "__main__":
