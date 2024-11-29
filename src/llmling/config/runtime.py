@@ -161,10 +161,8 @@ class RuntimeConfig:
                 if name not in tool_registry:
                     tool_registry[name] = tool
                 else:
-                    logger.warning(
-                        "Tool %s from toolset overlaps with configured tool",
-                        name,
-                    )
+                    msg = "Tool %s from toolset overlaps with configured tool"
+                    logger.warning(msg, name)
 
         for name, prompt_config in config.prompts.items():
             match prompt_config:
@@ -179,9 +177,8 @@ class RuntimeConfig:
                                 func = importing.import_callable(path)
                                 completion_funcs[arg_name] = func
                             except Exception:
-                                logger.exception(
-                                    "Failed to import completion function: %s", path
-                                )
+                                msg = "Failed to import completion function: %s"
+                                logger.exception(msg, path)
 
                     prompt = create_prompt_from_callable(
                         prompt_config.import_path,

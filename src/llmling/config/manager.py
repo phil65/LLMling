@@ -120,9 +120,8 @@ class ConfigManager:
                     else:
                         # Try to import the module
                         try:
-                            importlib.import_module(
-                                prompt_config.import_path.split(".")[0]
-                            )
+                            name = prompt_config.import_path.split(".")[0]
+                            importlib.import_module(name)
                         except ImportError:
                             warnings.append(
                                 f"Cannot import module for prompt {name}: "
@@ -161,10 +160,8 @@ class ConfigManager:
         for resource in self.config.resources.values():
             if hasattr(resource, "path"):
                 path = UPath(resource.path)
-                if not path.exists() and not path.as_uri().startswith((
-                    "http://",
-                    "https://",
-                )):
+                prefixes = ("http://", "https://")
+                if not path.exists() and not path.as_uri().startswith(prefixes):
                     warnings.append(f"Resource path not found: {path}")
 
         return warnings

@@ -66,11 +66,8 @@ def load_config(path: str | os.PathLike[str]) -> Config:
         msg = f"Failed to validate configuration from {path}"
         raise exceptions.ConfigError(msg) from exc
     else:
-        logger.debug(
-            "Loaded raw configuration: version=%s, resources=%d",
-            config.version,
-            len(config.resources),
-        )
+        msg = "Loaded raw configuration: version=%s, resources=%d"
+        logger.debug(msg, config.version, len(config.resources))
         return config
 
 

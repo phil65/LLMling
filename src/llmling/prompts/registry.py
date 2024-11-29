@@ -166,14 +166,10 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
             if len(args) == 2 and type(None) in args:  # noqa: PLR2004
                 other_type = next(arg for arg in args if arg is not type(None))
                 # Process the non-None type directly instead of using replace
-                return self._get_type_completions(
-                    ExtendedPromptArgument(
-                        name=arg.name,
-                        type_hint=other_type,
-                        description=arg.description,
-                    ),
-                    current_value,
+                arg = ExtendedPromptArgument(
+                    name=arg.name, type_hint=other_type, description=arg.description
                 )
+                return self._get_type_completions(arg, current_value)
 
         # Handle bool
         if type_hint is bool:

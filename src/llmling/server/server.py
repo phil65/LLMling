@@ -116,11 +116,8 @@ class LLMLingServer:
             try:
                 python_level = level_map[level]
                 logger.setLevel(python_level)
-                await self.current_session.send_log_message(
-                    level="info",
-                    data=f"Log level set to {level}",
-                    logger=self.name,
-                )
+                data = f"Log level set to {level}"
+                await self.current_session.send_log_message(data=data, logger=self.name)
             except Exception as exc:
                 error = mcp.McpError("Error setting log level")
                 error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
@@ -153,9 +150,7 @@ class LLMLingServer:
         @self.server.list_prompts()
         async def handle_list_prompts() -> list[mcp.types.Prompt]:
             """Handle prompts/list request."""
-            return [
-                conversions.to_mcp_prompt(prompt) for prompt in self.runtime.get_prompts()
-            ]
+            return [conversions.to_mcp_prompt(p) for p in self.runtime.get_prompts()]
 
         @self.server.get_prompt()
         async def handle_get_prompt(
@@ -166,18 +161,13 @@ class LLMLingServer:
             try:
                 prompt = self.runtime.get_prompt(name)
                 messages = await self.runtime.render_prompt(name, arguments)
-
-                return GetPromptResult(
-                    description=prompt.description,
-                    messages=[conversions.to_mcp_message(msg) for msg in messages],
-                )
+                mcp_msgs = [conversions.to_mcp_message(msg) for msg in messages]
+                return GetPromptResult(description=prompt.description, messages=mcp_msgs)
             except exceptions.LLMLingError as exc:
                 msg = str(exc)
                 error = mcp.McpError(msg)
-                error.error = mcp.ErrorData(
-                    code=INVALID_PARAMS if "not found" in msg else INTERNAL_ERROR,
-                    message=msg,
-                )
+                code = INVALID_PARAMS if "not found" in msg else INTERNAL_ERROR
+                error.error = mcp.ErrorData(code=code, message=msg)
                 raise error from exc
 
         @self.server.list_resources()
@@ -188,10 +178,8 @@ class LLMLingServer:
                 try:
                     # First get URI and basic info without loading
                     uri = self.runtime.get_resource_uri(name)
-                    resource_config = self.runtime._config.resources[
-                        name
-                    ]  # Get raw config
-
+                    # Get raw config
+                    resource_config = self.runtime._config.resources[name]
                     mcp_resource = mcp.types.Resource(
                         uri=conversions.to_mcp_uri(uri),
                         name=name,
@@ -201,11 +189,8 @@ class LLMLingServer:
                     resources.append(mcp_resource)
 
                 except Exception:
-                    logger.exception(
-                        "Failed to create resource listing for %r. Config: %r",
-                        name,
-                        self.runtime._config.resources.get(name),
-                    )
+                    msg = "Failed to create resource listing for %r. Config: %r"
+                    logger.exception(msg, name, self.runtime._config.resources.get(name))
                     continue
 
             return resources
@@ -266,12 +251,8 @@ class LLMLingServer:
             total: float | None,
         ) -> None:
             """Handle progress notifications from client."""
-            logger.debug(
-                "Progress notification: %s %.1f/%.1f",
-                token,
-                progress,
-                total or 0.0,
-            )
+            msg = "Progress notification: %s %.1f/%.1f"
+            logger.debug(msg, token, progress, total or 0.0)
 
     def _setup_observers(self) -> None:
         """Set up registry observers for MCP notifications."""

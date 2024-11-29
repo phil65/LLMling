@@ -63,9 +63,8 @@ class MCPInProcSession:
             assert self.process.stderr
             while True:
                 try:
-                    line = await asyncio.get_event_loop().run_in_executor(
-                        None, self.process.stderr.readline
-                    )
+                    fn = self.process.stderr.readline
+                    line = await asyncio.get_event_loop().run_in_executor(None, fn)
                     if not line:
                         break
                     print(
@@ -109,12 +108,7 @@ class MCPInProcSession:
             msg = "Server not started"
             raise RuntimeError(msg)
 
-        request = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params or {},
-            "id": 1,
-        }
+        request = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
 
         request_str = json.dumps(request) + "\n"
         logger.debug("Sending request: %s", request_str.strip())
@@ -142,11 +136,7 @@ class MCPInProcSession:
             msg = "Server not started"
             raise RuntimeError(msg)
 
-        notification = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params or {},
-        }
+        notification = {"jsonrpc": "2.0", "method": method, "params": params or {}}
 
         notification_str = json.dumps(notification) + "\n"
         logger.debug("Sending notification: %s", notification_str.strip())
