@@ -65,3 +65,15 @@ resources:
 resource_groups:
   code_review_basic:
     - system_prompt
+
+prompts:
+  code_review:
+    description: "Review code changes"
+    messages:
+      - role: system
+        content: |
+          Tst prompt
+    arguments:
+      - name: changes
+        type: text
+        required: true

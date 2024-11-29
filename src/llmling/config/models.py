@@ -224,6 +224,23 @@ class Config(BaseModel):
         arbitrary_types_allowed=True,
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def populate_prompt_names(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Populate prompt names from dictionary keys before validation."""
+        if isinstance(data, dict) and "prompts" in data:
+            prompts = data["prompts"]
+            if isinstance(prompts, dict):
+                # Add name to each prompt's data
+                data["prompts"] = {
+                    key: {
+                        "name": key,
+                        **(val if isinstance(val, dict) else val.model_dump()),
+                    }
+                    for key, val in prompts.items()
+                }
+        return data
+
     @model_validator(mode="after")
     def validate_references(self) -> Config:
         """Validate all references between components."""
@@ -232,16 +249,7 @@ class Config(BaseModel):
             self._validate_resource_groups()
         if self.context_processors:
             self._validate_processor_references()
-        if self.prompts:
-            self._validate_prompts()
         return self
-
-    def _validate_prompts(self) -> None:
-        """Validate prompt configurations."""
-        for name, prompt in self.prompts.items():
-            if prompt.name != name:
-                msg = f"Prompt name mismatch: {prompt.name} != {name}"
-                raise ValueError(msg)
 
     def _validate_resource_groups(self) -> None:
         """Validate resource references in groups."""
@@ -267,12 +275,7 @@ class Config(BaseModel):
 
 
 if __name__ == "__main__":
-    from pydantic import ValidationError
-
     from llmling.config.loading import load_config
 
-    try:
-        config = load_config(config_resources.TEST_CONFIG)  # type: ignore[has-type]
-        print(config)
-    except ValidationError as e:
-        print(e)
+    config = load_config(config_resources.TEST_CONFIG)  # type: ignore[has-type]
+    print(config)
