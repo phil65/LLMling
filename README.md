@@ -154,30 +154,97 @@ The function will be automatically converted into a prompt with:
 - Enum values from Literal types
 - Default values preserved
 
-#### Dynamic Registration
-
-Register function-based prompts programmatically:
-
-```python
-from llmling.prompts import PromptRegistry, create_prompt_from_callable
-
-registry = PromptRegistry()
-
-# Register a single function
-registry.register_function(analyze_code)
-
-# Or create a prompt explicitly
-prompt = create_prompt_from_callable(
-    analyze_code,
-    name_override="custom_name",
-    description_override="Custom description",
-    template_override="Custom template: {code}"
-)
-registry.register(prompt.name, prompt)
-```
-
 > [!TIP]
 > Function-based prompts make it easy to create well-documented, type-safe prompts directly from your Python code. The automatic conversion handles argument validation, documentation, and template generation
+
+## Custom Autocompletion
+
+LLMling provides flexible autocompletion for prompt arguments, combining multiple sources of suggestions and allowing custom completion functions.
+
+### Automatic Completions
+
+Arguments automatically get completions based on:
+
+1. Type hints:
+```python
+def analyze_code(
+    language: Literal["python", "javascript", "rust"],
+    style: bool = True,
+    level: Literal["basic", "detailed"] | None = None,
+) -> str:
+    """Analyze code."""
+    pass
+```
+
+2. Description hints:
+```python
+def analyze_text(
+    text: str,
+    format: str = "md"
+) -> str:
+    """Analyze text.
+
+    Args:
+        text: Input text
+        format: Output format (one of: md, txt, rst)
+    """
+    pass
+```
+
+### Custom Completion Functions
+
+You can provide custom completion functions either in code or via configuration:
+
+
+
+### Via YAML Configuration:
+```yaml
+prompts:
+  analyze_framework:
+    import_path: "mymodule.analysis.analyze_framework"
+    completions:
+      framework: "mymodule.completions.get_framework_completions"
+```
+
+### Completion Priority
+
+Completions are tried in this order:
+1. Custom completion function (if provided)
+2. Type-based completions (Literal, bool)
+3. Description-based completions (from "one of:" syntax)
+4. Default value (when no current input)
+
+All completions are:
+- Case-insensitive matched against current input
+- Deduplicated while preserving order
+- Limited to 100 results
+
+### Writing Custom Completion Functions
+
+Custom completion functions should:
+1. Take a single string argument (current input)
+2. Return a list of strings (possible completions)
+3. Handle empty input appropriately
+4. Be fast and handle errors gracefully
+
+Example:
+```python
+def get_language_completions(current: str) -> list[str]:
+    """Get programming language suggestions."""
+    languages = ["python", "javascript", "typescript", "rust", "go"]
+
+    # Handle empty input
+    if not current:
+        return languages
+
+    # Filter based on current input
+    current = current.lower()
+    return [
+        lang for lang in languages
+        if lang.lower().startswith(current)
+    ]
+```
+
 ### Tools
 
 Tools are Python functions or classes that can be called by LLMs. LLMling automatically generates OpenAI-compatible function schemas.
