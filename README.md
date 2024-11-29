@@ -28,400 +28,616 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyUp](https://pyup.io/repos/github/phil65/llmling/shield.svg)](https://pyup.io/repos/github/phil65/llmling/)
 
-[Read the documentation!](https://phil65.github.io/llmling/)
-
-
-# LLMling User Manual
-
-> [!WARNING]
-> LLMling is under active development. APIs and configurations may change frequently. Check the repository for the latest updates.
-
-LLMling is a flexible tool management system designed for LLM-based applications. It provides a modular approach to managing resources, processing tools, and prompt templates.
-
-## Quick Start
-
-Start the LLMling MCP server using [`uvx`](https://github.com/astral-sh/uv):
-
-```bash
-uvx --from llmling@latest mcp-server-llmling path/to/config.yml
-```
+A framework for declarative LLM application development focused on resource management, prompt templates, and tool execution.
 
 ## Core Concepts
 
-### Resources
+LLMLing provides a YAML-based configuration system for LLM applications:
 
-Resources are the basic building blocks in LLMling. They represent different types of content that can be loaded and processed.
+- **Static Declaration**: Define your LLM's environment in YAML - no code required
+- **MCP Protocol**: Built on the Machine Chat Protocol (MCP) for standardized LLM interaction
+- **Component Types**:
+  - **Resources**: Content providers (files, text, CLI output, etc.)
+  - **Prompts**: Message templates with arguments
+  - **Tools**: Python functions callable by the LLM
 
-> [!NOTE]
-> Available resource types:
-> - `text`: Raw text content
-> - `path`: Files or URLs
-> - `cli`: Command-line output
-> - `source`: Python source code
-> - `callable`: Python function results
-> - `image`: Image files or URLs
+The YAML configuration creates a complete environment that provides the LLM with:
+- Access to content via resources
+- Structured prompts for consistent interaction
+- Tools for extending capabilities
 
-### Resource Configuration
+## Usage
 
-Resources are defined in YAML configuration files. Each resource needs a unique name and type:
+### With Zed Editor
+
+Add LLMLing as a context server in your `settings.json`:
+
+```json
+{
+  "context_servers": {
+    "llmling": {
+      "command": {
+        "env": {},
+        "label": "llmling",
+        "path": "uvx",
+        "args": [
+          "--from",
+          "llmling",
+          "mcp-server-llmling",
+          "path/to/your/config.yml"
+        ]
+      },
+      "settings": {}
+    }
+  }
+}
+```
+
+### With Claude Desktop
+
+Configure LLMLing in your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "llmling": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "llmling",
+        "mcp-server-llmling",
+        "path/to/your/config.yml"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+### Manual Server Start
+
+Start the server directly from command line:
+
+```bash
+# Latest version
+uvx --upgrade --from llmling@latest mcp-server-llmling
+
+# Specific version
+uvx --from llmling==0.7.0 mcp-server-llmling path/to/config.yml
+```
+```
+
+## Resources
+
+Resources are content providers that load and pre-process data from various sources.
+
+### Basic Resource Types
 
 ```yaml
 resources:
-  guidelines:
-    type: path  # A file resource from any origin
-    path: "docs/guidelines.md"  # fsspec-backed, can also point to remote sources.
-    description: "Coding guidelines"
+  # Load and watch a file or directory
+  python_files:
+    type: path
+    path: "./src/**/*.py"  # Glob patterns supported
     watch:  # Optional file watching
       enabled: true
-      patterns: ["*.md"]
+      patterns:
+        - "*.py"
+        - "!**/__pycache__/**"  # Exclude patterns with !
+    processors:  # Optional processing steps
+      - name: format_python
+        parallel: false  # Process sequentially
+      - name: add_header
+        required: false  # Optional step
 
-  system_info:  # The result of a python function call
-    type: callable
-    import_path: "platform.uname"
-    description: "System information"
+  # Static text content
+  system_prompt:
+    type: text
+    content: |
+      You are a code reviewer specialized in Python.
+      Focus on these aspects:
+      - Code style (PEP8)
+      - Best practices
+      - Performance
+      - Security
 
-  code_sample:  # source code for module myapp.utils
+  # Execute CLI commands
+  git_changes:
+    type: cli
+    command: "git diff HEAD~1"  # String or list of args
+    shell: true  # Use shell for command
+    cwd: "./src"  # Optional working directory
+    timeout: 5.0  # Optional timeout in seconds
+
+  # Load Python source code
+  utils_module:
     type: source
-    import_path: "myapp.utils"
-    recursive: true
-    include_tests: false
-```
-
-> [!TIP]
-> Add a `watch` section to automatically reload resources when files change. Use `.gitignore`-style patterns to control which files trigger updates.
-
-### Prompts
-
-LLMling supports two ways to define prompts: YAML configuration and Python functions.
-
-#### YAML-Based Prompts
-
-Define prompts directly in your configuration:
-
-```yaml
-prompts:
-  code_review:
-    description: "Review code changes"
-    messages:
-      - role: system
-        content: |
-          You are a code reviewer analyzing these changes:
-          {changes}
-    arguments:
-      - name: changes
-        type: text
-        required: true
-```
-
-#### Function-Based Prompts
-
-Convert Python functions into prompts automatically by leveraging type hints and docstrings:
-
-```python
-from typing import Literal
-
-def analyze_code(
-    code: str,
-    language: str = "python",
-    style: Literal["brief", "detailed"] = "brief",
-    focus: list[str] | None = None,
-) -> str:
-    """Analyze code quality and structure.
-
-    Args:
-        code: Source code to analyze
-        language: Programming language
-        style: Analysis style (brief or detailed)
-        focus: Optional areas to focus on (e.g. ["security", "performance"])
-    """
-    pass
-```
-
-Register in YAML:
-```yaml
-prompts:
-  code_analyzer:
-    import_path: "myapp.prompts.analyze_code"
-    name: "Analyze Code"  # Optional override
-    description: "Custom description"  # Optional override
-    template: "Please analyze this {language} code:\n\n```{language}\n{code}\n```"  # Optional
-```
-
-The function will be automatically converted into a prompt with:
-- Arguments derived from parameters
-- Descriptions from docstrings
-- Validation from type hints
-- Enum values from Literal types
-- Default values preserved
-
-> [!TIP]
-> Function-based prompts make it easy to create well-documented, type-safe prompts directly from your Python code. The automatic conversion handles argument validation, documentation, and template generation
-
-## Custom Autocompletion
-
-LLMling provides flexible autocompletion for prompt arguments, combining multiple sources of suggestions and allowing custom completion functions.
-
-### Automatic Completions
-
-Arguments automatically get completions based on:
-
-1. Type hints:
-```python
-def analyze_code(
-    language: Literal["python", "javascript", "rust"],
-    style: bool = True,
-    level: Literal["basic", "detailed"] | None = None,
-) -> str:
-    """Analyze code."""
-    pass
-```
-
-2. Description hints:
-```python
-def analyze_text(
-    text: str,
-    format: str = "md"
-) -> str:
-    """Analyze text.
-
-    Args:
-        text: Input text
-        format: Output format (one of: md, txt, rst)
-    """
-    pass
-```
-
-### Custom Completion Functions
-
-You can provide custom completion functions either in code or via configuration:
-
-
-
-### Via YAML Configuration:
-```yaml
-prompts:
-  analyze_framework:
-    import_path: "mymodule.analysis.analyze_framework"
-    completions:
-      framework: "mymodule.completions.get_framework_completions"
-```
-
-### Completion Priority
-
-Completions are tried in this order:
-1. Custom completion function (if provided)
-2. Type-based completions (Literal, bool)
-3. Description-based completions (from "one of:" syntax)
-4. Default value (when no current input)
-
-All completions are:
-- Case-insensitive matched against current input
-- Deduplicated while preserving order
-- Limited to 100 results
-
-### Writing Custom Completion Functions
-
-Custom completion functions should:
-1. Take a single string argument (current input)
-2. Return a list of strings (possible completions)
-3. Handle empty input appropriately
-4. Be fast and handle errors gracefully
-
-Example:
-```python
-def get_language_completions(current: str) -> list[str]:
-    """Get programming language suggestions."""
-    languages = ["python", "javascript", "typescript", "rust", "go"]
-
-    # Handle empty input
-    if not current:
-        return languages
-
-    # Filter based on current input
-    current = current.lower()
-    return [
-        lang for lang in languages
-        if lang.lower().startswith(current)
-    ]
-```
-
-### Tools
-
-Tools are Python functions or classes that can be called by LLMs. LLMling automatically generates OpenAI-compatible function schemas.
-
-#### Function-Based Tools
-
-The simplest way to create a tool is by using a regular Python function:
-
-```python
-async def analyze_code(code: str) -> dict[str, Any]:
-    """Analyze Python code complexity and structure.
-
-    Args:
-        code: Python code to analyze
-
-    Returns:
-        Dictionary with analysis metrics
-    """
-    tree = ast.parse(code)
-    return {
-        "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]),
-        "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)])
-    }
-```
-
-Register in YAML:
-```yaml
-tools:
-  code_analyzer:
-    import_path: "myapp.tools.analyze_code"
-    name: "Analyze Code"  # Optional override
-    description: "Analyzes Python code structure"  # Optional override
-```
-
-> [!NOTE]
-> LLMling automatically generates OpenAI function schemas from type hints and docstrings. No manual schema definition needed!
-
-
-#### Class-Based Tools
-
-For more complex tools, create a class inheriting from `LLMCallableTool`:
-
-```python
-class BrowserTool(LLMCallableTool):
-    name = "browser"
-    description = "Control a web browser"
-
-    async def execute(
-        self,
-        action: Literal["open", "click", "read"],
-        url: str | None = None,
-        selector: str | None = None,
-    ) -> dict[str, str]:
-        """Execute browser actions."""
-        match action:
-            case "open":
-                return await self._open_page(url)
-            case "click":
-                return await self._click_element(selector)
-```
-
-### Processors
-
-Processors transform resource content before it's used. They can be chained together for complex transformations.
-
-```yaml
-resources:
-  documentation:
-    type: path
-    path: "docs/"
-    processors:
-      - name: normalize_text
-        parallel: false  # Run sequentially
-        required: true
-      - name: extract_sections
-        parallel: true   # Can run in parallel
-        kwargs:
-          min_length: 100
-```
-
-#### Custom Processors
-
-Create processors by implementing `BaseProcessor`:
-
-```python
-class TemplateProcessor(ChainableProcessor):
-    async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:
-        template = self.config.template
-        result = template.render(content=context.current_content)
-        return ProcessorResult(
-            content=result,
-            original_content=context.original_content
-        )
-```
-
-## Using with MCP Server
-
-While LLMling's core functionality is independent, it includes an [MCP](https://github.com/microsoft/mcp) server implementation for remote tool execution:
-
-```python
-from llmling.server import serve
-
-# Start MCP server with config
-await serve("config.yml")
-```
-
-> [!TIP]
-> The core LLMling functionality works without the MCP server. Use the components directly in your application or create custom server implementations.
-
-## Advanced Features
-
-### Dynamic Tool Registration
-
-Register tools from Python code:
-
-```python
-from llmling.tools import ToolRegistry
-
-registry = ToolRegistry()
-
-# Register a module's public functions
-registry.add_container(my_module, prefix="utils_")
-
-# Register individual function
-registry.register("analyze", analyze_function)
+    import_path: myapp.utils
+    recursive: true  # Include submodules
+    include_tests: false  # Exclude test files
+
+  # Execute Python callables
+  system_info:
+    type: callable
+    import_path: platform.uname
+    keyword_args:  # Optional arguments
+      aliased: true
+
+  # Load and display images
+  architecture:
+    type: image
+    path: "./docs/architecture.png"
+    alt_text: "System architecture diagram"
+    watch:  # Images can be watched too
+      enabled: true
 ```
 
 ### Resource Groups
 
-Group related resources for easier management:
+Group related resources for easier access:
 
 ```yaml
 resource_groups:
   code_review:
     - python_files
-    - lint_config
-    - style_guide
+    - git_changes
+    - system_prompt
+
+  documentation:
+    - architecture
+    - utils_module
 ```
 
-### Extension System
+### File Watching
 
-Libraries can expose their functionality to LLMling without having to create a full MCP server implementation. This is done via entry points:
+Resources supporting file watching (`path`, `image`) can be configured to detect changes:
 
-```toml
-# In your library's pyproject.toml
-[project.entry-points.llmling]
-tools = "your_library:get_mcp_tools"  # Function returning list of callables
+```yaml
+resources:
+  config_files:
+    type: path
+    path: "./config"
+    watch:
+      enabled: true
+      patterns:  # .gitignore style patterns
+        - "*.yml"
+        - "*.yaml"
+        - "!.private/**"  # Exclude private files
+      ignore_file: ".gitignore"  # Use existing ignore file
+```
+
+### Resource Processing
+
+Resources can be processed through a pipeline of processors:
+
+```yaml
+# First define processors
+context_processors:
+  uppercase:
+    type: function
+    import_path: myapp.processors.to_upper
+    async_execution: false  # Sync function
+
+  add_header:
+    type: template
+    template: |
+      # File: {{ source }}
+      # Generated: {{ now() }}
+
+      {{ content }}
+
+# Then use them in resources
+resources:
+  processed_file:
+    type: path
+    path: "./input.txt"
+    processors:
+      - name: uppercase
+        parallel: false
+      - name: add_header
+        required: false
+        kwargs:  # Pass processor arguments
+          timestamp_format: "%Y-%m-%d"
+```
+
+All resource types support processing pipelines. Processors can run:
+- Sequentially (default) or in parallel
+- As required (default) or optional steps
+- With custom arguments via `kwargs`
+
+
+## Prompts
+
+Prompts are message templates that can be formatted with arguments. LLMLing supports both declarative YAML prompts and function-based prompts.
+
+### YAML-Based Prompts
+
+```yaml
+prompts:
+  code_review:
+    description: "Review Python code changes"
+    messages:
+      - role: system
+        content: |
+          You are a Python code reviewer. Focus on:
+          - Code style (PEP8)
+          - Best practices
+          - Performance
+          - Security
+
+          Always structure your review as:
+          1. Summary
+          2. Issues Found
+          3. Suggestions
+
+      - role: user
+        content: |
+          Review the following code changes:
+
+          {code}
+
+          Focus areas: {focus_areas}
+
+    arguments:
+      - name: code
+        description: "Code to review"
+        required: true
+      - name: focus_areas
+        description: "Specific areas to focus on (one of: style, security, performance)"
+        required: false
+        default: "style"
+```
+
+### Function-Based Prompts
+
+Function-based prompts provide more control and enable auto-completion:
+
+```yaml
+prompts:
+  analyze_code:
+    # Import path to the prompt function
+    import_path: myapp.prompts.code_analysis
+    # Optional overrides
+    name: "Code Analysis"
+    description: "Analyze Python code structure and complexity"
+    # Optional message template override
+    template: |
+      Analyze this code: {code}
+      Focus on: {focus}
+    # Auto-completion functions for arguments
+    completions:
+      focus: myapp.prompts.get_analysis_focus_options
 ```
 
 ```python
-# In your library
-def get_mcp_tools() -> list[Callable[..., Any]]:
-    """Expose functions as LLM tools."""
-    return [
-        analyze_code,
-        validate_json,
-        process_data,
-    ]
+# myapp/prompts/code_analysis.py
+from typing import Literal
+
+FocusArea = Literal["complexity", "dependencies", "typing"]
+
+def code_analysis(
+    code: str,
+    focus: FocusArea = "complexity",
+    include_metrics: bool = True
+) -> list[dict[str, str]]:
+    """Analyze Python code structure and complexity.
+
+    Args:
+        code: Python source code to analyze
+        focus: Analysis focus area (one of: complexity, dependencies, typing)
+        include_metrics: Whether to include numeric metrics
+    """
+    # Function will be converted to a prompt automatically
+    ...
+
+def get_analysis_focus_options(current: str) -> list[str]:
+    """Provide auto-completion for focus argument."""
+    options = ["complexity", "dependencies", "typing"]
+    return [opt for opt in options if opt.startswith(current)]
 ```
 
-Enable tools from a package in your LLMling configuration:
+### Message Content Types
+
+Prompts support different content types:
 
 ```yaml
-# llmling.yml
-toolsets:
-  - your_library  # Use tools from your_library
+prompts:
+  document_review:
+    messages:
+      # Text content
+      - role: system
+        content: "You are a document reviewer..."
+
+      # Resource reference
+      - role: user
+        content:
+          type: resource
+          content: "document://main.pdf"
+          alt_text: "Main document content"
+
+      # Image content
+      - role: user
+        content:
+          type: image_url
+          content: "https://example.com/diagram.png"
+          alt_text: "System architecture diagram"
 ```
 
-> [!TIP]
-> Libraries can expose their most useful functions as LLM tools without any LLMling-specific code. The entry point system uses Python's standard packaging features.
+### Argument Validation
 
-#### Discoverable Tools
+Prompts validate arguments before formatting:
 
-Tools exposed through entry points:
-- Are automatically discovered
-- Get schemas generated from type hints and docstrings
-- Can be used like any other LLMling tool
-- Don't require the library to depend on LLMling
+```yaml
+prompts:
+  analyze:
+    messages:
+      - role: user
+        content: "Analyze with level {level}"
 
-This allows for a rich ecosystem of tools that can be easily composed and used by LLMs.
+    arguments:
+      - name: level
+        description: "Analysis depth (one of: basic, detailed, full)"
+        required: true
+        # Will be used for validation and auto-completion
+        type_hint: Literal["basic", "detailed", "full"]
+```
+
+## Tools
+
+Tools are Python functions or classes that can be called by the LLM. They provide a safe way to extend the LLM's capabilities with custom functionality.
+
+### Basic Tool Configuration
+
+```yaml
+tools:
+  # Function-based tool
+  analyze_code:
+    import_path: myapp.tools.code.analyze
+    description: "Analyze Python code structure and metrics"
+
+  # Class-based tool
+  browser:
+    import_path: llmling.tools.browser.BrowserTool
+    description: "Control web browser for research"
+
+  # Override tool name
+  code_metrics:
+    import_path: myapp.tools.analyze_complexity
+    name: "Analyze Code Complexity"
+    description: "Calculate code complexity metrics"
+
+# Include pre-built tool collections
+toolsets:
+  - llmling.code  # Code analysis tools
+  - llmling.web   # Web/browser tools
+```
+
+### Function-Based Tools
+
+Tools can be created from any Python function:
+
+```python
+# myapp/tools/code.py
+from typing import Any
+import ast
+
+async def analyze(
+    code: str,
+    include_metrics: bool = True
+) -> dict[str, Any]:
+    """Analyze Python code structure and complexity.
+
+    Args:
+        code: Python source code to analyze
+        include_metrics: Whether to include numeric metrics
+
+    Returns:
+        Dictionary with analysis results
+    """
+    tree = ast.parse(code)
+    return {
+        "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]),
+        "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
+        "complexity": _calculate_complexity(tree) if include_metrics else None
+    }
+```
+
+### Class-Based Tools
+
+Complex tools can be implemented as classes:
+
+```python
+# myapp/tools/browser.py
+from typing import Literal
+from playwright.async_api import Page
+from llmling.tools.base import LLMCallableTool
+
+class BrowserTool(LLMCallableTool):
+    """Tool for web browser automation."""
+
+    name = "browser"
+    description = "Control web browser to navigate and interact with web pages"
+
+    async def execute(
+        self,
+        action: Literal["open", "click", "read"] = "open",
+        url: str | None = None,
+        selector: str | None = None,
+    ) -> dict[str, str]:
+        """Execute browser action.
+
+        Args:
+            action: Browser action to perform
+            url: URL to navigate to (for 'open' action)
+            selector: Element selector (for 'click' and 'read' actions)
+        """
+        match action:
+            case "open":
+                return await self._open_page(url)
+            case "click":
+                return await self._click_element(selector)
+            case "read":
+                return await self._read_content(selector)
+
+    async def startup(self) -> None:
+        """Initialize browser on startup."""
+        self.page = await self._launch_browser()
+
+    async def shutdown(self) -> None:
+        """Clean up browser resources."""
+        await self.page.close()
+```
+
+### Tool Collections (Toolsets)
+
+Group related tools into reusable collections:
+
+```python
+# myapp/toolsets.py
+from typing import Callable, Any
+
+def get_mcp_tools() -> list[Callable[..., Any]]:
+    """Entry point exposing tools to LLMling."""
+    from myapp.tools import (
+        analyze_code,
+        check_style,
+        count_tokens
+    )
+    return [
+        analyze_code,
+        check_style,
+        count_tokens
+    ]
+
+# In setup.py or pyproject.toml:
+entry_points = {
+    "llmling": [
+        "tools = myapp.toolsets:get_mcp_tools"
+    ]
+}
+```
+
+### Tool Progress Reporting
+
+Tools can report progress to the client:
+
+```python
+from llmling.tools.base import LLMCallableTool
+
+class AnalysisTool(LLMCallableTool):
+    name = "analyze"
+    description = "Analyze large codebase"
+
+    async def execute(
+        self,
+        path: str,
+        _meta: dict[str, Any] | None = None,  # Progress tracking
+    ) -> dict[str, Any]:
+        files = list(Path(path).glob("**/*.py"))
+        results = []
+
+        for i, file in enumerate(files):
+            # Report progress if meta information provided
+            if _meta and "progressToken" in _meta:
+                self.notify_progress(
+                    token=_meta["progressToken"],
+                    progress=i,
+                    total=len(files),
+                    description=f"Analyzing {file.name}"
+                )
+
+            results.append(await self._analyze_file(file))
+
+        return {"results": results}
+```
+
+### Complete Tool Example
+
+Here's a complete example combining multiple tool features:
+
+```yaml
+# Configuration
+tools:
+  # Basic function tool
+  analyze:
+    import_path: myapp.tools.code.analyze
+
+  # Class-based tool with lifecycle
+  browser:
+    import_path: myapp.tools.browser.BrowserTool
+
+  # Tool with progress reporting
+  batch_analysis:
+    import_path: myapp.tools.AnalysisTool
+
+toolsets:
+  - llmling.code
+  - myapp.tools
+```
+
+```python
+# Tool implementation
+from typing import Any
+from pathlib import Path
+from llmling.tools.base import LLMCallableTool
+
+class AnalysisTool(LLMCallableTool):
+    """Tool for batch code analysis with progress reporting."""
+
+    name = "batch_analysis"
+    description = "Analyze multiple Python files"
+
+    async def startup(self) -> None:
+        """Initialize analysis engine."""
+        self.analyzer = await self._create_analyzer()
+
+    async def execute(
+        self,
+        path: str,
+        recursive: bool = True,
+        _meta: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Execute batch analysis.
+
+        Args:
+            path: Directory to analyze
+            recursive: Whether to analyze subdirectories
+            _meta: Optional progress tracking metadata
+        """
+        files = list(Path(path).glob("**/*.py" if recursive else "*.py"))
+        results = []
+
+        for i, file in enumerate(files, 1):
+            # Report progress
+            if _meta and "progressToken" in _meta:
+                self.notify_progress(
+                    token=_meta["progressToken"],
+                    progress=i,
+                    total=len(files),
+                    description=f"Analyzing {file.name}"
+                )
+
+            # Analyze file
+            try:
+                result = await self.analyzer.analyze_file(file)
+                results.append({
+                    "file": str(file),
+                    "metrics": result
+                })
+            except Exception as e:
+                results.append({
+                    "file": str(file),
+                    "error": str(e)
+                })
+
+        return {
+            "total_files": len(files),
+            "successful": len([r for r in results if "metrics" in r]),
+            "failed": len([r for r in results if "error" in r]),
+            "results": results
+        }
+
+    async def shutdown(self) -> None:
+        """Clean up analysis engine."""
+        await self.analyzer.close()
+```
