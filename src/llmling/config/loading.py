@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING
 import logfire
 import yamling
 
-from llmling.config.models import Config
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
     import os
+
+    from llmling.config.models import Config
 
 
 logger = get_logger(__name__)
@@ -57,6 +58,8 @@ def load_config(path: str | os.PathLike[str]) -> Config:
         raise exceptions.ConfigError(msg)
 
     try:
+        from llmling.config.models import Config
+
         # Convert to model (only basic pydantic validation)
         config = Config.model_validate(content)
     except Exception as exc:

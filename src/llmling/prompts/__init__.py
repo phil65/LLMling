@@ -8,6 +8,7 @@ from llmling.prompts.models import (
 )
 from llmling.prompts.registry import PromptRegistry
 from llmling.prompts.rendering import render_prompt
+from llmling.prompts.function import create_prompt_from_callable
 
 __all__ = [
     "ExtendedPromptArgument",
@@ -18,5 +19,6 @@ __all__ = [
     "PromptRegistry",
     "PromptResult",
     "SystemPrompt",
+    "create_prompt_from_callable",
     "render_prompt",
 ]

@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING, Any, Self
 
 import logfire
 
+from llmling.config.models import Prompt, PromptConfig
 from llmling.core.log import get_logger
 from llmling.extensions.loaders import ToolsetLoader
 from llmling.processors.registry import ProcessorRegistry
+from llmling.prompts.function import create_prompt_from_callable
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
@@ -23,7 +25,7 @@ from llmling.tools.registry import ToolRegistry
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from llmling.config.models import Config, Prompt, Resource
+    from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
     from llmling.prompts.models import PromptResult
     from llmling.resources.models import LoadedResource
@@ -143,9 +145,6 @@ class RuntimeConfig:
         for name, resource in config.resources.items():
             resource_registry[name] = resource
 
-        for name, prompt in config.prompts.items():
-            prompt_registry[name] = prompt
-
         # Register explicit tools
         for name, tool_config in config.tools.items():
             tool = LLMCallableTool.from_callable(
@@ -166,6 +165,20 @@ class RuntimeConfig:
                         "Tool %s from toolset overlaps with configured tool",
                         name,
                     )
+
+        for name, prompt_config in config.prompts.items():
+            match prompt_config:
+                case Prompt():
+                    prompt_registry[name] = prompt_config
+                case PromptConfig():
+                    # Create prompt from function
+                    prompt = create_prompt_from_callable(
+                        prompt_config.import_path,
+                        name_override=prompt_config.name or name,
+                        description_override=prompt_config.description,
+                        template_override=prompt_config.template,
+                    )
+                    prompt_registry[name] = prompt
 
         return cls(
             config=config,

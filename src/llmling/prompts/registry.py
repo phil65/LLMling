@@ -6,11 +6,14 @@ from typing import TYPE_CHECKING, Any
 
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
+from llmling.prompts.function import create_prompt_from_callable
 from llmling.prompts.models import Prompt, PromptResult
 from llmling.prompts.rendering import render_prompt
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.loaders.registry import ResourceLoaderRegistry
 
@@ -47,6 +50,23 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
             case _:
                 msg = f"Invalid prompt type: {type(item)}"
                 raise exceptions.LLMLingError(msg)
+
+    def register_function(
+        self,
+        fn: Callable[..., Any] | str,
+        name: str | None = None,
+        *,
+        replace: bool = False,
+    ) -> None:
+        """Register a function as a prompt.
+
+        Args:
+            fn: Function or import path
+            name: Optional name override
+            replace: Whether to replace existing prompt
+        """
+        prompt = create_prompt_from_callable(fn, name_override=name)
+        self.register(prompt.name, prompt, replace=replace)
 
     async def render(
         self,

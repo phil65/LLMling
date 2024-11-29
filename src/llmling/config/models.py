@@ -207,6 +207,24 @@ class ToolConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class PromptConfig(BaseModel):
+    """Configuration for prompts from functions."""
+
+    import_path: str
+    """Import path to the function implementation (e.g. 'mymodule.prompts.my_func')"""
+
+    name: str | None = None
+    """Optional override for prompt name"""
+
+    description: str | None = None
+    """Optional override for prompt description"""
+
+    template: str | None = None
+    """Optional message template override"""
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Config(BaseModel):
     """Root configuration model."""
 
@@ -218,7 +236,7 @@ class Config(BaseModel):
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
     toolsets: list[str] = Field(default_factory=list)
     # Add prompts support
-    prompts: dict[str, Prompt] = Field(default_factory=dict)
+    prompts: dict[str, Prompt | PromptConfig] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,

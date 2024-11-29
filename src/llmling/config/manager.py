@@ -13,8 +13,10 @@ import logfire
 from upath import UPath
 import yamling
 
+from llmling.config.models import PromptConfig
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.prompts.models import Prompt
 
 
 if TYPE_CHECKING:
@@ -40,7 +42,16 @@ class ConfigManager:
         Args:
             config: Configuration to manage
         """
-        self.config = config
+        self._config = config
+
+    @property
+    def config(self) -> Config:
+        """Get the managed configuration."""
+        return self._config
+
+    @config.setter
+    def config(self, value: Config) -> None:
+        self._config = value
 
     def save(
         self,
@@ -97,6 +108,30 @@ class ConfigManager:
         if warnings := self.validate():
             msg = "Configuration validation failed:\n" + "\n".join(warnings)
             raise exceptions.ConfigError(msg)
+
+    def _validate_prompts(self) -> list[str]:
+        """Validate prompt configuration."""
+        warnings = []
+        for name, prompt_config in self.config.prompts.items():
+            match prompt_config:
+                case PromptConfig():
+                    if not prompt_config.import_path:
+                        warnings.append(f"Prompt {name} missing import_path")
+                    else:
+                        # Try to import the module
+                        try:
+                            importlib.import_module(
+                                prompt_config.import_path.split(".")[0]
+                            )
+                        except ImportError:
+                            warnings.append(
+                                f"Cannot import module for prompt {name}: "
+                                f"{prompt_config.import_path}"
+                            )
+                case Prompt():
+                    if not prompt_config.messages:
+                        warnings.append(f"Prompt {name} has no messages")
+        return warnings
 
     def _validate_resources(self) -> list[str]:
         """Validate resource configuration.
