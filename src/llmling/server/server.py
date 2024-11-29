@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
-from mcp.server import Server
+from mcp.server import NotificationOptions, Server
 from mcp.types import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
@@ -91,6 +91,11 @@ class LLMLingServer:
 
         # Create MCP server
         self.server = Server(name)
+        self.server.notification_options = NotificationOptions(
+            prompts_changed=True,
+            resources_changed=True,
+            tools_changed=True,
+        )
         self._setup_handlers()
         self._setup_observers()
         logger.debug("Server initialized with name: %s", name)
