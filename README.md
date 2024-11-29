@@ -233,18 +233,11 @@ resources:
     path: "./input.txt"
     processors:
       - name: uppercase
-        parallel: false
       - name: add_header
         required: false
         kwargs:  # Pass processor arguments
           timestamp_format: "%Y-%m-%d"
 ```
-
-All resource types support processing pipelines. Processors can run:
-- Sequentially (default) or in parallel
-- As required (default) or optional steps
-- With custom arguments via `kwargs`
-
 
 ## Prompts
 
@@ -508,13 +501,13 @@ def get_mcp_tools() -> list[Callable[..., Any]]:
         check_style,
         count_tokens
     ]
+```
 
-# In setup.py or pyproject.toml:
-entry_points = {
-    "llmling": [
-        "tools = myapp.toolsets:get_mcp_tools"
-    ]
-}
+In pyproject.toml:
+
+```toml
+[project.entry-points.llmling]
+tools = "llmling.testing:get_mcp_tools"
 ```
 
 ### Tool Progress Reporting
