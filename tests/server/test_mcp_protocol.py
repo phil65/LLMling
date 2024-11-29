@@ -9,7 +9,7 @@ import yaml
 
 from llmling.config.models import Config, TextResource, ToolConfig
 from llmling.prompts.models import Prompt, PromptMessage
-from llmling.testing.testclient import MCPInProcSession
+from llmling.server.mcp_inproc_session import MCPInProcSession
 
 
 if TYPE_CHECKING:

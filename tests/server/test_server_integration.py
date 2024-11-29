@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from llmling.testing.testclient import MCPInProcSession  # Our working client
+from llmling.server.mcp_inproc_session import MCPInProcSession
 
 
 # Configure logfire to suppress warnings

@@ -14,7 +14,7 @@ import pytest
 
 if TYPE_CHECKING:
     from llmling.server import LLMLingServer
-    from llmling.testing.testclient import MCPInProcSession
+    from llmling.server.mcp_inproc_session import MCPInProcSession
 
 
 # Initialize logfire to avoid warnings
