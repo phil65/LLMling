@@ -1,34 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
 from pydantic import ValidationError
 import pytest
 
 from llmling.config.models import Config
-from llmling.core.exceptions import ProcessorError
 from llmling.prompts.models import (
-    ArgumentType,
     ExtendedPromptArgument,
     MessageContent,
     Prompt,
     PromptMessage,
-    PromptResult,
 )
-from llmling.prompts.rendering import render_prompt
-from llmling.resources.base import LoaderContext, ResourceLoader
-from llmling.resources.models import LoadedResource, ResourceMetadata
-
-
-if TYPE_CHECKING:
-    from llmling.processors.registry import ProcessorRegistry
 
 
 def test_config_with_prompts():
     """Test config with prompts section."""
     config_data = {
         "version": "1.0",
-        # Need to add required fields from Config model
         "resources": {},
         "prompts": {
             "analyze": {
@@ -55,7 +42,7 @@ def test_config_with_resource_prompts():
     """Test config with prompts using resources."""
     config_data = {
         "version": "1.0",
-        "resources": {},  # Required field
+        "resources": {},
         "prompts": {
             "review": {
                 "name": "review",
@@ -79,8 +66,8 @@ def test_config_with_resource_prompts():
         },
     }
     config = Config.model_validate(config_data)
-    assert "review" in config.prompts
-    msg = config.prompts["review"].messages[0]
+    assert config.prompts["review"]
+    msg = config.prompts["review"].messages[0]  # type: ignore
     assert isinstance(msg.content, list)
     assert len(msg.content) == 2  # noqa: PLR2004
     assert msg.content[0].type == "text"
@@ -112,7 +99,7 @@ def sample_prompt() -> Prompt:
     """Create a sample prompt for testing."""
     arg = ExtendedPromptArgument(
         name="name",
-        type=ArgumentType.TEXT,
+        type="text",
         description="Name to greet",
         required=True,
     )
@@ -124,109 +111,46 @@ def sample_prompt() -> Prompt:
     )
 
 
-@pytest.fixture
-def resource_prompt() -> Prompt:
-    """Create a prompt with resource references."""
-    return Prompt(
-        name="analyze",
-        description="Analyze code",
+def test_prompt_format():
+    """Test prompt message formatting."""
+    prompt = Prompt(
+        name="test",
+        description="Test prompt",
         messages=[
-            PromptMessage(
-                role="user",
-                content=[
-                    MessageContent.text("Analyze this code:"),
-                    MessageContent.resource("source://test.py"),
-                ],
-            )
+            PromptMessage(role="user", content="Hello {name}"),
+            PromptMessage(role="user", content="Age: {age}"),
+        ],
+        arguments=[
+            ExtendedPromptArgument(name="name", required=True),
+            ExtendedPromptArgument(name="age", required=False),
         ],
     )
 
+    # Test with all arguments
+    messages = prompt.format({"name": "Alice", "age": "30"})
+    assert len(messages) == 2  # noqa: PLR2004
+    assert messages[0].get_text_content() == "Hello Alice"
+    assert messages[1].get_text_content() == "Age: 30"
 
-@pytest.fixture
-def loaded_resource() -> LoadedResource:
-    """Create a sample loaded resource."""
-    return LoadedResource(
-        content="def test(): pass",
-        source_type="source",
-        metadata=ResourceMetadata(
-            uri="source://test.py", mime_type="text/x-python", name="test.py"
-        ),
-    )
-
-
-async def test_prompt_rendering(sample_prompt: Prompt):
-    """Test basic prompt rendering."""
-    result = await render_prompt(sample_prompt, {"name": "World"})
-    assert isinstance(result, PromptResult)
-    assert len(result.messages) == 1
-    assert isinstance(result.messages[0].content, list)
-    assert result.messages[0].content[0].content == "Hello World"
+    # Test with only required arguments
+    messages = prompt.format({"name": "Bob"})
+    assert messages[0].get_text_content() == "Hello Bob"
+    assert messages[1].get_text_content() == "Age: "
 
 
-async def test_prompt_with_resources(
-    resource_prompt: Prompt,
-    loaded_resource: LoadedResource,
-):
-    """Test prompt rendering with resource resolution."""
-
-    class MockProcessorRegistry:
-        async def process(self, content: str, *args: Any, **kwargs: Any) -> str:
-            return "processed content"
-
-    class MockLoader(ResourceLoader[None]):
-        uri_scheme = "source"
-
-        async def _load_impl(
-            self,
-            resource: Any,
-            name: str,
-            processor_registry: ProcessorRegistry | None,
-        ) -> LoadedResource:
-            return loaded_resource
-
-        async def load(
-            self,
-            context: LoaderContext[None] | None = None,
-            processor_registry: ProcessorRegistry | None = None,
-        ) -> LoadedResource:
-            return loaded_resource
-
-    class MockLoaderRegistry:
-        def find_loader_for_uri(self, uri: str) -> ResourceLoader[Any]:
-            return MockLoader()
-
-    result = await render_prompt(
-        resource_prompt,
-        {},
-        loader_registry=MockLoaderRegistry(),
-        processor_registry=MockProcessorRegistry(),
-    )
-    assert len(result.messages) == 1
-    msg = result.messages[0]
-    assert isinstance(msg.content, list)
-    assert len(msg.content) == 2  # noqa: PLR2004
-    assert msg.content[0].type == "text"
-    assert msg.content[0].content == "Analyze this code:"
-    assert msg.content[1].type == "resource"
-    assert msg.resolved_content is not None
-    assert len(msg.resolved_content) == 2  # noqa: PLR2004
-    assert msg.resolved_content[0].original == msg.content[0]
-    assert msg.resolved_content[1].resolved == loaded_resource
-
-
-async def test_prompt_validation():
+def test_prompt_validation():
     """Test prompt argument validation."""
-    arg = ExtendedPromptArgument(
-        name="required_arg",
-        type=ArgumentType.TEXT,
-        required=True,
-    )
     prompt = Prompt(
         name="test",
-        description="",
+        description="Test prompt",
         messages=[PromptMessage(role="user", content="Test {required_arg}")],
-        arguments=[arg],
+        arguments=[ExtendedPromptArgument(name="required_arg", required=True)],
     )
 
-    with pytest.raises(ProcessorError, match="Missing required argument"):
-        await render_prompt(prompt, {})
+    # Should raise when missing required argument
+    with pytest.raises(ValueError, match="Missing required argument"):
+        prompt.format({})
+
+    # Should work with required argument
+    messages = prompt.format({"required_arg": "value"})
+    assert messages[0].get_text_content() == "Test value"

@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 class TemplateProcessor(ChainableProcessor):
     """Processor that applies a Jinja2 template."""
 
-    def __init__(self, config: ProcessorConfig) -> None:
+    def __init__(self, config: ProcessorConfig):
         """Initialize the processor."""
         super().__init__(config)
         self.template_config = config.get_template_config()

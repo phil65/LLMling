@@ -1,189 +1,58 @@
-"""Prompt-related models."""
+"""Prompt models for MCP."""
 
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003
-from enum import Enum, IntEnum
-from typing import Any, Literal
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from llmling.core.typedefs import MessageContent
-from llmling.resources.models import LoadedResource  # noqa: TC001
-
-
-MessageRole = Literal["system", "user", "assistant", "tool"]
-
-
-class ArgumentType(str, Enum):
-    """Types of prompt arguments that support completion."""
-
-    TEXT = "text"
-    FILE = "file"
-    ENUM = "enum"
-    RESOURCE = "resource"
-    TOOL = "tool"
-
-
-class PromptPriority(IntEnum):
-    """Priority levels for system prompts."""
-
-    TOOL = 100  # Tool-specific instructions
-    SYSTEM = 200  # User-provided system prompts
-    OVERRIDE = 300  # High-priority overrides
-
-
-class SystemPrompt(BaseModel):
-    """System prompt configuration."""
-
-    content: str
-    source: str = ""  # e.g., "tool:browser", "user", "config"
-    priority: PromptPriority = PromptPriority.SYSTEM
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-    model_config = ConfigDict(frozen=True)
-
-
-class MessageContext(BaseModel):
-    """Context for message construction."""
-
-    system_prompts: list[SystemPrompt] = Field(default_factory=list)
-    user_content: str = ""
-    metadata: dict[str, Any] = Field(default_factory=dict)
-    content_items: list[MessageContent] = Field(default_factory=list)
-
-    model_config = ConfigDict(frozen=True)
+from llmling.core.typedefs import MessageContent, MessageRole
 
 
 class ExtendedPromptArgument(BaseModel):
-    """Extended argument definition with completion support.
+    """Prompt argument with validation information.
 
-    This extends the base MCP PromptArgument with additional fields
-    for completion and validation.
+    Extends MCP's prompt argument with additional metadata for validation.
     """
 
     name: str
     description: str | None = None
-    required: bool | None = None
-    # Extended fields for completion support
-    type: ArgumentType = ArgumentType.TEXT
-    enum_values: list[str] | None = None  # For enum type
-    file_patterns: list[str] | None = None  # For file type
-    resource_types: list[str] | None = None  # For resource type
-    tool_names: list[str] | None = None  # For tool type
+    required: bool = False
+    type: str = "text"  # Keeping it simple, just "text" type
     default: Any | None = None
-
-    model_config = ConfigDict(extra="allow")
-
-    @model_validator(mode="after")
-    def validate_enum_values(self) -> ExtendedPromptArgument:
-        """Validate that enum values are provided when type is ENUM."""
-        if self.type == ArgumentType.ENUM and not self.enum_values:
-            msg = "enum_values required for enum type"
-            raise ValueError(msg)
-        return self
-
-    @model_validator(mode="after")
-    def validate_type_specific_fields(self) -> ExtendedPromptArgument:
-        """Validate fields specific to argument types."""
-        match self.type:
-            case ArgumentType.ENUM:
-                if not self.enum_values:
-                    msg = "enum_values required for enum type"
-                    raise ValueError(msg)
-            case ArgumentType.FILE:
-                if not self.file_patterns:
-                    self.file_patterns = ["*"]  # Default to all files
-            case ArgumentType.RESOURCE:
-                if not self.resource_types:
-                    self.resource_types = ["*"]  # Default to all resources
-            case ArgumentType.TOOL:
-                if not self.tool_names:
-                    self.tool_names = ["*"]  # Default to all tools
-        return self
-
-
-class ResolvedContent(BaseModel):
-    """Content with resolved resources."""
-
-    original: MessageContent
-    resolved: LoadedResource | None = None
-    resolved_at: datetime | None = None
 
     model_config = ConfigDict(frozen=True)
 
 
 class PromptMessage(BaseModel):
-    """A message in a prompt."""
+    """A message in a prompt template."""
 
     role: MessageRole
     content: str | MessageContent | list[MessageContent] = ""
-    resolved_content: list[ResolvedContent] | None = None
 
     model_config = ConfigDict(frozen=True)
 
-    def needs_resolution(self) -> bool:
-        """Check if message has unresolved resources."""
-        contents = self.get_content_items()
-        return any(item.type == "resource" for item in contents)
-
-    def get_content_items(self) -> list[MessageContent]:
-        """Get all content items."""
-        match self.content:
-            case str():
-                return [MessageContent.text(self.content)]
-            case MessageContent():
-                return [self.content]
-            case list():
-                return self.content
-            case _:
-                return [MessageContent.text(str(self.content))]
-
-    @model_validator(mode="before")
-    @classmethod
-    def ensure_content_items(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Ensure backwards compatibility for content field."""
-        if isinstance(data, dict):
-            content = data.get("content", "")
-            match content:
-                case str():
-                    # Convert string to text content
-                    data["content"] = MessageContent.text(content)
-                case MessageContent():
-                    # Already correct format
-                    pass
-                case list():
-                    # Ensure all items are MessageContent
-                    data["content"] = [
-                        item
-                        if isinstance(item, MessageContent)
-                        else MessageContent.text(str(item))
-                        for item in content
-                    ]
-                case _:
-                    # Convert anything else to string
-                    data["content"] = MessageContent.text(str(content))
-        return data
-
     def get_text_content(self) -> str:
-        """Get text content for backwards compatibility."""
+        """Get text content of message."""
         match self.content:
             case str():
                 return self.content
             case MessageContent() if self.content.type == "text":
                 return self.content.content
             case list() if self.content:
-                # Get first text content or first content
+                # Join text content items with space
                 text_items = [
-                    item.content for item in self.content if item.type == "text"
+                    item.content
+                    for item in self.content
+                    if isinstance(item, MessageContent) and item.type == "text"
                 ]
-                return text_items[0] if text_items else self.content[0].content
+                return " ".join(text_items) if text_items else ""
             case _:
                 return ""
 
 
 class Prompt(BaseModel):
-    """Prompt template definition."""
+    """MCP prompt template."""
 
     name: str
     description: str
@@ -194,19 +63,65 @@ class Prompt(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     def validate_arguments(self, provided: dict[str, Any]) -> None:
-        """Validate provided arguments against requirements."""
+        """Validate that required arguments are provided."""
         required = {arg.name for arg in self.arguments if arg.required}
         missing = required - set(provided)
         if missing:
             msg = f"Missing required arguments: {', '.join(missing)}"
             raise ValueError(msg)
 
+    def format(self, arguments: dict[str, Any] | None = None) -> list[PromptMessage]:
+        """Format prompt messages with arguments.
 
-class PromptResult(BaseModel):
-    """Result of rendering a prompt template."""
+        Args:
+            arguments: Values to format the prompt with
 
-    messages: list[PromptMessage]
-    metadata: dict[str, Any] = Field(default_factory=dict)
-    resolved_at: datetime | None = None
+        Returns:
+            List of formatted messages
 
-    model_config = ConfigDict(frozen=True)
+        Raises:
+            ValueError: If required arguments are missing
+        """
+        args = arguments or {}
+        self.validate_arguments(args)
+
+        # Add defaults for missing optional arguments
+        format_args = {}
+        for arg in self.arguments:
+            if arg.name in args:
+                format_args[arg.name] = args[arg.name]
+            elif arg.default is not None:
+                format_args[arg.name] = arg.default
+            elif not arg.required:
+                format_args[arg.name] = ""  # Empty string for optional args
+
+        # Format all messages
+        formatted_messages = []
+        for msg in self.messages:
+            match msg.content:
+                case str():
+                    content: MessageContent | list[MessageContent] = MessageContent(
+                        type="text", content=msg.content.format(**format_args)
+                    )
+                case MessageContent() if msg.content.type == "text":
+                    content = MessageContent(
+                        type="text", content=msg.content.content.format(**format_args)
+                    )
+                case list():
+                    content = [
+                        MessageContent(
+                            type=item.type,
+                            content=item.content.format(**format_args)
+                            if item.type == "text"
+                            else item.content,
+                            alt_text=item.alt_text,
+                        )
+                        for item in msg.content
+                        if isinstance(item, MessageContent)
+                    ]
+                case _:
+                    content = msg.content
+
+            formatted_messages.append(PromptMessage(role=msg.role, content=content))
+
+        return formatted_messages

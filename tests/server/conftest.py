@@ -50,10 +50,7 @@ def runtime_config(base_config: Config) -> RuntimeConfig:
         loader_registry=loader_registry,
         processor_registry=processor_registry,
     )
-    prompt_registry = PromptRegistry(
-        loader_registry=loader_registry,
-        processor_registry=processor_registry,
-    )
+    prompt_registry = PromptRegistry()
     tool_registry = ToolRegistry()
 
     # Register default loaders

@@ -1,3 +1,5 @@
+"""Test function-based prompt creation."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -5,7 +7,7 @@ from typing import Literal
 import pytest
 
 from llmling.prompts.function import create_prompt_from_callable
-from llmling.prompts.models import ArgumentType, ExtendedPromptArgument
+from llmling.prompts.models import ExtendedPromptArgument
 
 
 def example_function(
@@ -62,19 +64,20 @@ def test_create_prompt_arguments():
     # Check text argument
     assert isinstance(args["text"], ExtendedPromptArgument)
     assert args["text"].required is True
-    assert args["text"].type == ArgumentType.TEXT
+    assert args["text"].type == "text"
     assert args["text"].description
     assert "input text to process" in args["text"].description.lower()
 
-    # Check style argument
+    # Check style argument - should be text type with enum values
     assert args["style"].required is False
-    assert args["style"].type == ArgumentType.ENUM
-    assert args["style"].enum_values == ["brief", "detailed"]
+    assert args["style"].type == "text"
     assert args["style"].default == "brief"
+    assert "brief" in str(args["style"].description)
+    assert "detailed" in str(args["style"].description)
 
     # Check tags argument
     assert args["tags"].required is False
-    assert args["tags"].type == ArgumentType.TEXT  # Changed from ENUM
+    assert args["tags"].type == "text"
     assert args["tags"].default is None
 
 
@@ -92,6 +95,28 @@ def test_create_prompt_async():
     assert "Content to process" in description
 
 
+def test_prompt_formatting():
+    """Test that created prompts can be formatted."""
+    prompt = create_prompt_from_callable(example_function)
+
+    # Format with all arguments
+    messages = prompt.format({
+        "text": "sample",
+        "style": "brief",
+        "tags": ["test"],
+    })
+    formatted = messages[1].get_text_content()
+    assert "text=sample" in formatted
+    assert "style=brief" in formatted
+    assert "tags=['test']" in formatted
+
+    # Format with only required arguments
+    messages = prompt.format({"text": "sample"})
+    formatted = messages[1].get_text_content()
+    assert "text=sample" in formatted
+    assert "style=brief" in formatted  # Default value
+
+
 def test_create_prompt_overrides():
     """Test prompt creation with overrides."""
     prompt = create_prompt_from_callable(
@@ -103,8 +128,10 @@ def test_create_prompt_overrides():
 
     assert prompt.name == "custom_name"
     assert prompt.description == "Custom description"
-    assert prompt.messages[1].content
-    assert "Custom template" in prompt.messages[1].get_text_content()
+
+    # Test template override
+    messages = prompt.format({"text": "test"})
+    assert messages[1].get_text_content() == "Custom template: test"
 
 
 def test_create_prompt_from_import_path():
@@ -114,6 +141,10 @@ def test_create_prompt_from_import_path():
     assert prompt.name == "uppercase_text"
     assert "Convert text to uppercase" in prompt.description
 
+    # Test formatting
+    messages = prompt.format({"text": "test"})
+    assert "text=test" in messages[1].get_text_content()
+
 
 def test_create_prompt_invalid_import():
     """Test prompt creation with invalid import path."""
@@ -121,25 +152,26 @@ def test_create_prompt_invalid_import():
         create_prompt_from_callable("nonexistent.module.function")
 
 
-def test_argument_types():
-    """Test various argument type conversions."""
+def test_argument_validation():
+    """Test argument validation in created prompts."""
+    prompt = create_prompt_from_callable(example_function)
 
-    def func_with_types(
-        text: str,
-        count: int,
-        flag: bool,
-        items: list[str],
-        choice: Literal["a", "b"],
-    ) -> None:
-        """Test function with various types."""
+    # Should fail without required argument
+    with pytest.raises(ValueError, match="Missing required argument"):
+        prompt.format({})
 
-    prompt = create_prompt_from_callable(func_with_types)
-    args = {arg.name: arg for arg in prompt.arguments}
+    # Should work with required argument
+    messages = prompt.format({"text": "test"})
+    assert len(messages) == 2  # noqa: PLR2004
+    assert "text=test" in messages[1].get_text_content()
 
-    assert args["text"].type == ArgumentType.TEXT
-    assert args["count"].type == ArgumentType.TEXT
-    assert args["flag"].type == ArgumentType.ENUM
-    assert args["flag"].enum_values == ["true", "false"]
-    assert args["items"].type == ArgumentType.TEXT
-    assert args["choice"].type == ArgumentType.ENUM
-    assert args["choice"].enum_values == ["a", "b"]
+
+def test_system_message():
+    """Test that system message contains function info."""
+    prompt = create_prompt_from_callable(example_function)
+
+    system_msg = prompt.messages[0]
+    assert system_msg.role == "system"
+    content = system_msg.get_text_content()
+    assert "Function: example_function" in content
+    assert "Description: Process text with given style" in content

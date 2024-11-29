@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Self
 import logfire
 
 from llmling.config.models import Prompt, PromptConfig
+from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.extensions.loaders import ToolsetLoader
 from llmling.processors.registry import ProcessorRegistry
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
-    from llmling.prompts.models import PromptResult
+    from llmling.prompts.models import PromptMessage
     from llmling.resources.models import LoadedResource
 
 
@@ -115,10 +116,7 @@ class RuntimeConfig:
             loader_registry=loader_registry,
             processor_registry=processor_registry,
         )
-        prompt_registry = PromptRegistry(
-            loader_registry=loader_registry,
-            processor_registry=processor_registry,
-        )
+        prompt_registry = PromptRegistry()
         tool_registry = ToolRegistry()
 
         # Register default loaders
@@ -256,21 +254,54 @@ class RuntimeConfig:
         """List all available prompt names."""
         return self._prompt_registry.list_items()
 
+    async def render_prompt(
+        self,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+    ) -> Sequence[PromptMessage]:
+        """Format a prompt with arguments.
+
+        Args:
+            name: Name of the prompt
+            arguments: Optional arguments for formatting
+
+        Returns:
+            List of formatted messages
+
+        Raises:
+            LLMLingError: If prompt not found or formatting fails
+        """
+        try:
+            prompt = self._prompt_registry[name]
+            return prompt.format(arguments)
+        except KeyError as exc:
+            msg = f"Prompt not found: {name}"
+            raise exceptions.LLMLingError(msg) from exc
+        except Exception as exc:
+            msg = f"Failed to format prompt {name}: {exc}"
+            raise exceptions.LLMLingError(msg) from exc
+
     def get_prompt(self, name: str) -> Prompt:
-        """Get a prompt by name."""
-        return self._prompt_registry[name]
+        """Get a prompt by name.
+
+        Args:
+            name: Name of the prompt
+
+        Returns:
+            The prompt
+
+        Raises:
+            LLMLingError: If prompt not found
+        """
+        try:
+            return self._prompt_registry[name]
+        except KeyError as exc:
+            msg = f"Prompt not found: {name}"
+            raise exceptions.LLMLingError(msg) from exc
 
     def get_prompts(self) -> Sequence[Prompt]:
         """Get all registered prompts."""
         return list(self._prompt_registry.values())
-
-    async def render_prompt(
-        self,
-        name: str,
-        arguments: dict[str, Any],
-    ) -> PromptResult:
-        """Render a prompt with arguments."""
-        return await self._prompt_registry.render(name, arguments)
 
     # Registry Observation
     def add_resource_observer(self, observer: RegistryEvents[str, Resource]) -> None:

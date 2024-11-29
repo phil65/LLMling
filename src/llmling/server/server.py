@@ -19,8 +19,8 @@ from mcp.types import (
 from pydantic import AnyUrl
 
 from llmling.config.models import PathResource, SourceResource
+from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.prompts.models import ArgumentType, Prompt
 from llmling.server import conversions
 from llmling.server.log import configure_server_logging, run_logging_processor
 from llmling.server.observers import PromptObserver, ResourceObserver, ToolObserver
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     import os
 
     from llmling.config.runtime import RuntimeConfig
+    from llmling.prompts.models import Prompt
 
 
 logger = get_logger(__name__)
@@ -164,25 +165,19 @@ class LLMLingServer:
             """Handle prompts/get request."""
             try:
                 prompt = self.runtime.get_prompt(name)
-                result = await self.runtime.render_prompt(
-                    name,
-                    arguments or {},
-                )
-                messages = [conversions.to_mcp_message(msg) for msg in result.messages]
+                messages = await self.runtime.render_prompt(name, arguments)
+
                 return GetPromptResult(
                     description=prompt.description,
-                    messages=messages,
+                    messages=[conversions.to_mcp_message(msg) for msg in messages],
                 )
-            except KeyError as exc:
-                msg = f"Prompt not found: {name}"
+            except exceptions.LLMLingError as exc:
+                msg = str(exc)
                 error = mcp.McpError(msg)
-                error.error = mcp.ErrorData(code=INVALID_PARAMS, message=msg)
-                raise error from exc
-            except Exception as exc:
-                msg = f"Error rendering prompt: {exc}"
-                logger.exception(msg)
-                error = mcp.McpError(msg)
-                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
+                error.error = mcp.ErrorData(
+                    code=INVALID_PARAMS if "not found" in msg else INTERNAL_ERROR,
+                    message=msg,
+                )
                 raise error from exc
 
         @self.server.list_resources()
@@ -415,7 +410,6 @@ class LLMLingServer:
         current_value: str,
     ) -> Completion:
         """Generate completions for prompt arguments."""
-        # Find the argument definition
         arg_def = next(
             (arg for arg in prompt.arguments if arg.name == arg_name),
             None,
@@ -424,27 +418,20 @@ class LLMLingServer:
             return Completion(values=[], total=0, hasMore=False)
 
         vals: list[str] = []
-        match arg_def.type:
-            case ArgumentType.ENUM:
-                # Filter enum values based on current input
-                vals = [
-                    v for v in (arg_def.enum_values or []) if v.startswith(current_value)
-                ]
 
-            case ArgumentType.RESOURCE:
-                # Complete resource names
-                vals = [
-                    name
-                    for name in self.runtime.list_resources()
-                    if name.startswith(current_value)
-                ]
+        # Get any available defaults
+        if arg_def.default is not None and not current_value:
+            vals.append(str(arg_def.default))
 
-            case ArgumentType.FILE:
-                # Complete file paths
-                import glob
-
-                pattern = f"{current_value}*"
-                vals = list(glob.glob(pattern))  # noqa: PTH207
+        # Add description-based suggestions
+        if arg_def.description and "one of:" in arg_def.description:
+            # Extract values from description like "one of: a, b, c"
+            try:
+                options_part = arg_def.description.split("one of:", 1)[1]
+                options = [opt.strip() for opt in options_part.split(",")]
+                vals.extend(opt for opt in options if opt.startswith(current_value))
+            except IndexError:
+                pass
 
         return Completion(
             values=vals[:100],

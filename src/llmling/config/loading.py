@@ -75,26 +75,9 @@ def load_config(path: str | os.PathLike[str]) -> Config:
 
 
 if __name__ == "__main__":
-    # Example usage showing recommended pattern
     import sys
 
     from llmling.config.manager import ConfigManager
 
-    try:
-        config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yml"
-
-        # Load and validate using ConfigManager
-        manager: ConfigManager = ConfigManager.load(config_path)
-
-        # Check for warnings
-        if warnings := manager.validate():
-            print("\nValidation warnings:", file=sys.stderr)
-            for warning in warnings:
-                print(f"- {warning}", file=sys.stderr)
-
-        print(f"\nLoaded configuration version: {manager.config.version}")
-        print(f"Number of resources: {len(manager.config.resources)}")
-
-    except exceptions.ConfigError as e:
-        print(f"Error loading config: {e}", file=sys.stderr)
-        sys.exit(1)
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yml"
+    manager: ConfigManager = ConfigManager.load(config_path)
