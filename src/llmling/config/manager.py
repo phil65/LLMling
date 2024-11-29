@@ -9,12 +9,15 @@ import yamling
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
+from llmling.extensions.loaders import ToolsetLoader
+from llmling.tools.base import LLMCallableTool
+from llmling.utils import importing
 
 
 if TYPE_CHECKING:
     import os
 
-    from llmling.config.models import Config, Resource
+    from llmling.config.models import Config, Resource, ToolConfig
 
 
 logger = get_logger(__name__)
@@ -93,3 +96,53 @@ class ConfigManager:
             for resource in resources
             if resource not in self.config.resources
         ]
+
+    def _create_tool(self, tool_config: ToolConfig) -> LLMCallableTool:
+        """Create tool instance from config.
+
+        Args:
+            tool_config: Tool configuration
+
+        Returns:
+            Configured tool instance
+
+        Raises:
+            ConfigError: If tool creation fails
+        """
+        try:
+            callable_obj = importing.import_callable(tool_config.import_path)
+            return LLMCallableTool.from_callable(
+                callable_obj,
+                name_override=tool_config.name,
+                description_override=tool_config.description,
+            )
+        except Exception as exc:
+            msg = f"Failed to create tool from {tool_config.import_path}"
+            raise exceptions.ConfigError(msg) from exc
+
+    def get_tools(self) -> dict[str, LLMCallableTool]:
+        """Get all tools from config and toolsets."""
+        tools = {}
+
+        # Load explicitly configured tools
+        for name, tool_config in self.config.tools.items():
+            try:
+                tools[name] = self._create_tool(tool_config)
+            except Exception:
+                logger.exception("Failed to create tool %s", name)
+
+        # Load tools from toolsets
+        if self.config.toolsets:
+            loader = ToolsetLoader()
+            toolset_tools = loader.load_items(self.config.toolsets)
+
+            # Handle potential name conflicts
+            for name, tool in toolset_tools.items():
+                if name in tools:
+                    logger.warning(
+                        "Tool %s from toolset overlaps with configured tool", name
+                    )
+                    continue
+                tools[name] = tool
+
+        return tools

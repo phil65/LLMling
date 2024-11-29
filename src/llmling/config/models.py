@@ -216,6 +216,7 @@ class Config(BaseModel):
     resources: dict[str, Resource] = Field(default_factory=dict)
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
+    toolsets: list[str] = Field(default_factory=list)
     # Add prompts support
     prompts: dict[str, Prompt] = Field(default_factory=dict)
 

@@ -3,7 +3,6 @@ context_processors:
   uppercase:
     type: function
     import_path: llmling.testing.processors.uppercase_text
-
   add_metadata:
     type: template
     template: |
@@ -19,6 +18,9 @@ tools:
     import_path: "llmling.testing.tools.analyze_ast"
     description: "Analyze Python code structure"
 
+toolsets:
+  - llmling
+  
 # Resource definitions
 resources:
   python_guidelines:

@@ -19,6 +19,14 @@ from llmling.testing.tools import (
 )
 from llmling.testing.utils import TestStreamPair, create_test_server_session
 
+
+def get_mcp_tools():
+    """Entry point exposing test tools to LLMling."""
+    from llmling.testing.tools import example_tool, analyze_ast
+
+    return [example_tool, analyze_ast]
+
+
 __all__ = [
     # Test utilities
     "TestStreamPair",

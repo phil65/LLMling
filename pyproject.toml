@@ -55,6 +55,9 @@ dependencies = [
 [project.scripts]
 mcp-server-llmling = "llmling.server.__main__:run"
 
+[project.entry-points.llmling]
+tools = "llmling.testing:get_mcp_tools"
+
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
 

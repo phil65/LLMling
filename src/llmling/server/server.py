@@ -19,6 +19,7 @@ from mcp.types import (
 from pydantic import AnyUrl
 
 from llmling import config_resources
+from llmling.config.manager import ConfigManager
 from llmling.config.models import PathResource, SourceResource
 from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
@@ -72,6 +73,11 @@ class LLMLingServer:
             loader_registry=self.loader_registry,
             processor_registry=self.processor_registry,
         )
+        self.config_manager = ConfigManager(config)
+
+        # Register tools from all sources
+        for tool_name, tool in self.config_manager.get_tools().items():
+            self.tool_registry[tool_name] = tool
 
         # Register default resource loaders if using new registry
         if loader_registry is None:
@@ -321,10 +327,6 @@ class LLMLingServer:
             await self.tool_registry.startup()
             await self.resource_registry.startup()
             await self.prompt_registry.startup()
-
-            # Register tools from config
-            for name, tool_config in self.config.tools.items():
-                self.tool_registry[name] = tool_config
 
             # Register resources from config
             for name, resource in self.config.resources.items():

@@ -250,3 +250,45 @@ resource_groups:
     - lint_config
     - style_guide
 ```
+
+### Extension System
+
+Libraries can expose their functionality to LLMling without having to create a full MCP server implementation. This is done via entry points:
+
+```toml
+# In your library's pyproject.toml
+[project.entry-points.llmling]
+tools = "your_library:get_mcp_tools"  # Function returning list of callables
+```
+
+```python
+# In your library
+def get_mcp_tools() -> list[Callable[..., Any]]:
+    """Expose functions as LLM tools."""
+    return [
+        analyze_code,
+        validate_json,
+        process_data,
+    ]
+```
+
+Enable tools from a package in your LLMling configuration:
+
+```yaml
+# llmling.yml
+toolsets:
+  - your_library  # Use tools from your_library
+```
+
+> [!TIP]
+> Libraries can expose their most useful functions as LLM tools without any LLMling-specific code. The entry point system uses Python's standard packaging features.
+
+#### Discoverable Tools
+
+Tools exposed through entry points:
+- Are automatically discovered
+- Get schemas generated from type hints and docstrings
+- Can be used like any other LLMling tool
+- Don't require the library to depend on LLMling
+
+This allows for a rich ecosystem of tools that can be easily composed and used by LLMs.
