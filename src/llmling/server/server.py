@@ -186,18 +186,28 @@ class LLMLingServer:
             resources = []
             for name in self.runtime.list_resources():
                 try:
-                    resource = await self.runtime.load_resource(name)
+                    # First get URI and basic info without loading
                     uri = self.runtime.get_resource_uri(name)
+                    resource_config = self.runtime._config.resources[
+                        name
+                    ]  # Get raw config
+
                     mcp_resource = mcp.types.Resource(
                         uri=conversions.to_mcp_uri(uri),
-                        name=resource.metadata.name or name,
-                        description=resource.metadata.description,
-                        mimeType=resource.metadata.mime_type,
+                        name=name,
+                        description=resource_config.description,
+                        mimeType="text/plain",  # Default, could be made more specific
                     )
                     resources.append(mcp_resource)
+
                 except Exception:
-                    logger.exception("Failed to create resource %r", name)
+                    logger.exception(
+                        "Failed to create resource listing for %r. Config: %r",
+                        name,
+                        self.runtime._config.resources.get(name),
+                    )
                     continue
+
             return resources
 
         @self.server.read_resource()

@@ -72,7 +72,7 @@ async def test_mcp_resource_operations(configured_client: MCPInProcSession) -> N
     assert "resources" in response
     resource_list = response["resources"]
     assert len(resource_list) >= 1
-    test_resource = next(r for r in resource_list if r["name"] == "Test resource")
+    test_resource = next(r for r in resource_list if r["description"] == "Test resource")
 
     # Read resource content
     response = await configured_client.send_request(
