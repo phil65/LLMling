@@ -186,9 +186,16 @@ class LLMLingServer:
         ) -> GetPromptResult:
             """Handle prompts/get request."""
             try:
-                result = await self.prompt_registry.render(name, arguments or {})
+                # Initialize args with empty dict if None
+                args = arguments or {}
+
+                # Get prompt first to fail fast if not found
+                prompt = self.prompt_registry[name]
+
+                # Then try to render
+                result = await self.prompt_registry.render(name, args)
                 messages = [conversions.to_mcp_message(msg) for msg in result.messages]
-                return GetPromptResult(description=f"Prompt: {name}", messages=messages)
+                return GetPromptResult(description=prompt.description, messages=messages)
             except KeyError as exc:
                 msg = f"Prompt not found: {name}"
                 error = mcp.McpError(msg)
