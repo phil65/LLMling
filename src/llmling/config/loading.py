@@ -84,7 +84,7 @@ if __name__ == "__main__":
         config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yml"
 
         # Load and validate using ConfigManager
-        manager = ConfigManager.load(config_path)
+        manager: ConfigManager = ConfigManager.load(config_path)
 
         # Check for warnings
         if warnings := manager.validate():

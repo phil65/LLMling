@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, get_type_hints
+from types import UnionType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
@@ -27,32 +36,148 @@ def create_prompt_from_callable(
     description_override: str | None = None,
     template_override: str | None = None,
 ) -> Prompt:
-    """Create a prompt from a callable or import path.
-
-    Args:
-        fn: Function or import path to create prompt from
-        name_override: Optional override for prompt name
-        description_override: Optional override for description
-        template_override: Optional override for message template
-
-    Returns:
-        Prompt instance
-
-    Raises:
-        ValueError: If callable cannot be imported or is invalid
-    """
+    """Create a prompt from a callable or import path."""
     # Import if string path provided
+
     if isinstance(fn, str):
         from llmling.utils import importing
 
         fn = importing.import_callable(fn)
 
-    return _FunctionPrompt.from_callable(
-        fn,
-        name_override=name_override,
-        description_override=description_override,
-        template_override=template_override,
+    # Get function metadata
+    name = name_override or fn.__name__
+    sig = inspect.signature(fn)
+    hints = get_type_hints(fn, include_extras=True)
+
+    # Get description from docstring
+    doc = inspect.getdoc(fn)
+    description = description_override or (
+        doc.split("\n\n")[0] if doc else f"Prompt from {name}"
     )
+
+    # Parse docstring for arg descriptions
+    arg_docs = _parse_arg_docs(fn)
+
+    # Create arguments
+    arguments = []
+    for param_name, param in sig.parameters.items():
+        if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+            continue
+
+        arg_type = hints.get(param_name, Any)
+        required = param.default == param.empty
+        arg_desc = arg_docs.get(param_name, "")
+
+        arg_type, enum_values = _get_argument_type(arg_type)
+
+        arguments.append(
+            ExtendedPromptArgument(
+                name=param_name,
+                description=arg_desc,
+                required=required,
+                type=arg_type,
+                enum_values=enum_values,
+                default=None if param.default is param.empty else param.default,
+            )
+        )
+    # Create message template
+    if template_override:
+        template = template_override
+    else:
+        arg_list = ", ".join(f"{arg.name}={{{arg.name}}}" for arg in arguments)
+        template = f"Call {name}({arg_list})"
+
+    # Create prompt messages
+    messages = [
+        PromptMessage(
+            role="system",
+            content=MessageContent(
+                type="text",
+                content=(
+                    f"Function: {name}\n"
+                    f"Description: {description}\n\n"
+                    "Please provide the required arguments."
+                ),
+            ),
+        ),
+        PromptMessage(role="user", content=MessageContent(type="text", content=template)),
+    ]
+
+    return Prompt(
+        name=name,
+        description=description,
+        arguments=arguments,
+        messages=messages,
+        metadata={
+            "source": "function",
+            "import_path": f"{fn.__module__}.{fn.__qualname__}",
+        },
+    )
+
+
+def _parse_arg_docs(fn: Callable[..., Any]) -> dict[str, str]:
+    """Parse argument descriptions from docstring."""
+    doc = inspect.getdoc(fn)
+    if not doc:
+        return {}
+
+    arg_docs: dict[str, str] = {}
+    lines = doc.split("\n")
+    in_args = False
+    current_arg = None
+
+    for line in lines:
+        line = line.strip()
+
+        # Start of Args section
+        if line == "Args:":
+            in_args = True
+            continue
+
+        # End of Args section
+        if in_args and (not line or line.startswith(("Returns:", "Raises:"))):
+            break
+
+        # Parse argument
+        if in_args:
+            if line and not line.startswith(" "):
+                # New argument definition
+                if ":" in line:
+                    arg_name, desc = line.split(":", 1)
+                    current_arg = arg_name.strip()
+                    arg_docs[current_arg] = desc.strip()
+            elif current_arg and line:
+                # Continuation of previous argument description
+                arg_docs[current_arg] += " " + line.strip()
+
+    return arg_docs
+
+
+def _get_argument_type(type_hint: Any) -> tuple[ArgumentType, list[str] | None]:
+    """Convert Python type hint to prompt argument type and possible values."""
+    # Check for Literal types
+    if get_origin(type_hint) is Literal:
+        return ArgumentType.ENUM, [str(arg) for arg in get_args(type_hint)]
+
+    # Check for bool
+    if type_hint is bool:
+        return ArgumentType.ENUM, ["true", "false"]
+
+    # Handle Union/Optional types
+    if get_origin(type_hint) in (Union, UnionType):
+        args = get_args(type_hint)
+        # If one of the args is None, process the other type
+        if len(args) == 2 and type(None) in args:  # noqa: PLR2004
+            other_type = next(arg for arg in args if arg is not type(None))
+            return _get_argument_type(other_type)
+
+    # Handle list, set, tuple
+    if get_origin(type_hint) in (list, set, tuple):
+        # We could potentially make this ENUM if we know the possible values
+        return ArgumentType.TEXT, None
+
+    # Default to TEXT for everything else
+    return ArgumentType.TEXT, None
 
 
 class _FunctionPrompt:
@@ -67,50 +192,41 @@ class _FunctionPrompt:
         description_override: str | None = None,
         template_override: str | None = None,
     ) -> Prompt:
-        """Create a prompt from a callable.
-
-        Args:
-            fn: Function to convert
-            name_override: Optional override for prompt name
-            description_override: Optional override for prompt description
-            template_override: Optional override for message template
-
-        Returns:
-            MCP Prompt instance
-
-        Example:
-            >>> def analyze_code(
-            ...     code: str,
-            ...     language: str = "python",
-            ...     focus: list[str] | None = None
-            ... ) -> str:
-            ...     '''Analyze code with given focus areas.'''
-            ...     pass
-            >>> prompt = FunctionPrompt.from_callable(analyze_code)
-        """
+        """Create a prompt from a callable."""
         # Get function metadata
         name = name_override or fn.__name__
-        description = description_override or inspect.getdoc(fn) or f"Prompt from {name}"
         sig = inspect.signature(fn)
         hints = get_type_hints(fn, include_extras=True)
 
-        # Create arguments from parameters
+        # Get description from docstring
+        doc = inspect.getdoc(fn)
+        description = description_override or (
+            doc.split("\n\n")[0] if doc else f"Prompt from {name}"
+        )
+
+        # Parse docstring for arg descriptions
+        arg_docs = _parse_arg_docs(fn)
+
+        # Create arguments
         arguments = []
         for param_name, param in sig.parameters.items():
-            # Skip *args and **kwargs
             if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 continue
 
             arg_type = hints.get(param_name, Any)
             required = param.default == param.empty
-            description = cls._get_param_doc(fn, param_name)
+            arg_desc = arg_docs.get(param_name, "")
+
+            # Use standalone function instead of static method
+            arg_type, enum_values = _get_argument_type(arg_type)
 
             arguments.append(
                 ExtendedPromptArgument(
                     name=param_name,
-                    description=description,
+                    description=arg_desc,
                     required=required,
-                    type=cls._get_argument_type(arg_type),
+                    type=arg_type,
+                    enum_values=enum_values,
                     default=None if param.default is param.empty else param.default,
                 )
             )
@@ -121,19 +237,24 @@ class _FunctionPrompt:
         else:
             # Create default template from function signature
             arg_list = ", ".join(f"{arg.name}={{{arg.name}}}" for arg in arguments)
-            template = f"Execute {name}({arg_list})"
+            template = f"Call {name}({arg_list})"
 
         # Create prompt messages
         messages = [
             PromptMessage(
                 role="system",
-                content=MessageContent.text(
-                    f"Function: {name}\n"
-                    f"Description: {description}\n\n"
-                    "Please provide the required arguments."
+                content=MessageContent(
+                    type="text",
+                    content=(
+                        f"Function: {name}\n"
+                        f"Description: {description}\n\n"
+                        "Please provide the required arguments."
+                    ),
                 ),
             ),
-            PromptMessage(role="user", content=MessageContent.text(template)),
+            PromptMessage(
+                role="user", content=MessageContent(type="text", content=template)
+            ),
         ]
 
         return Prompt(
@@ -163,17 +284,6 @@ class _FunctionPrompt:
             if in_args and line.strip().startswith(f"{param_name}:"):
                 return line.split(":", 1)[1].strip()
         return ""
-
-    @staticmethod
-    def _get_argument_type(type_hint: Any) -> ArgumentType:
-        """Convert Python type hint to prompt argument type."""
-        # Map Python types to ArgumentType
-        if hasattr(type_hint, "__origin__"):  # Generic types
-            origin = type_hint.__origin__
-            if origin in (list, set, tuple):
-                return ArgumentType.ENUM
-        # Add more type mappings as needed
-        return ArgumentType.TEXT
 
 
 # Example usage

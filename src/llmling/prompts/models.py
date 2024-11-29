@@ -76,6 +76,14 @@ class ExtendedPromptArgument(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     @model_validator(mode="after")
+    def validate_enum_values(self) -> ExtendedPromptArgument:
+        """Validate that enum values are provided when type is ENUM."""
+        if self.type == ArgumentType.ENUM and not self.enum_values:
+            msg = "enum_values required for enum type"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def validate_type_specific_fields(self) -> ExtendedPromptArgument:
         """Validate fields specific to argument types."""
         match self.type:

@@ -90,29 +90,94 @@ resources:
 > [!TIP]
 > Add a `watch` section to automatically reload resources when files change. Use `.gitignore`-style patterns to control which files trigger updates.
 
-### Prompts (not yet implemented / buggy)
+### Prompts
 
-Define prompts with variables that can be filled at runtime:
+LLMling supports two ways to define prompts: YAML configuration and Python functions.
+
+#### YAML-Based Prompts
+
+Define prompts directly in your configuration:
 
 ```yaml
 prompts:
   code_review:
-    name: "Code Review"
     description: "Review code changes"
     messages:
       - role: system
         content: |
           You are a code reviewer analyzing these changes:
           {changes}
-
-          Guidelines to follow:
-          {resource://guidelines}
     arguments:
       - name: changes
         type: text
         required: true
 ```
 
+#### Function-Based Prompts
+
+Convert Python functions into prompts automatically by leveraging type hints and docstrings:
+
+```python
+from typing import Literal
+
+def analyze_code(
+    code: str,
+    language: str = "python",
+    style: Literal["brief", "detailed"] = "brief",
+    focus: list[str] | None = None,
+) -> str:
+    """Analyze code quality and structure.
+
+    Args:
+        code: Source code to analyze
+        language: Programming language
+        style: Analysis style (brief or detailed)
+        focus: Optional areas to focus on (e.g. ["security", "performance"])
+    """
+    pass
+```
+
+Register in YAML:
+```yaml
+prompts:
+  code_analyzer:
+    import_path: "myapp.prompts.analyze_code"
+    name: "Analyze Code"  # Optional override
+    description: "Custom description"  # Optional override
+    template: "Please analyze this {language} code:\n\n```{language}\n{code}\n```"  # Optional
+```
+
+The function will be automatically converted into a prompt with:
+- Arguments derived from parameters
+- Descriptions from docstrings
+- Validation from type hints
+- Enum values from Literal types
+- Default values preserved
+
+#### Dynamic Registration
+
+Register function-based prompts programmatically:
+
+```python
+from llmling.prompts import PromptRegistry, create_prompt_from_callable
+
+registry = PromptRegistry()
+
+# Register a single function
+registry.register_function(analyze_code)
+
+# Or create a prompt explicitly
+prompt = create_prompt_from_callable(
+    analyze_code,
+    name_override="custom_name",
+    description_override="Custom description",
+    template_override="Custom template: {code}"
+)
+registry.register(prompt.name, prompt)
+```
+
+> [!TIP]
+> Function-based prompts make it easy to create well-documented, type-safe prompts directly from your Python code. The automatic conversion handles argument validation, documentation, and template generation
 ### Tools
 
 Tools are Python functions or classes that can be called by LLMs. LLMling automatically generates OpenAI-compatible function schemas.
