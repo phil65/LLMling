@@ -191,13 +191,24 @@ class LLMLingServer:
             """Handle resources/list request."""
             resources = []
 
-            # Use registry directly since we already registered resources in startup
             for name in self.resource_registry:
                 try:
-                    loaded = await self.resource_registry.load(name)
-                    resources.append(conversions.to_mcp_resource(loaded))
+                    resource = self.resource_registry[name]
+                    # Get appropriate loader
+                    loader = self.loader_registry.get_loader(resource)
+                    # Create URI
+                    uri = loader.create_uri(name=name)
+
+                    # Create MCP resource without loading
+                    mcp_resource = mcp.types.Resource(
+                        uri=conversions.to_mcp_uri(uri),
+                        name=resource.description or name,
+                        description=resource.description,
+                        mimeType=loader.supported_mime_types[0],
+                    )
+                    resources.append(mcp_resource)
                 except Exception:
-                    logger.exception("Failed to load resource %r", name)
+                    logger.exception("Failed to create resource %r", name)
                     continue
 
             logger.debug("Found %d resources", len(resources))
