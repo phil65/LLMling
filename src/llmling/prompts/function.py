@@ -171,21 +171,13 @@ def _parse_arg_docs(fn: Callable[..., Any]) -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    # Example usage
-    def example_function(
-        text: str,
-        mode: Literal["simple", "detailed"] = "simple",
-        tags: list[str] | None = None,
-    ) -> str:
+
+    def example_function(text: str, mode: Literal["a", "b"] = "a") -> str:
         """Process text with given mode and tags.
 
         Args:
             text: Input text to process
-            mode: Processing mode (one of: simple, detailed)
-            tags: Optional tags to apply
-
-        Returns:
-            Processed text
+            mode: Processing mode (one of: a, b)
         """
         return text
 

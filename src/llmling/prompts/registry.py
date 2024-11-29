@@ -139,11 +139,8 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
             ]
 
         except Exception:
-            logger.exception(
-                "Completion failed for prompt=%s argument=%s",
-                prompt_name,
-                argument_name,
-            )
+            msg = "Completion failed for prompt=%s argument=%s"
+            logger.exception(msg, prompt_name, argument_name)
             return []
 
     def _get_type_completions(

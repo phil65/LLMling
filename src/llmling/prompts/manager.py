@@ -41,33 +41,20 @@ class PromptManager:
 
         # Add system message if provided
         if system_content:
-            messages.append(
-                Message(
-                    role="system",
-                    content=system_content,
-                )
-            )
+            msg = Message(role="system", content=system_content)
+            messages.append(msg)
 
         # Add tool system prompts if any
-        if tools:
-            messages.extend(
-                Message(
-                    role="system",
-                    content=tool.system_prompt,
-                    name=tool.name,
-                )
-                for tool in tools
-                if tool.system_prompt
-            )
+        messages.extend(
+            Message(role="system", content=t.system_prompt, name=t.name)
+            for t in tools or []
+            if t.system_prompt
+        )
 
         # Add user content
         if user_content or content_items:
-            messages.append(
-                Message(
-                    role="user",
-                    content=user_content or "",
-                    content_items=content_items or [],
-                )
-            )
+            items = content_items or []
+            msg = Message(role="user", content=user_content or "", content_items=items)
+            messages.append(msg)
 
         return messages
