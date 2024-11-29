@@ -61,12 +61,15 @@ class LLMLingServer:
         # Initialize registries
         self.loader_registry = loader_registry or ResourceLoaderRegistry()
         self.processor_registry = processor_registry or ProcessorRegistry()
-        self.prompt_registry = prompt_registry or PromptRegistry()
         self.tool_registry = tool_registry or ToolRegistry()
 
         # Create resource registry with dependencies
         self.resource_registry = ResourceRegistry(
             loader_registry=self.loader_registry,
+            processor_registry=self.processor_registry,
+        )
+        self.prompt_registry = prompt_registry or PromptRegistry(
+            resource_registry=self.loader_registry,
             processor_registry=self.processor_registry,
         )
 
