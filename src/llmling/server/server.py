@@ -313,6 +313,7 @@ class LLMLingServer:
             await self.processor_registry.startup()
             await self.tool_registry.startup()
             await self.resource_registry.startup()
+            await self.prompt_registry.startup()
 
             # Register tools from config
             for name, tool_config in self.config.tools.items():
@@ -363,6 +364,7 @@ class LLMLingServer:
             await self.processor_registry.shutdown()
             await self.tool_registry.shutdown()
             await self.resource_registry.shutdown()
+            await self.prompt_registry.shutdown()
 
         finally:
             self._tasks.clear()
