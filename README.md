@@ -31,42 +31,212 @@
 [Read the documentation!](https://phil65.github.io/llmling/)
 
 
+LLMling is a flexible tool management system designed for LLM-based applications. It provides a modular approach to managing resources, processing tools, and prompt templates.
+
+## Core Concepts
+
+### Resources
+
+Resources are the basic building blocks in LLMling. They represent different types of content that can be loaded and processed.
+
+!!! info "Resource Types"
+    - `text`: Raw text content
+    - `path`: Files or URLs
+    - `cli`: Command-line output
+    - `source`: Python source code
+    - `callable`: Python function results
+    - `image`: Image files or URLs
+
+### Resource Configuration
+
+Resources are defined in YAML configuration files. Each resource needs a unique name and type:
+
 ```yaml
-# Root level: Config
-version: "1.0"
-global_settings:  # GlobalSettings
-  timeout: 30
-  max_retries: 3
-  temperature: 0.7
-
-context_processors:  # dict[str, ProcessorConfig]
-  processor1:
-    type: function
-    import_path: "utils.clean_text"
-  processor2:
-    type: template
-    template: "{{ content }}\n---"
-
-resources:  # dict[str, Resource(PathResource | TextResource | CLIResource)]
+resources:
   guidelines:
-    type: path  # PathResource
-    path: "./guide.md"
-    description: "Guide"
-    processors:  # list[ProcessingStep]
-      - name: processor1
-        keyword_args: {key: "value"}
+    type: path
+    path: "docs/guidelines.md"
+    description: "Coding guidelines"
+    watch:  # Optional file watching
+      enabled: true
+      patterns: ["*.md"]
 
-  prompt:
-    type: text  # TextResource
-    content: "System prompt"
-    description: "Basic prompt"
+  system_info:
+    type: callable
+    import_path: "platform.uname"
+    description: "System information"
 
-  git_diff:
-    type: cli  # CLIResource
-    command: "git diff"
-    description: "Changes"
+  code_sample:
+    type: source
+    import_path: "myapp.utils"
+    recursive: true
+    include_tests: false
+```
 
-resource_groups:  # dict[str, list[str]]
-  review_resources:
-    - guidelines
-    - prompt
+!!! tip "File Watching"
+    Add a `watch` section to automatically reload resources when files change. Use `.gitignore`-style patterns to control which files trigger updates.
+
+### Tools
+
+Tools are Python functions or classes that can be called by LLMs. LLMling automatically generates OpenAI-compatible function schemas.
+
+#### Function-Based Tools
+
+The simplest way to create a tool is by using a regular Python function:
+
+```python
+async def analyze_code(code: str) -> dict[str, Any]:
+    """Analyze Python code complexity and structure.
+
+    Args:
+        code: Python code to analyze
+
+    Returns:
+        Dictionary with analysis metrics
+    """
+    tree = ast.parse(code)
+    return {
+        "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]),
+        "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)])
+    }
+```
+
+Register in YAML:
+```yaml
+tools:
+  code_analyzer:
+    import_path: "myapp.tools.analyze_code"
+    name: "Analyze Code"  # Optional override
+    description: "Analyzes Python code structure"  # Optional override
+```
+
+#### Class-Based Tools
+
+For more complex tools, create a class inheriting from `LLMCallableTool`:
+
+```python
+class BrowserTool(LLMCallableTool):
+    name = "browser"
+    description = "Control a web browser"
+
+    async def execute(
+        self,
+        action: Literal["open", "click", "read"],
+        url: str | None = None,
+        selector: str | None = None,
+    ) -> dict[str, str]:
+        """Execute browser actions."""
+        match action:
+            case "open":
+                return await self._open_page(url)
+            case "click":
+                return await self._click_element(selector)
+```
+
+!!! note "Schema Generation"
+    LLMling automatically generates OpenAI function schemas from type hints and docstrings. No manual schema definition needed!
+
+### Processors
+
+Processors transform resource content before it's used. They can be chained together for complex transformations.
+
+```yaml
+resources:
+  documentation:
+    type: path
+    path: "docs/"
+    processors:
+      - name: normalize_text
+        parallel: false  # Run sequentially
+        required: true
+      - name: extract_sections
+        parallel: true   # Can run in parallel
+        kwargs:
+          min_length: 100
+```
+
+#### Custom Processors
+
+Create processors by implementing `BaseProcessor`:
+
+```python
+class TemplateProcessor(ChainableProcessor):
+    async def _process_impl(self, context: ProcessingContext) -> ProcessorResult:
+        template = self.config.template
+        result = template.render(content=context.current_content)
+        return ProcessorResult(
+            content=result,
+            original_content=context.original_content
+        )
+```
+
+## Using with MCP Server
+
+While LLMling's core functionality is independent, it includes an [MCP](https://github.com/microsoft/mcp) server implementation for remote tool execution:
+
+```python
+from llmling.server import serve
+
+# Start MCP server with config
+await serve("config.yml")
+```
+
+!!! tip "Server Independence"
+    The core LLMling functionality works without the MCP server. Use the components directly in your application or create custom server implementations.
+
+## Advanced Features
+
+### Dynamic Tool Registration
+
+Register tools from Python code:
+
+```python
+from llmling.tools import ToolRegistry
+
+registry = ToolRegistry()
+
+# Register a module's public functions
+registry.add_container(my_module, prefix="utils_")
+
+# Register individual function
+registry.register("analyze", analyze_function)
+```
+
+### Resource Groups
+
+Group related resources for easier management:
+
+```yaml
+resource_groups:
+  code_review:
+    - python_files
+    - lint_config
+    - style_guide
+```
+
+### Prompt Templates
+
+Define reusable prompt templates with variable substitution:
+
+```yaml
+prompts:
+  code_review:
+    name: "Code Review"
+    description: "Generate code review comments"
+    messages:
+      - role: system
+        content: "You are a code reviewer. Review the following code:"
+      - role: user
+        content: "{code}"
+    arguments:
+      - name: code
+        description: "Code to review"
+        type: text
+        required: true
+```
+
+!!! info "Resource References"
+    Prompts can reference resources using the `resource://` URI scheme:
+    ```yaml
+    content: "Use these guidelines: {resource://guidelines}"
+    ```
