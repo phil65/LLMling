@@ -68,19 +68,19 @@ Resources are defined in YAML configuration files. Each resource needs a unique 
 ```yaml
 resources:
   guidelines:
-    type: path
-    path: "docs/guidelines.md"
+    type: path  # A file resource from any origin
+    path: "docs/guidelines.md"  # fsspec-backed, can also point to remote sources.
     description: "Coding guidelines"
     watch:  # Optional file watching
       enabled: true
       patterns: ["*.md"]
 
-  system_info:
+  system_info:  # The result of a python function call
     type: callable
     import_path: "platform.uname"
     description: "System information"
 
-  code_sample:
+  code_sample:  # source code for module myapp.utils
     type: source
     import_path: "myapp.utils"
     recursive: true
@@ -90,7 +90,7 @@ resources:
 > [!TIP]
 > Add a `watch` section to automatically reload resources when files change. Use `.gitignore`-style patterns to control which files trigger updates.
 
-### Prompts
+### Prompts (not yet implemented / buggy)
 
 Define prompts with variables that can be filled at runtime:
 
@@ -147,6 +147,10 @@ tools:
     description: "Analyzes Python code structure"  # Optional override
 ```
 
+> [!NOTE]
+> LLMling automatically generates OpenAI function schemas from type hints and docstrings. No manual schema definition needed!
+
+
 #### Class-Based Tools
 
 For more complex tools, create a class inheriting from `LLMCallableTool`:
@@ -169,9 +173,6 @@ class BrowserTool(LLMCallableTool):
             case "click":
                 return await self._click_element(selector)
 ```
-
-> [!NOTE]
-> LLMling automatically generates OpenAI function schemas from type hints and docstrings. No manual schema definition needed!
 
 ### Processors
 
