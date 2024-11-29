@@ -182,9 +182,21 @@ class LLMLingServer:
             name: str, arguments: dict[str, str] | None = None
         ) -> GetPromptResult:
             """Handle prompts/get request."""
-            result = await self.prompt_registry.render(name, arguments or {})
-            messages = [conversions.to_mcp_message(msg) for msg in result.messages]
-            return GetPromptResult(description=f"Prompt: {name}", messages=messages)
+            try:
+                result = await self.prompt_registry.render(name, arguments or {})
+                messages = [conversions.to_mcp_message(msg) for msg in result.messages]
+                return GetPromptResult(description=f"Prompt: {name}", messages=messages)
+            except KeyError as exc:
+                msg = f"Prompt not found: {name}"
+                error = mcp.McpError(msg)
+                error.error = mcp.ErrorData(code=INVALID_PARAMS, message=msg)
+                raise error from exc
+            except Exception as exc:
+                msg = f"Error rendering prompt: {exc}"
+                logger.exception(msg)
+                error = mcp.McpError(msg)
+                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
+                raise error from exc
 
         @self.server.list_resources()
         async def handle_list_resources() -> list[mcp.types.Resource]:
