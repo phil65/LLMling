@@ -11,7 +11,6 @@ from mcp.server import NotificationOptions, Server
 from mcp.types import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
-    CompleteResult,
     Completion,
     CompletionArgument,
     GetPromptResult,
@@ -236,34 +235,27 @@ class LLMLingServer:
         async def handle_completion(
             ref: mcp.types.PromptReference | mcp.types.ResourceReference,
             argument: mcp.types.CompletionArgument,
-        ) -> CompleteResult:
+        ) -> Completion | None:
             """Handle completion requests."""
             try:
-                completion: Completion
                 match ref:
                     case mcp.types.PromptReference():
-                        completion = await self._complete_prompt_argument(
+                        return await self._complete_prompt_argument(
                             self.prompt_registry[ref.name],
                             argument.name,
                             argument.value,
                         )
                     case mcp.types.ResourceReference():
-                        completion = await self._complete_resource(
-                            AnyUrl(ref.uri), argument
-                        )
+                        url = AnyUrl(ref.uri)
+                        return await self._complete_resource(url, argument)
                     case _:
                         msg = f"Invalid reference type: {type(ref)}"
                         error = mcp.McpError(msg)
                         error.error = mcp.ErrorData(code=INVALID_PARAMS, message=msg)
                         raise error  # noqa: TRY301
-
-                return CompleteResult(completion=completion)
-
-            except Exception as exc:
+            except Exception:
                 logger.exception("Completion failed")
-                error = mcp.McpError(msg)
-                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
-                raise error from exc
+                return None  # Let MCP convert to empty Completion
 
         @self.server.progress_notification()
         async def handle_progress(
