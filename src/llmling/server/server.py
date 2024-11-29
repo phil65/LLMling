@@ -444,17 +444,17 @@ class LLMLingServer:
         if not arg_def:
             return Completion(values=[], total=0, hasMore=False)
 
-        values: list[str] = []
+        vals: list[str] = []
         match arg_def.type:
             case ArgumentType.ENUM:
                 # Filter enum values based on current input
-                values = [
+                vals = [
                     v for v in (arg_def.enum_values or []) if v.startswith(current_value)
                 ]
 
             case ArgumentType.RESOURCE:
                 # Complete resource names
-                values = [
+                vals = [
                     name
                     for name in self.resource_registry.list_items()
                     if name.startswith(current_value)
@@ -465,13 +465,9 @@ class LLMLingServer:
                 import glob
 
                 pattern = f"{current_value}*"
-                values = list(glob.glob(pattern))  # noqa: PTH207
+                vals = list(glob.glob(pattern))  # noqa: PTH207
 
-        return Completion(
-            values=values[:100],  # Limit to 100 items
-            total=len(values),
-            hasMore=len(values) > 100,  # noqa: PLR2004
-        )
+        return Completion(values=vals[:100], total=len(vals), hasMore=len(vals) > 100)  # noqa: PLR2004
 
     async def _complete_resource(
         self,
