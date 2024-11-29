@@ -31,7 +31,20 @@
 [Read the documentation!](https://phil65.github.io/llmling/)
 
 
+# LLMling User Manual
+
+> [!WARNING]
+> LLMling is under active development. APIs and configurations may change frequently. Check the repository for the latest updates.
+
 LLMling is a flexible tool management system designed for LLM-based applications. It provides a modular approach to managing resources, processing tools, and prompt templates.
+
+## Quick Start
+
+Start the LLMling MCP server using [`uvx`](https://github.com/astral-sh/uv):
+
+```bash
+uvx --from llmling@latest mcp-server-llmling path/to/config.yml
+```
 
 ## Core Concepts
 
@@ -39,13 +52,14 @@ LLMling is a flexible tool management system designed for LLM-based applications
 
 Resources are the basic building blocks in LLMling. They represent different types of content that can be loaded and processed.
 
-!!! info "Resource Types"
-    - `text`: Raw text content
-    - `path`: Files or URLs
-    - `cli`: Command-line output
-    - `source`: Python source code
-    - `callable`: Python function results
-    - `image`: Image files or URLs
+> [!NOTE]
+> Available resource types:
+> - `text`: Raw text content
+> - `path`: Files or URLs
+> - `cli`: Command-line output
+> - `source`: Python source code
+> - `callable`: Python function results
+> - `image`: Image files or URLs
 
 ### Resource Configuration
 
@@ -73,8 +87,31 @@ resources:
     include_tests: false
 ```
 
-!!! tip "File Watching"
-    Add a `watch` section to automatically reload resources when files change. Use `.gitignore`-style patterns to control which files trigger updates.
+> [!TIP]
+> Add a `watch` section to automatically reload resources when files change. Use `.gitignore`-style patterns to control which files trigger updates.
+
+### Prompts
+
+Define prompts with variables that can be filled at runtime:
+
+```yaml
+prompts:
+  code_review:
+    name: "Code Review"
+    description: "Review code changes"
+    messages:
+      - role: system
+        content: |
+          You are a code reviewer analyzing these changes:
+          {changes}
+
+          Guidelines to follow:
+          {resource://guidelines}
+    arguments:
+      - name: changes
+        type: text
+        required: true
+```
 
 ### Tools
 
@@ -133,8 +170,8 @@ class BrowserTool(LLMCallableTool):
                 return await self._click_element(selector)
 ```
 
-!!! note "Schema Generation"
-    LLMling automatically generates OpenAI function schemas from type hints and docstrings. No manual schema definition needed!
+> [!NOTE]
+> LLMling automatically generates OpenAI function schemas from type hints and docstrings. No manual schema definition needed!
 
 ### Processors
 
@@ -181,8 +218,8 @@ from llmling.server import serve
 await serve("config.yml")
 ```
 
-!!! tip "Server Independence"
-    The core LLMling functionality works without the MCP server. Use the components directly in your application or create custom server implementations.
+> [!TIP]
+> The core LLMling functionality works without the MCP server. Use the components directly in your application or create custom server implementations.
 
 ## Advanced Features
 
@@ -213,30 +250,3 @@ resource_groups:
     - lint_config
     - style_guide
 ```
-
-### Prompt Templates
-
-Define reusable prompt templates with variable substitution:
-
-```yaml
-prompts:
-  code_review:
-    name: "Code Review"
-    description: "Generate code review comments"
-    messages:
-      - role: system
-        content: "You are a code reviewer. Review the following code:"
-      - role: user
-        content: "{code}"
-    arguments:
-      - name: code
-        description: "Code to review"
-        type: text
-        required: true
-```
-
-!!! info "Resource References"
-    Prompts can reference resources using the `resource://` URI scheme:
-    ```yaml
-    content: "Use these guidelines: {resource://guidelines}"
-    ```
