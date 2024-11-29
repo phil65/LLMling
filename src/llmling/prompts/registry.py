@@ -20,17 +20,17 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
 
     def __init__(
         self,
-        resource_registry: ResourceLoaderRegistry | None = None,
+        loader_registry: ResourceLoaderRegistry | None = None,
         processor_registry: ProcessorRegistry | None = None,
     ) -> None:
         """Initialize registry.
 
         Args:
-            resource_registry: Optional registry for resolving resources
+            loader_registry: Optional registry for resolving resources
             processor_registry: Optional registry for content processors
         """
         super().__init__()
-        self.resource_registry = resource_registry
+        self.loader_registry = loader_registry
         self.processor_registry = processor_registry
 
     @property
@@ -58,6 +58,6 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
         return await render_prompt(
             prompt,
             arguments or {},
-            resource_registry=self.resource_registry,
+            loader_registry=self.loader_registry,
             processor_registry=self.processor_registry,
         )

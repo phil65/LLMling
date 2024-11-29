@@ -22,14 +22,14 @@ logger = get_logger(__name__)
 @instrument("Resolving resources")
 async def resolve_resources(
     message: PromptMessage,
-    resource_registry: ResourceLoaderRegistry,
+    loader_registry: ResourceLoaderRegistry,
     processor_registry: ProcessorRegistry,
 ) -> PromptMessage:
     """Resolve resources in a message.
 
     Args:
         message: Message to resolve
-        resource_registry: Registry for loading resources
+        loader_registry: Registry for loading resources
         processor_registry: Registry for content processors
 
     Returns:
@@ -52,7 +52,7 @@ async def resolve_resources(
 
         try:
             # Find appropriate loader
-            loader = resource_registry.find_loader_for_uri(content.content)
+            loader = loader_registry.find_loader_for_uri(content.content)
             from llmling.resources.base import ResourceLoader
 
             if not isinstance(loader, ResourceLoader):
@@ -92,7 +92,7 @@ async def render_prompt(
     prompt: Prompt,
     arguments: dict[str, Any],
     *,
-    resource_registry: ResourceLoaderRegistry | None = None,
+    loader_registry: ResourceLoaderRegistry | None = None,
     processor_registry: ProcessorRegistry | None = None,
 ) -> PromptResult:
     """Render a prompt template with arguments.
@@ -100,7 +100,7 @@ async def render_prompt(
     Args:
         prompt: Prompt to render
         arguments: Arguments for template
-        resource_registry: Optional registry for resolving resources
+        loader_registry: Optional registry for resolving resources
         processor_registry: Optional registry for content processors
 
     Returns:
@@ -144,13 +144,13 @@ async def render_prompt(
 
             # Resolve resources if registries provided
             if (
-                resource_registry
+                loader_registry
                 and processor_registry
                 and rendered_message.needs_resolution()
             ):
                 rendered_message = await resolve_resources(
                     rendered_message,
-                    resource_registry,
+                    loader_registry,
                     processor_registry,
                 )
 
@@ -159,7 +159,7 @@ async def render_prompt(
         return PromptResult(
             messages=rendered_messages,
             metadata={"prompt_name": prompt.name, "arguments": arguments},
-            resolved_at=now if resource_registry else None,
+            resolved_at=now if loader_registry else None,
         )
 
     except KeyError as exc:

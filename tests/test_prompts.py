@@ -191,14 +191,14 @@ async def test_prompt_with_resources(
         ) -> LoadedResource:
             return loaded_resource
 
-    class MockResourceRegistry:
+    class MockLoaderRegistry:
         def find_loader_for_uri(self, uri: str) -> ResourceLoader[Any]:
             return MockLoader()
 
     result = await render_prompt(
         resource_prompt,
         {},
-        resource_registry=MockResourceRegistry(),
+        loader_registry=MockLoaderRegistry(),
         processor_registry=MockProcessorRegistry(),
     )
     assert len(result.messages) == 1

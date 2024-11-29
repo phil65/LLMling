@@ -69,7 +69,7 @@ class LLMLingServer:
             processor_registry=self.processor_registry,
         )
         self.prompt_registry = prompt_registry or PromptRegistry(
-            resource_registry=self.loader_registry,
+            loader_registry=self.loader_registry,
             processor_registry=self.processor_registry,
         )
 

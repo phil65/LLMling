@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def resource_registry() -> ResourceLoaderRegistry:
+def loader_registry() -> ResourceLoaderRegistry:
     """Create a populated resource registry."""
     registry = ResourceLoaderRegistry()
     registry["text"] = TextResourceLoader
@@ -62,19 +62,19 @@ def processor_registry() -> ProcessorRegistry:
     ],
 )
 def test_find_loader_for_uri(
-    resource_registry: ResourceLoaderRegistry,
+    loader_registry: ResourceLoaderRegistry,
     uri: str,
     expected_loader: type,
 ) -> None:
     """Test that correct loader is found for URI."""
-    loader = resource_registry.find_loader_for_uri(uri)
+    loader = loader_registry.find_loader_for_uri(uri)
     assert isinstance(loader, expected_loader)
 
 
-def test_find_loader_invalid_uri(resource_registry: ResourceLoaderRegistry) -> None:
+def test_find_loader_invalid_uri(loader_registry: ResourceLoaderRegistry) -> None:
     """Test error handling for invalid URIs."""
     with pytest.raises(exceptions.LoaderError):
-        resource_registry.find_loader_for_uri("invalid://uri")
+        loader_registry.find_loader_for_uri("invalid://uri")
 
 
 @pytest.mark.parametrize(
@@ -118,12 +118,12 @@ def test_get_name_from_uri(uri: str, expected: str) -> None:
     ],
 )
 def test_get_name_from_uri_invalid(
-    resource_registry: ResourceLoaderRegistry,
+    loader_registry: ResourceLoaderRegistry,
     uri: str,
 ) -> None:
     """Test invalid URI handling."""
     with pytest.raises(exceptions.LoaderError):  # noqa: PT012
-        loader_cls = resource_registry.find_loader_for_uri(uri)
+        loader_cls = loader_registry.find_loader_for_uri(uri)
         loader_cls.get_name_from_uri(uri)
 
 
@@ -139,12 +139,12 @@ def test_get_name_from_uri_invalid(
     ],
 )
 def test_get_loader(
-    resource_registry: ResourceLoaderRegistry,
+    loader_registry: ResourceLoaderRegistry,
     resource: Any,
     expected_type: type,
 ) -> None:
     """Test that correct loader is returned for resource types."""
-    loader = resource_registry.get_loader(resource)
+    loader = loader_registry.get_loader(resource)
     assert isinstance(loader, expected_type)
 
 
@@ -266,18 +266,18 @@ def test_uri_scheme_support(loader_cls: type[ResourceLoader], scheme: str) -> No
     assert not loader_cls.supports_uri(f"invalid://{uri}")
 
 
-def test_registry_supported_schemes(resource_registry: ResourceLoaderRegistry) -> None:
+def test_registry_supported_schemes(loader_registry: ResourceLoaderRegistry) -> None:
     """Test getting supported schemes from registry."""
-    schemes = resource_registry.get_supported_schemes()
+    schemes = loader_registry.get_supported_schemes()
     assert all(
         scheme in schemes
         for scheme in ["text", "file", "cli", "python", "callable", "image"]
     )
 
 
-def test_registry_uri_templates(resource_registry: ResourceLoaderRegistry) -> None:
+def test_registry_uri_templates(loader_registry: ResourceLoaderRegistry) -> None:
     """Test getting URI templates from registry."""
-    templates = resource_registry.get_uri_templates()
+    templates = loader_registry.get_uri_templates()
     assert len(templates) == 6  # One for each loader type  # noqa: PLR2004
     assert all("scheme" in t and "template" in t and "mimeTypes" in t for t in templates)
 
