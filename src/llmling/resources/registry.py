@@ -190,13 +190,16 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
     async def load_by_uri(self, uri: str) -> LoadedResource:
         """Load a resource by URI."""
         try:
-            # Find loader that supports this URI
+            # For simple resource names in file:/// format
+            if uri.startswith("file:///"):
+                # Extract resource name
+                name = uri.split("/")[-1]
+                # Load using the name which will use the configured path/URL
+                return await self.load(name)
+
+            # For direct URLs or other schemes
             loader = self.loader_registry.find_loader_for_uri(uri)
-
-            # Get resource name from URI
             name = loader.get_name_from_uri(uri)
-
-            # Load resource
             return await self.load(name)
 
         except Exception as exc:
