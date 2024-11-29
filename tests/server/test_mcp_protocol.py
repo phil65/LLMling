@@ -108,19 +108,19 @@ async def test_mcp_prompt_operations(configured_client: MCPInProcSession) -> Non
     # List prompts
     prompts = await configured_client.list_prompts()
     assert len(prompts) >= 1
-    _test_prompt = next(p for p in prompts if p["name"] == "test")
+    test_prompt = next(p for p in prompts if p["name"] == "test")
 
     # Get prompt
-    # result = await configured_client.send_request(
-    #     "prompts/get",
-    #     {
-    #         "name": test_prompt["name"],
-    #         "arguments": {"test": "value"},
-    #     },
-    # )
-    # assert "messages" in result
-    # assert len(result["messages"]) >= 1
-    # assert result["messages"][0]["content"]["text"] == "test"
+    result = await configured_client.send_request(
+        "prompts/get",
+        {
+            "name": test_prompt["name"],
+            "arguments": {"test": "value"},
+        },
+    )
+    assert "messages" in result
+    assert len(result["messages"]) >= 1
+    assert result["messages"][0]["content"]["text"] == "test"
 
 
 @pytest.mark.asyncio
