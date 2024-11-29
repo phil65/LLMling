@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from typing import Literal
 
 import pytest
@@ -64,20 +65,20 @@ def test_create_prompt_arguments():
     # Check text argument
     assert isinstance(args["text"], ExtendedPromptArgument)
     assert args["text"].required is True
-    assert args["text"].type == "text"
+    assert args["text"].type_hint is str
     assert args["text"].description
     assert "input text to process" in args["text"].description.lower()
 
     # Check style argument - should be text type with enum values
     assert args["style"].required is False
-    assert args["style"].type == "text"
+    assert args["style"].type_hint is typing.Literal["brief", "detailed"]
     assert args["style"].default == "brief"
     assert "brief" in str(args["style"].description)
     assert "detailed" in str(args["style"].description)
 
     # Check tags argument
     assert args["tags"].required is False
-    assert args["tags"].type == "text"
+    assert args["tags"].type_hint == (list[str] | None)
     assert args["tags"].default is None
 
 
@@ -175,3 +176,30 @@ def test_system_message():
     content = system_msg.get_text_content()
     assert "Function: example_function" in content
     assert "Description: Process text with given style" in content
+
+
+def test_prompt_with_completions():
+    """Test prompt creation with completion functions."""
+
+    def get_language_completions(current: str) -> list[str]:
+        languages = ["python", "javascript", "rust"]
+        return [lang for lang in languages if lang.startswith(current)]
+
+    def example_func(
+        language: Literal["python", "javascript"],
+        other: str,
+    ) -> None:
+        """Example function with completions."""
+
+    prompt = create_prompt_from_callable(
+        example_func, completions={"other": get_language_completions}
+    )
+
+    args = {arg.name: arg for arg in prompt.arguments}
+
+    # Check literal type still works
+    assert args["language"].completion_function is None
+
+    # Check completion function
+    assert args["other"].completion_function is not None
+    assert args["other"].completion_function("py") == ["python"]

@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from llmling.core.typedefs import MessageContent, MessageRole
+from llmling.prompts.completion import CompletionFunction  # noqa: TC001
 
 
 class ExtendedPromptArgument(BaseModel):
@@ -18,8 +19,9 @@ class ExtendedPromptArgument(BaseModel):
     name: str
     description: str | None = None
     required: bool = False
-    type: str = "text"  # Keeping it simple, just "text" type
+    type_hint: Any = str
     default: Any | None = None
+    completion_function: CompletionFunction = None
 
     model_config = ConfigDict(frozen=True)
 

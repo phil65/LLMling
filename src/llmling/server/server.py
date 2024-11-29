@@ -410,34 +410,48 @@ class LLMLingServer:
         current_value: str,
     ) -> Completion:
         """Generate completions for prompt arguments."""
-        arg_def = next(
-            (arg for arg in prompt.arguments if arg.name == arg_name),
-            None,
-        )
-        if not arg_def:
+        try:
+            # Get completions through runtime
+            completions = await self.runtime.get_prompt_completions(
+                prompt.name, arg_name, current_value
+            )
+
+            # Add any available defaults if no current value
+            arg = next((a for a in prompt.arguments if a.name == arg_name), None)
+            if arg and not current_value:
+                if arg.default is not None:
+                    completions.append(str(arg.default))
+
+                # Add description-based suggestions
+                if arg.description and "one of:" in arg.description:
+                    try:
+                        options_part = arg.description.split("one of:", 1)[1]
+                        options = [opt.strip() for opt in options_part.split(",")]
+                        completions.extend(
+                            opt for opt in options if opt.startswith(current_value)
+                        )
+                    except IndexError:
+                        pass
+
+            # Deduplicate while preserving order
+            seen = set()
+            unique_completions = [
+                x
+                for x in completions
+                if not (x in seen or seen.add(x))  # type: ignore
+            ]
+
+            return Completion(
+                values=unique_completions[:100],
+                total=len(unique_completions),
+                hasMore=len(unique_completions) > 100,  # noqa: PLR2004
+            )
+
+        except Exception:
+            logger.exception(
+                "Completion failed for prompt=%s argument=%s", prompt.name, arg_name
+            )
             return Completion(values=[], total=0, hasMore=False)
-
-        vals: list[str] = []
-
-        # Get any available defaults
-        if arg_def.default is not None and not current_value:
-            vals.append(str(arg_def.default))
-
-        # Add description-based suggestions
-        if arg_def.description and "one of:" in arg_def.description:
-            # Extract values from description like "one of: a, b, c"
-            try:
-                options_part = arg_def.description.split("one of:", 1)[1]
-                options = [opt.strip() for opt in options_part.split(",")]
-                vals.extend(opt for opt in options if opt.startswith(current_value))
-            except IndexError:
-                pass
-
-        return Completion(
-            values=vals[:100],
-            total=len(vals),
-            hasMore=len(vals) > 100,  # noqa: PLR2004
-        )
 
     async def _complete_resource(
         self,

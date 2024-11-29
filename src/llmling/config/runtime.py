@@ -21,6 +21,7 @@ from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
 from llmling.tools.registry import ToolRegistry
+from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
+    from llmling.prompts.completion import CompletionFunction
     from llmling.prompts.models import PromptMessage
     from llmling.resources.models import LoadedResource
 
@@ -170,11 +172,23 @@ class RuntimeConfig:
                     prompt_registry[name] = prompt_config
                 case PromptConfig():
                     # Create prompt from function
+                    completion_funcs: dict[str, CompletionFunction] = {}
+                    if prompt_config.completions:
+                        for arg_name, path in prompt_config.completions.items():
+                            try:
+                                func = importing.import_callable(path)
+                                completion_funcs[arg_name] = func
+                            except Exception:
+                                logger.exception(
+                                    "Failed to import completion function: %s", path
+                                )
+
                     prompt = create_prompt_from_callable(
                         prompt_config.import_path,
                         name_override=prompt_config.name or name,
                         description_override=prompt_config.description,
                         template_override=prompt_config.template,
+                        completions=completion_funcs,
                     )
                     prompt_registry[name] = prompt
 
@@ -334,3 +348,33 @@ class RuntimeConfig:
     def original_config(self) -> Config:
         """Get the original static configuration."""
         return self._config
+
+    async def get_prompt_completions(
+        self,
+        prompt_name: str,
+        argument_name: str,
+        current_value: str,
+    ) -> list[str]:
+        """Get completions for a prompt argument.
+
+        Args:
+            prompt_name: Name of the prompt
+            argument_name: Name of the argument
+            current_value: Current input value
+
+        Returns:
+            List of completion suggestions
+
+        Raises:
+            LLMLingError: If prompt not found
+        """
+        try:
+            return await self._prompt_registry.get_completions(
+                prompt_name, argument_name, current_value
+            )
+        except KeyError as exc:
+            msg = f"Prompt not found: {prompt_name}"
+            raise exceptions.LLMLingError(msg) from exc
+        except Exception as exc:
+            msg = f"Completion failed: {exc}"
+            raise exceptions.LLMLingError(msg) from exc

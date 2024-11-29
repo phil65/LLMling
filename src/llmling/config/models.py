@@ -222,6 +222,8 @@ class PromptConfig(BaseModel):
     template: str | None = None
     """Optional message template override"""
 
+    completions: dict[str, str] | None = None
+
     model_config = ConfigDict(frozen=True)
 
 
