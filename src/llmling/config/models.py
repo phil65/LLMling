@@ -28,6 +28,18 @@ class GlobalSettings(BaseModel):
     max_retries: int = 3
     """Maximum number of retries for failed operations"""
 
+    requirements: list[str] = Field(default_factory=list)
+    """List of package requirments for the functions used in this file."""
+
+    pip_index_url: str | None = None
+    """Alternative PyPI index URL for package installation"""
+
+    extra_paths: list[str] = Field(default_factory=list)
+    """Additional import paths"""
+
+    prefer_uv: bool = False
+    """Explicitely use uv for package installation / management """
+
     model_config = ConfigDict(frozen=True)
 
 

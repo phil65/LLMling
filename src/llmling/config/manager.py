@@ -7,6 +7,7 @@ operations including loading, validation, and saving.
 from __future__ import annotations
 
 import importlib
+import re
 from typing import TYPE_CHECKING
 
 import logfire
@@ -94,9 +95,41 @@ class ConfigManager:
             List of validation warnings
         """
         warnings: list[str] = []
+        warnings.extend(self._validate_requirements())
         warnings.extend(self._validate_resources())
         warnings.extend(self._validate_processors())
         warnings.extend(self._validate_tools())
+        return warnings
+
+    def _validate_requirements(self) -> list[str]:
+        """Validate requirement specifications."""
+        # Validate requirement format
+        req_pattern = re.compile(
+            r"^([a-zA-Z0-9][a-zA-Z0-9._-]*)(>=|<=|==|!=|>|<|~=)?([0-9a-zA-Z._-]+)?$"
+        )
+        warnings = [
+            f"Invalid requirement format: {req}"
+            for req in self.config.global_settings.requirements
+            if not req_pattern.match(req)
+        ]
+
+        # Validate pip index URL if specified
+        if (
+            index_url := self.config.global_settings.pip_index_url
+        ) and not index_url.startswith(("http://", "https://")):
+            warnings.append(f"Invalid pip index URL: {index_url}")
+
+        # Validate extra paths exist
+        for path in self.config.global_settings.extra_paths:
+            try:
+                from upath import UPath
+
+                path_obj = UPath(path)
+                if not path_obj.exists():
+                    warnings.append(f"Extra path does not exist: {path}")
+            except Exception as exc:  # noqa: BLE001
+                warnings.append(f"Invalid extra path {path}: {exc}")
+
         return warnings
 
     def validate_or_raise(self) -> None:
