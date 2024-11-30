@@ -16,7 +16,7 @@ import yamling
 
 from llmling.config.models import PromptConfig
 from llmling.core import exceptions
-from llmling.core.log import get_logger
+from llmling.core.log import get_logger, setup_logging
 from llmling.prompts.models import Prompt
 
 
@@ -258,6 +258,7 @@ class ConfigManager:
 
         try:
             config = load_config(path)
+            setup_logging(level=config.global_settings.log_level)
             return cls(config)
         except Exception as exc:
             msg = f"Failed to load configuration from {path}"
