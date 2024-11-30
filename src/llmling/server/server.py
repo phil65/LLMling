@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
@@ -103,18 +102,8 @@ class LLMLingServer:
         @self.server.set_logging_level()
         async def handle_set_level(level: mcp.LoggingLevel) -> None:
             """Handle logging level changes."""
-            level_map: dict[mcp.LoggingLevel, int] = {
-                "debug": logging.DEBUG,
-                "info": logging.INFO,
-                "notice": logging.INFO,
-                "warning": logging.WARNING,
-                "error": logging.ERROR,
-                "critical": logging.CRITICAL,
-                "alert": logging.CRITICAL,
-                "emergency": logging.CRITICAL,
-            }
             try:
-                python_level = level_map[level]
+                python_level = conversions.LOG_LEVEL_MAP[level]
                 logger.setLevel(python_level)
                 data = f"Log level set to {level}"
                 await self.current_session.send_log_message(
@@ -350,12 +339,8 @@ class LLMLingServer:
 
             # Optionally send description as log message
             if description:
-                self._create_task(
-                    session.send_log_message(
-                        level="info",
-                        data=description,
-                    )
-                )
+                coro = session.send_log_message(level="info", data=description)
+                self._create_task(coro)
 
         except Exception:
             logger.exception("Failed to send progress notification")

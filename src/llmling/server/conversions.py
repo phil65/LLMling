@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 import urllib.parse
 
+import mcp
 from mcp import types
 
 
@@ -17,6 +19,18 @@ if TYPE_CHECKING:
     )
     from llmling.resources.models import LoadedResource
     from llmling.tools.base import LLMCallableTool
+
+
+LOG_LEVEL_MAP: dict[mcp.LoggingLevel, int] = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "notice": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
+    "alert": logging.CRITICAL,
+    "emergency": logging.CRITICAL,
+}
 
 
 def to_mcp_tool(tool: LLMCallableTool) -> types.Tool:
