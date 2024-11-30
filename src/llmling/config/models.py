@@ -28,9 +28,6 @@ class GlobalSettings(BaseModel):
     max_retries: int = 3
     """Maximum number of retries for failed operations"""
 
-    temperature: float = 0.7
-    """Default sampling temperature for LLM completions"""
-
     model_config = ConfigDict(frozen=True)
 
 

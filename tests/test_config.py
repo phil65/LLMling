@@ -31,7 +31,6 @@ def minimal_config_dict() -> dict[str, Any]:
         "global_settings": {
             "timeout": 30,
             "max_retries": 3,
-            "temperature": 0.7,
         },
         "resources": {
             "test-context": {
@@ -131,7 +130,6 @@ version: "1.0"
 global_settings:
     timeout: 30
     max_retries: 3
-    temperature: 0.7
 context_processors: {}
 resources:
     test-context:
