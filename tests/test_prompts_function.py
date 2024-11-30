@@ -162,7 +162,7 @@ async def test_argument_validation():
 
     # Should fail without required argument
     with pytest.raises(ValueError, match="Missing required arguments"):
-        await prompt.format({})  # Add await here
+        await prompt.format({})
 
 
 def test_system_message():

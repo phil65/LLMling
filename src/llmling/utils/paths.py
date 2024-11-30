@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-# Shared constants
 INVALID_CHARS_PATTERN = re.compile(r'[\x00-\x1F<>:"|?*\\]')
 
 

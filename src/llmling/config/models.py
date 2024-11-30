@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence as TypingSequence  # noqa: TC003
 import os  # noqa: TC003
 from typing import Any, Literal
+import warnings
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 import upath
@@ -81,8 +82,6 @@ class PathResource(BaseResource):
         """Whether this resource instance supports watching."""
         path = upath.UPath(self.path)
         if not path.exists():
-            import warnings
-
             msg = f"Cannot watch non-existent path: {self.path}"
             warnings.warn(msg, UserWarning, stacklevel=2)
             return False
@@ -250,7 +249,6 @@ class Config(BaseModel):
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
     toolsets: list[str] = Field(default_factory=list)
-    # Add prompts support
     prompts: dict[str, Prompt | PromptConfig] = Field(default_factory=dict)
 
     model_config = ConfigDict(

@@ -49,12 +49,7 @@ class DependencyManager:
     def _detect_uv_environment(self) -> bool:
         """Detect if we're running in a uv environment."""
         try:
-            # UV_VIRTUAL_ENV works on both platforms
-            if "UV_VIRTUAL_ENV" in os.environ:
-                return True
-
-            # Check PATH for uv/uv.exe
-            return bool(shutil.which("uv"))
+            return "UV_VIRTUAL_ENV" in os.environ or bool(shutil.which("uv"))
         except Exception:  # noqa: BLE001
             return False
 
@@ -94,12 +89,7 @@ class DependencyManager:
         cmd.extend(missing)
 
         try:
-            result = subprocess.run(
-                cmd,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             self._installed.update(missing)
             logger.debug("Package install output:\n%s", result.stdout)
 
@@ -162,13 +152,10 @@ class DependencyManager:
                 if not abs_path.exists():
                     logger.warning("Path does not exist: %s", path)
                     continue
-
                 # Convert to string in platform's format
-                str_path = str(abs_path)
-                if str_path not in sys.path:
+                if (str_path := str(abs_path)) not in sys.path:
                     sys.path.append(str_path)
                     logger.debug("Added %s to Python path", str_path)
-
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to add path %s: %s", path, exc)
 
