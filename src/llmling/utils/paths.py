@@ -41,6 +41,16 @@ def normalize_path_components(parts: Sequence[str]) -> list[str]:
     return result
 
 
+def is_ignorable_part(part: str) -> bool:
+    """Check if a path component should be ignored."""
+    return (
+        not part
+        or part in {".", ".."}
+        or (len(part) == 2 and part[1] == ":")  # Drive letter  # noqa: PLR2004
+        or part in {"/", "\\"}
+    )
+
+
 def uri_to_path(uri: str) -> str:
     """Convert a file URI to a normalized path."""
     if not uri.startswith("file:///"):

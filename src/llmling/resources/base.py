@@ -19,6 +19,7 @@ from llmling.core.descriptors import classproperty
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent, MessageContentType
 from llmling.resources.models import LoadedResource, ResourceMetadata
+from llmling.utils import paths
 
 
 if TYPE_CHECKING:
@@ -147,7 +148,7 @@ class ResourceLoader[TResource](ABC):
             parts = [
                 urllib.parse.unquote(str(part))  # URL decode each part
                 for part in path.parts
-                if not cls._is_ignorable_part(str(part))
+                if not paths.is_ignorable_part(str(part))
             ]
 
             if not parts:
@@ -171,16 +172,6 @@ class ResourceLoader[TResource](ABC):
             raise exceptions.LoaderError(msg) from exc
         else:
             return normalized
-
-    @staticmethod
-    def _is_ignorable_part(part: str) -> bool:
-        """Check if a path component should be ignored."""
-        return (
-            not part
-            or part in {".", ".."}
-            or (len(part) == 2 and part[1] == ":")  # Drive letter  # noqa: PLR2004
-            or part in {"/", "\\"}
-        )
 
     @classmethod
     def create_uri(cls, *, name: str) -> str:
