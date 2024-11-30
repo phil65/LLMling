@@ -1,3 +1,7 @@
+global_settings:
+  scripts:
+    - "https://gist.githubusercontent.com/phil65/9b57d35ea63f354cf056e0c7d4a62885/raw/d69c01f1bc56a18a1a0e3292a32003f6c4ab6a6f/get_readme.py"
+  log_level: "DEBUG"
 # Resource processors definitions
 context_processors:
   uppercase:
@@ -20,7 +24,7 @@ tools:
 
 toolsets:
   - llmling
-  
+
 # Resource definitions
 resources:
   python_guidelines:
@@ -79,3 +83,7 @@ prompts:
       - name: changes
         type: text
         required: true
+  get_readme:
+    import_path: get_readme.get_readme
+    # name: "Fetch Readme for package"
+    description: "Fetch README.md for PyPi package"
