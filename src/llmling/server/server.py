@@ -160,7 +160,7 @@ class LLMLingServer:
             """Handle prompts/get request."""
             try:
                 prompt = self.runtime.get_prompt(name)
-                messages = await self.runtime.render_prompt(name, arguments)
+                messages = await prompt.format(arguments or {})  # Note: now async
                 mcp_msgs = [conversions.to_mcp_message(msg) for msg in messages]
                 return GetPromptResult(description=prompt.description, messages=mcp_msgs)
             except exceptions.LLMLingError as exc:

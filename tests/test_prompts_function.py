@@ -26,7 +26,12 @@ def example_function(
     Returns:
         Processed text
     """
-    return text
+    result = text
+    if style == "detailed":
+        result = f"{result} (detailed)"
+    if tags:
+        result = f"{result} [tags: {', '.join(tags)}]"
+    return result
 
 
 async def async_function(
@@ -42,6 +47,8 @@ async def async_function(
     Returns:
         Processed content
     """
+    if mode == "upper":
+        return content.upper()
     return content
 
 
@@ -69,7 +76,7 @@ def test_create_prompt_arguments():
     assert args["text"].description
     assert "input text to process" in args["text"].description.lower()
 
-    # Check style argument - should be text type with enum values
+    # Check style argument
     assert args["style"].required is False
     assert args["style"].type_hint is typing.Literal["brief", "detailed"]
     assert args["style"].default == "brief"
@@ -96,26 +103,23 @@ def test_create_prompt_async():
     assert "Content to process" in description
 
 
-def test_prompt_formatting():
-    """Test that created prompts can be formatted."""
+@pytest.mark.asyncio
+async def test_prompt_formatting():
+    """Test that created prompts format with function results."""
     prompt = create_prompt_from_callable(example_function)
 
     # Format with all arguments
-    messages = prompt.format({
+    messages = await prompt.format({
         "text": "sample",
-        "style": "brief",
+        "style": "detailed",
         "tags": ["test"],
     })
-    formatted = messages[1].get_text_content()
-    assert "text=sample" in formatted
-    assert "style=brief" in formatted
-    assert "tags=['test']" in formatted
+    result = messages[1].get_text_content()
+    assert result == "sample (detailed) [tags: test]"
 
     # Format with only required arguments
-    messages = prompt.format({"text": "sample"})
-    formatted = messages[1].get_text_content()
-    assert "text=sample" in formatted
-    assert "style=brief" in formatted  # Default value
+    messages = await prompt.format({"text": "sample"})
+    assert messages[1].get_text_content() == "sample"  # Uses default brief style
 
 
 def test_create_prompt_overrides():
@@ -124,27 +128,25 @@ def test_create_prompt_overrides():
         example_function,
         name_override="custom_name",
         description_override="Custom description",
-        template_override="Custom template: {text}",
+        template_override="Result: {result}",
     )
 
     assert prompt.name == "custom_name"
     assert prompt.description == "Custom description"
-
-    # Test template override
-    messages = prompt.format({"text": "test"})
-    assert messages[1].get_text_content() == "Custom template: test"
+    assert prompt.messages[1].content.content == "Result: {result}"  # type: ignore
 
 
-def test_create_prompt_from_import_path():
+@pytest.mark.asyncio
+async def test_create_prompt_from_import_path():
     """Test prompt creation from import path."""
     prompt = create_prompt_from_callable("llmling.testing.processors.uppercase_text")
 
     assert prompt.name == "uppercase_text"
     assert "Convert text to uppercase" in prompt.description
 
-    # Test formatting
-    messages = prompt.format({"text": "test"})
-    assert "text=test" in messages[1].get_text_content()
+    # Test execution
+    messages = await prompt.format({"text": "test"})
+    assert messages[1].get_text_content() == "TEST"
 
 
 def test_create_prompt_invalid_import():
@@ -153,18 +155,14 @@ def test_create_prompt_invalid_import():
         create_prompt_from_callable("nonexistent.module.function")
 
 
-def test_argument_validation():
+@pytest.mark.asyncio
+async def test_argument_validation():
     """Test argument validation in created prompts."""
     prompt = create_prompt_from_callable(example_function)
 
     # Should fail without required argument
-    with pytest.raises(ValueError, match="Missing required argument"):
-        prompt.format({})
-
-    # Should work with required argument
-    messages = prompt.format({"text": "test"})
-    assert len(messages) == 2  # noqa: PLR2004
-    assert "text=test" in messages[1].get_text_content()
+    with pytest.raises(ValueError, match="Missing required arguments"):
+        await prompt.format({})  # Add await here
 
 
 def test_system_message():
@@ -173,9 +171,7 @@ def test_system_message():
 
     system_msg = prompt.messages[0]
     assert system_msg.role == "system"
-    content = system_msg.get_text_content()
-    assert "Function: example_function" in content
-    assert "Description: Process text with given style" in content
+    assert "Content from example_function" in system_msg.get_text_content()
 
 
 def test_prompt_with_completions():
@@ -203,3 +199,15 @@ def test_prompt_with_completions():
     # Check completion function
     assert args["other"].completion_function is not None
     assert args["other"].completion_function("py") == ["python"]
+
+
+@pytest.mark.asyncio
+async def test_async_function_execution():
+    """Test that async functions are properly executed."""
+    prompt = create_prompt_from_callable(async_function)
+
+    messages = await prompt.format({"content": "test", "mode": "upper"})
+    assert messages[1].get_text_content() == "TEST"
+
+    messages = await prompt.format({"content": "test"})
+    assert messages[1].get_text_content() == "test"

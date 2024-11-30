@@ -111,7 +111,8 @@ def sample_prompt() -> Prompt:
     )
 
 
-def test_prompt_format():
+@pytest.mark.asyncio
+async def test_prompt_format():
     """Test prompt message formatting."""
     prompt = Prompt(
         name="test",
@@ -127,18 +128,19 @@ def test_prompt_format():
     )
 
     # Test with all arguments
-    messages = prompt.format({"name": "Alice", "age": "30"})
+    messages = await prompt.format({"name": "Alice", "age": "30"})
     assert len(messages) == 2  # noqa: PLR2004
     assert messages[0].get_text_content() == "Hello Alice"
     assert messages[1].get_text_content() == "Age: 30"
 
     # Test with only required arguments
-    messages = prompt.format({"name": "Bob"})
+    messages = await prompt.format({"name": "Bob"})
     assert messages[0].get_text_content() == "Hello Bob"
     assert messages[1].get_text_content() == "Age: "
 
 
-def test_prompt_validation():
+@pytest.mark.asyncio
+async def test_prompt_validation():
     """Test prompt argument validation."""
     prompt = Prompt(
         name="test",
@@ -149,8 +151,8 @@ def test_prompt_validation():
 
     # Should raise when missing required argument
     with pytest.raises(ValueError, match="Missing required argument"):
-        prompt.format({})
+        await prompt.format({})
 
     # Should work with required argument
-    messages = prompt.format({"required_arg": "value"})
+    messages = await prompt.format({"required_arg": "value"})
     assert messages[0].get_text_content() == "Test value"

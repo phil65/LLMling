@@ -89,25 +89,15 @@ def create_prompt_from_callable(
             )
         )
 
-    # Create message template
-    if template_override:
-        template = template_override
-    else:
-        # Create default template from function signature
-        arg_list = ", ".join(f"{arg.name}={{{arg.name}}}" for arg in arguments)
-        template = f"Call {name}({arg_list})"
-
+    # Create message template. Will be formatted with function result
+    template = template_override if template_override else "{result}"
     # Create prompt messages
     messages = [
         PromptMessage(
             role="system",
             content=MessageContent(
                 type="text",
-                content=(
-                    f"Function: {name}\n"
-                    f"Description: {description}\n\n"
-                    "Please provide the required arguments."
-                ),
+                content=f"Content from {name}:\n",
             ),
         ),
         PromptMessage(role="user", content=MessageContent(type="text", content=template)),

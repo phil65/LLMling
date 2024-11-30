@@ -72,7 +72,9 @@ class Prompt(BaseModel):
             msg = f"Missing required arguments: {', '.join(missing)}"
             raise ValueError(msg)
 
-    def format(self, arguments: dict[str, Any] | None = None) -> list[PromptMessage]:
+    async def format(
+        self, arguments: dict[str, Any] | None = None
+    ) -> list[PromptMessage]:
         """Format prompt messages with arguments.
 
         Args:
@@ -87,15 +89,25 @@ class Prompt(BaseModel):
         args = arguments or {}
         self.validate_arguments(args)
 
-        # Add defaults for missing optional arguments
-        format_args = {}
-        for arg in self.arguments:
-            if arg.name in args:
-                format_args[arg.name] = args[arg.name]
-            elif arg.default is not None:
-                format_args[arg.name] = arg.default
-            elif not arg.required:
-                format_args[arg.name] = ""  # Empty string for optional args
+        # If this is a function prompt, execute it
+        if self.metadata.get("source") == "function":
+            try:
+                from llmling.utils import calling
+
+                import_path = self.metadata["import_path"]
+                result = await calling.execute_callable(import_path, **args)
+                format_args = {"result": result}
+            except Exception as exc:  # noqa: BLE001
+                format_args = {"result": f"Error executing function: {exc}"}
+        else:
+            # Add default values for optional arguments
+            format_args = args.copy()  # Make a copy to avoid modifying input
+            for arg in self.arguments:
+                if arg.name not in format_args:
+                    if arg.default is not None:
+                        format_args[arg.name] = arg.default
+                    elif not arg.required:
+                        format_args[arg.name] = ""  # Empty string for optional args
 
         # Format all messages
         formatted_messages = []

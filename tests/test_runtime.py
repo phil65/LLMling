@@ -6,6 +6,7 @@ from llmling.core import exceptions
 from llmling.prompts.models import ExtendedPromptArgument, Prompt, PromptMessage
 
 
+@pytest.mark.asyncio
 async def test_render_prompt(runtime_config):
     """Test prompt rendering through runtime config."""
     prompt = Prompt(
@@ -27,6 +28,7 @@ async def test_render_prompt_not_found(runtime_config):
         await runtime_config.render_prompt("nonexistent")
 
 
+@pytest.mark.asyncio
 async def test_render_prompt_validation_error(runtime_config):
     """Test error handling for invalid arguments."""
     prompt = Prompt(

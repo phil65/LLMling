@@ -55,7 +55,7 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
     ) -> list[PromptMessage]:
         """Get formatted messages for a prompt."""
         prompt = self[name]
-        return prompt.format(arguments or {})
+        return await prompt.format(arguments or {})
 
     async def get_completions(
         self,

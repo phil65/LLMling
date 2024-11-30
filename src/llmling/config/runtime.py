@@ -284,7 +284,7 @@ class RuntimeConfig:
         """
         try:
             prompt = self._prompt_registry[name]
-            return prompt.format(arguments)
+            return await prompt.format(arguments)
         except KeyError as exc:
             msg = f"Prompt not found: {name}"
             raise exceptions.LLMLingError(msg) from exc
