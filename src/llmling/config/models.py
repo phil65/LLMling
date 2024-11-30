@@ -17,6 +17,7 @@ from llmling.resources.watching import WatchConfig  # noqa: TC001
 
 
 ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 class GlobalSettings(BaseModel):
@@ -39,6 +40,9 @@ class GlobalSettings(BaseModel):
 
     prefer_uv: bool = False
     """Explicitely use uv for package installation / management """
+
+    log_level: LogLevel = "INFO"
+    """Log level to use for the server"""
 
     model_config = ConfigDict(frozen=True)
 

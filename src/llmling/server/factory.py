@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from llmling import config_resources
 from llmling.config.manager import ConfigManager
 from llmling.config.runtime import RuntimeConfig
-from llmling.core.log import get_logger
+from llmling.core.log import get_logger, setup_logging
 from llmling.server.server import LLMLingServer
 
 
@@ -38,6 +38,7 @@ def create_server(
     # Load and validate config
     path = config_path or config_resources.TEST_CONFIG
     manager = ConfigManager.load(path)
+    setup_logging(level=manager.config.global_settings.log_level)
 
     # Log any validation warnings
     if warnings := manager.validate():
