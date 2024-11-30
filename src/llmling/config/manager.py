@@ -122,8 +122,6 @@ class ConfigManager:
         # Validate extra paths exist
         for path in self.config.global_settings.extra_paths:
             try:
-                from upath import UPath
-
                 path_obj = UPath(path)
                 if not path_obj.exists():
                     warnings.append(f"Extra path does not exist: {path}")
@@ -147,22 +145,18 @@ class ConfigManager:
         warnings = []
         for name, prompt_config in self.config.prompts.items():
             match prompt_config:
+                case PromptConfig() if not prompt_config.import_path:
+                    warnings.append(f"Prompt {name} missing import_path")
                 case PromptConfig():
-                    if not prompt_config.import_path:
-                        warnings.append(f"Prompt {name} missing import_path")
-                    else:
-                        # Try to import the module
-                        try:
-                            name = prompt_config.import_path.split(".")[0]
-                            importlib.import_module(name)
-                        except ImportError:
-                            warnings.append(
-                                f"Cannot import module for prompt {name}: "
-                                f"{prompt_config.import_path}"
-                            )
-                case Prompt():
-                    if not prompt_config.messages:
-                        warnings.append(f"Prompt {name} has no messages")
+                    # Try to import the module
+                    try:
+                        name = prompt_config.import_path.split(".")[0]
+                        importlib.import_module(name)
+                    except ImportError:
+                        path = prompt_config.import_path
+                        warnings.append(f"Cannot import module for prompt {name}: {path}")
+                case Prompt() if not prompt_config.messages:
+                    warnings.append(f"Prompt {name} has no messages")
         return warnings
 
     def _validate_resources(self) -> list[str]:
@@ -204,21 +198,18 @@ class ConfigManager:
         warnings = []
         for name, processor in self.config.context_processors.items():
             match processor.type:
+                case "function" if not processor.import_path:
+                    warnings.append(f"Processor {name} missing import_path")
                 case "function":
-                    if not processor.import_path:
-                        warnings.append(f"Processor {name} missing import_path")
-                    else:
-                        # Try to import the module
-                        try:
-                            importlib.import_module(processor.import_path.split(".")[0])
-                        except ImportError:
-                            path = processor.import_path
-                            warnings.append(
-                                f"Cannot import module for processor {name}: {path}"
-                            )
-                case "template":
-                    if not processor.template:
-                        warnings.append(f"Processor {name} missing template")
+                    # Try to import the module
+                    try:
+                        importlib.import_module(processor.import_path.split(".")[0])
+                    except ImportError:
+                        path = processor.import_path
+                        msg = f"Cannot import module for processor {name}: {path}"
+                        warnings.append(msg)
+                case "template" if not processor.template:
+                    warnings.append(f"Processor {name} missing template")
         return warnings
 
     def _validate_tools(self) -> list[str]:
