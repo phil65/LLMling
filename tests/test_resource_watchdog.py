@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 import tempfile
 from typing import TYPE_CHECKING
+import warnings
 
 import pytest
 
@@ -169,7 +170,8 @@ async def test_supports_watching(temp_dir: Path) -> None:
 
     # Non-existent paths should not support watching
     nonexistent = PathResource(path="/nonexistent/path")
-    assert not nonexistent.supports_watching
+    with warnings.catch_warnings():
+        assert not nonexistent.supports_watching
 
     # Text resources never support watching
     text_resource = TextResource(content="some text")
