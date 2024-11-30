@@ -70,12 +70,4 @@ def serve_mcp(ctx, config: str = "src/llmling/config_resources/test.yml"):
 def inspect(ctx):
     """Start the MCP Inspector to debug our server."""
     # Use the uvx variant since we're using uv
-    ctx.run("npx -y @modelcontextprotocol/inspector@latest uvx --directory . run llmling")
-
-
-@duty(capture=False)
-def inspect_config(ctx, config: str = "src/llmling/config_resources/test.yml"):
-    """Start the MCP Inspector with a specific config file."""
-    ctx.run(
-        f"npx -y @modelcontextprotocol/inspector@latest uvx --directory . run llmling {config}"
-    )
+    ctx.run("npx -y @modelcontextprotocol/inspector@latest")
