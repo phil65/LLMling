@@ -635,3 +635,8 @@ class AnalysisTool(LLMCallableTool):
         """Clean up analysis engine."""
         await self.analyzer.close()
 ```
+
+One quirk right now:
+
+All tools you reference must be available inside the LLMling server environment,
+so you would have to "uv pip install" them right now. I will explore ways to simplify this.
