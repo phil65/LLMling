@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import depkit
+
 from llmling import config_resources
 from llmling.config.manager import ConfigManager
 from llmling.config.runtime import RuntimeConfig
@@ -22,12 +24,14 @@ def create_server(
     config_path: str | os.PathLike[str] | None = None,
     *,
     name: str = "llmling-server",
+    install_requirements: bool = True,
 ) -> LLMLingServer:
     """Create a fully configured server instance.
 
     Args:
         config_path: Path to config file (defaults to test config)
         name: Server name
+        install_requirements: Whether to install missing requirements
 
     Returns:
         Configured server instance
@@ -43,7 +47,29 @@ def create_server(
     if warnings := manager.validate():
         logger.warning("Configuration warnings:\n%s", "\n".join(warnings))
 
+    # Handle dependencies if requested
+    if install_requirements:
+        dep_manager = depkit.DependencyManager(
+            prefer_uv=manager.config.global_settings.prefer_uv,
+            requirements=manager.config.global_settings.requirements,
+            extra_paths=manager.config.global_settings.extra_paths,
+            pip_index_url=manager.config.global_settings.pip_index_url,
+        )
+        dep_manager.install_requirements()
+        dep_manager.update_python_path()
+
+        # Validate tool imports
+        for tool in manager.config.tools.values():
+            dep_manager.ensure_importable(tool.import_path)
+
     # Create runtime config
     runtime = RuntimeConfig.from_config(manager.config)
 
     return LLMLingServer(runtime, name=name)
+
+
+if __name__ == "__main__":
+    import depkit
+
+    manager = depkit.DependencyManager()
+    print(manager)
