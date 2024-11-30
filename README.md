@@ -115,6 +115,12 @@ Resources are content providers that load and pre-process data from various sour
 ### Basic Resource Types
 
 ```yaml
+global_config:  # declare dependencies if used for tools or function prompts
+  requirements: ["myapp"]
+  scripts:
+    - "https://gist.githubusercontent.com/.../get_readme.py"
+
+
 resources:
   # Load and watch a file or directory
   python_files:
