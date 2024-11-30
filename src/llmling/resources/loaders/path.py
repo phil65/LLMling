@@ -26,8 +26,6 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         "text/markdown",
         "text/yaml",
     ]
-    # Invalid path characters (Windows + Unix)
-    invalid_chars_pattern = re.compile(r'[\x00-\x1F<>:"|?*\\]')
 
     @classmethod
     def supports_uri(cls, uri: str) -> bool:
@@ -74,16 +72,6 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                 raise
             msg = f"Invalid URI: {uri}"
             raise exceptions.LoaderError(msg) from exc
-
-    @staticmethod
-    def _is_ignorable_part(part: str) -> bool:
-        """Check if a path component should be ignored."""
-        return (
-            not part
-            or part in {".", ".."}
-            or (len(part) == 2 and part[1] == ":")  # Drive letter  # noqa: PLR2004
-            or part in {"/", "\\"}
-        )
 
     @classmethod
     def create_uri(cls, *, name: str) -> str:
