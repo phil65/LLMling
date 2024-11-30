@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, ClassVar
+import urllib.parse
 
 from upath import UPath
 
@@ -38,34 +38,49 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         else:
             return True
 
+    @staticmethod
+    def _normalize_path_components(parts: list[str]) -> list[str]:
+        """Normalize path components, resolving . and .. entries."""
+        result: list[str] = []
+        for part in parts:
+            match part:
+                case "." | "":
+                    continue
+                case "..":
+                    if result:
+                        result.pop()
+                case _:
+                    if not PathResourceLoader._is_ignorable_part(part):
+                        result.append(part)
+        return result
+
     @classmethod
     def get_name_from_uri(cls, uri: str) -> str:
         """Extract the normalized path from a URI."""
         try:
-            if not cls.supports_uri(uri):
-                msg = f"Unsupported URI: {uri}"
+            if not uri.startswith("file:///"):
+                msg = f"Invalid file URI format: {uri}"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            path = UPath(uri)
+            # Remove the file:/// prefix
+            path = uri[8:]
 
-            # Get parts excluding protocol info
-            parts = [part for part in path.parts if not cls._is_ignorable_part(str(part))]
+            # Split into components and decode, including empty parts
+            parts = [urllib.parse.unquote(part) for part in path.split("/")]
 
-            if not parts:
+            # Remove empty parts and normalize
+            normalized_parts = cls._normalize_path_components(parts)
+            if not normalized_parts:
                 msg = "Empty path after normalization"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Validate path components
-            for part in parts:
-                if cls.invalid_chars_pattern.search(str(part)):
+            # Validate normalized components
+            for part in normalized_parts:
+                if cls.invalid_chars_pattern.search(part):
                     msg = f"Invalid characters in path component: {part}"
                     raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Join with forward slashes and normalize consecutive slashes
-            joined = "/".join(str(p) for p in parts)
-            return re.sub(
-                r"/+", "/", joined
-            )  # Replace multiple slashes with single slash
+            return "/".join(normalized_parts)
 
         except Exception as exc:
             if isinstance(exc, exceptions.LoaderError):
@@ -75,22 +90,25 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
     @classmethod
     def create_uri(cls, *, name: str) -> str:
-        """Create a URI from a path or URL."""
+        """Create a URI from a path."""
         try:
             # Validate path
             if cls.invalid_chars_pattern.search(name):
                 msg = f"Invalid characters in path: {name}"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Use UPath for handling
-            path = UPath(name)
+            # Normalize path separators and split
+            parts = name.replace("\\", "/").split("/")
 
-            # If it already has a protocol, use it as-is
-            if path.protocol:
-                return str(path)
+            # Normalize components
+            normalized_parts = cls._normalize_path_components(parts)
+            if not normalized_parts:
+                msg = "Empty path"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            # Otherwise, treat as local file
-            return f"file:///{str(path).lstrip('/')}"
+            # Encode components and create URI
+            encoded_parts = [urllib.parse.quote(part) for part in normalized_parts]
+            return f"file:///{'/'.join(encoded_parts)}"
 
         except Exception as exc:
             if isinstance(exc, exceptions.LoaderError):
