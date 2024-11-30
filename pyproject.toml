@@ -50,6 +50,7 @@ dependencies = [
     "pathspec",
     "watchdog",
     "platformdirs>=4.3.6",
+    "depkit",
 ]
 
 [project.scripts]
