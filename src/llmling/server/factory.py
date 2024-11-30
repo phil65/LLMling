@@ -54,6 +54,7 @@ def create_server(
             requirements=manager.config.global_settings.requirements,
             extra_paths=manager.config.global_settings.extra_paths,
             pip_index_url=manager.config.global_settings.pip_index_url,
+            scripts=manager.config.global_settings.scripts,
         )
         dep_manager.install_requirements()
         dep_manager.update_python_path()

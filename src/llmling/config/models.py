@@ -39,6 +39,9 @@ class GlobalSettings(BaseModel):
     extra_paths: list[str] = Field(default_factory=list)
     """Additional import paths"""
 
+    scripts: list[str] = Field(default_factory=list)
+    """PEP723 scripts (can be imported and will be scanned for dependencies)"""
+
     prefer_uv: bool = False
     """Explicitely use uv for package installation / management """
 
