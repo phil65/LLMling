@@ -32,7 +32,8 @@ A framework for declarative LLM application development focused on resource mana
 
 ## Core Concepts
 
-LLMLing provides a YAML-based configuration system for LLM applications:
+LLMLing provides a YAML-based configuration system for LLM applications.
+It allows to set up custom MPC servers serving content defined in YAML files.
 
 - **Static Declaration**: Define your LLM's environment in YAML - no code required
 - **MCP Protocol**: Built on the Machine Chat Protocol (MCP) for standardized LLM interaction
