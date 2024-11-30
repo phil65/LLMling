@@ -49,19 +49,14 @@ def create_server(
 
     # Handle dependencies if requested
     if install_requirements:
-        dep_manager = depkit.DependencyManager(
+        depman = depkit.DependencyManager(
             prefer_uv=manager.config.global_settings.prefer_uv,
             requirements=manager.config.global_settings.requirements,
             extra_paths=manager.config.global_settings.extra_paths,
             pip_index_url=manager.config.global_settings.pip_index_url,
             scripts=manager.config.global_settings.scripts,
         )
-        dep_manager.install_requirements()
-        dep_manager.update_python_path()
-
-        # Validate tool imports
-        for tool in manager.config.tools.values():
-            dep_manager.ensure_importable(tool.import_path)
+        depman.install()
 
     # Create runtime config
     runtime = RuntimeConfig.from_config(manager.config)
