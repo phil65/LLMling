@@ -171,6 +171,7 @@ async def test_supports_watching(temp_dir: Path) -> None:
     # Non-existent paths should not support watching
     nonexistent = PathResource(path="/nonexistent/path")
     with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         assert not nonexistent.supports_watching
 
     # Text resources never support watching
