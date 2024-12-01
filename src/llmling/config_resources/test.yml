@@ -1,6 +1,7 @@
 global_settings:
   scripts:
     - "https://gist.githubusercontent.com/phil65/9b57d35ea63f354cf056e0c7d4a62885/raw/d69c01f1bc56a18a1a0e3292a32003f6c4ab6a6f/get_readme.py"
+    - "https://gist.githubusercontent.com/phil65/bae47ad9c737c6f584707944bc793f49/raw/e075ca1aabb5c767ab0ed0a675fd2632febfee55/uithub.py"
   log_level: "DEBUG"
 # Resource processors definitions
 context_processors:
