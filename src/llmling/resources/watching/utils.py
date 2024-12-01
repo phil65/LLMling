@@ -72,7 +72,7 @@ def load_patterns(
                 # Filter empty lines and comments
                 file_patterns = [
                     line.strip()
-                    for line in path.read_text().splitlines()
+                    for line in path.read_text("utf-8").splitlines()
                     if line.strip() and not line.startswith("#")
                 ]
                 result.extend(file_patterns)
