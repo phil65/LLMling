@@ -94,6 +94,8 @@ Discussions = "https://github.com/phil65/llmling/discussions"
 
 [tool.logfire]
 ignore_no_config = true
+console = false
+show_project_link = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
