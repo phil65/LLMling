@@ -48,20 +48,16 @@ def create_server(
         logger.warning("Configuration warnings:\n%s", "\n".join(warnings))
 
     # Handle dependencies if requested
-    if install_requirements:
-        depman = depkit.DependencyManager(
-            prefer_uv=manager.config.global_settings.prefer_uv,
-            requirements=manager.config.global_settings.requirements,
-            extra_paths=manager.config.global_settings.extra_paths,
-            pip_index_url=manager.config.global_settings.pip_index_url,
-            scripts=manager.config.global_settings.scripts,
-        )
-        depman.install()
-
-    # Create runtime config
-    runtime = RuntimeConfig.from_config(manager.config)
-
-    return LLMLingServer(runtime, name=name)
+    with depkit.DependencyManager(
+        prefer_uv=manager.config.global_settings.prefer_uv,
+        requirements=manager.config.global_settings.requirements,
+        extra_paths=manager.config.global_settings.extra_paths,
+        pip_index_url=manager.config.global_settings.pip_index_url,
+        scripts=manager.config.global_settings.scripts,
+    ):
+        # Create runtime config
+        runtime = RuntimeConfig.from_config(manager.config)
+        return LLMLingServer(runtime, name=name)
 
 
 if __name__ == "__main__":
