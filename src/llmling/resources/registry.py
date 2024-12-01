@@ -168,11 +168,8 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
 
             # Ensure the URI is set correctly
             if loaded.metadata.uri != uri:
-                logger.warning(
-                    "Loader returned different URI than expected: %s != %s",
-                    loaded.metadata.uri,
-                    uri,
-                )
+                msg = "Loader returned different URI than expected: %s != %s"
+                logger.warning(msg, loaded.metadata.uri, uri)
                 loaded.metadata.uri = uri
 
             # Update cache using URI
