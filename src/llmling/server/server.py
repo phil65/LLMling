@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import glob
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
@@ -13,6 +14,7 @@ from mcp.types import (
     Completion,
     CompletionArgument,
     GetPromptResult,
+    Resource,
     TextContent,
 )
 from pydantic import AnyUrl
@@ -160,23 +162,18 @@ class LLMLingServer:
                 raise error from exc
 
         @self.server.list_resources()
-        async def handle_list_resources() -> list[mcp.types.Resource]:
+        async def handle_list_resources() -> list[Resource]:
             """Handle resources/list request."""
             resources = []
             for name in self.runtime.list_resources():
                 try:
                     # First get URI and basic info without loading
                     uri = self.runtime.get_resource_uri(name)
-                    # Get raw config
-                    resource_config = self.runtime._config.resources[name]
-                    mcp_resource = mcp.types.Resource(
-                        uri=conversions.to_mcp_uri(uri),
-                        name=name,
-                        description=resource_config.description,
-                        mimeType="text/plain",  # Default, could be made more specific
-                    )
-                    resources.append(mcp_resource)
-
+                    mcp_uri = conversions.to_mcp_uri(uri)
+                    dsc = self.runtime._config.resources[name].description
+                    mime = "text/plain"  # Default, could be made more specific
+                    res = Resource(uri=mcp_uri, name=name, description=dsc, mimeType=mime)
+                    resources.append(res)
                 except Exception:
                     msg = "Failed to create resource listing for %r. Config: %r"
                     logger.exception(msg, name, self.runtime._config.resources.get(name))
@@ -325,13 +322,12 @@ class LLMLingServer:
             session = self.current_session
 
             # Create and track the progress notification task
-            self._create_task(
-                session.send_progress_notification(
-                    progress_token=token,
-                    progress=progress,
-                    total=total,
-                )
+            task = session.send_progress_notification(
+                progress_token=token,
+                progress=progress,
+                total=total,
             )
+            self._create_task(task)
 
             # Optionally send description as log message
             if description:
@@ -445,18 +441,13 @@ class LLMLingServer:
             match resource:
                 case PathResource():
                     # Complete paths
-                    import glob
-
                     pattern = f"{argument.value}*"
                     values = list(glob.glob(pattern))  # noqa: PTH207
 
                 case SourceResource():
                     # Complete Python import paths
-                    values = [
-                        name
-                        for name in self._get_importable_names()
-                        if name.startswith(argument.value)
-                    ]
+                    names = self._get_importable_names()
+                    values = [name for name in names if name.startswith(argument.value)]
 
             return Completion(
                 values=values[:100],
