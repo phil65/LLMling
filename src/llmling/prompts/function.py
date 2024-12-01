@@ -92,26 +92,18 @@ def create_prompt_from_callable(
     # Create message template. Will be formatted with function result
     template = template_override if template_override else "{result}"
     # Create prompt messages
+    content = MessageContent(type="text", content=f"Content from {name}:\n")
     messages = [
-        PromptMessage(
-            role="system",
-            content=MessageContent(
-                type="text",
-                content=f"Content from {name}:\n",
-            ),
-        ),
+        PromptMessage(role="system", content=content),
         PromptMessage(role="user", content=MessageContent(type="text", content=template)),
     ]
-
+    path = f"{fn.__module__}.{fn.__qualname__}"
     return Prompt(
         name=name,
         description=description,
         arguments=arguments,
         messages=messages,
-        metadata={
-            "source": "function",
-            "import_path": f"{fn.__module__}.{fn.__qualname__}",
-        },
+        metadata={"source": "function", "import_path": path},
     )
 
 

@@ -65,16 +65,9 @@ async def create_test_server_session() -> AsyncGenerator[
             server_name="llmling-server",
             server_version="1.0.0",
             capabilities=ServerCapabilities(
-                resources=ResourcesCapability(
-                    subscribe=True,
-                    listChanged=True,
-                ),
-                prompts=PromptsCapability(
-                    listChanged=True,
-                ),
-                tools=ToolsCapability(
-                    listChanged=True,
-                ),
+                resources=ResourcesCapability(subscribe=True, listChanged=True),
+                prompts=PromptsCapability(listChanged=True),
+                tools=ToolsCapability(listChanged=True),
                 logging=LoggingCapability(),
             ),
         ),
