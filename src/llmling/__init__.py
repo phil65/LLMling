@@ -5,6 +5,8 @@ from llmling.resources import (
     LoadedResource,
     default_registry as resource_registry,
 )
+from llmling.config.models import Config
+from llmling.config.runtime import RuntimeConfig
 from llmling.core.exceptions import (
     LLMLingError,
     ConfigError,
@@ -20,6 +22,7 @@ from llmling.server import LLMLingServer, serve
 __version__ = "0.8.2"
 
 __all__ = [
+    "Config",
     "ConfigError",
     "LLMError",
     "LLMLingError",
@@ -30,6 +33,7 @@ __all__ = [
     "ProcessorRegistry",
     "ResourceError",
     "ResourceLoader",
+    "RuntimeConfig",
     "resource_registry",
     "serve",
 ]
