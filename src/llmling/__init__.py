@@ -57,7 +57,6 @@ __all__ = [
 # │       ├── config/                     # Configuration handling
 # │       │   ├── __init__.py
 # │       │   ├── models.py              # Configuration models
-# │       │   ├── loading.py             # Config loading utilities
 # │       │   ├── manager.py             # Config management
 # │       │   └── validation.py          # Config validation
 # │       │

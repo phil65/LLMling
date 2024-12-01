@@ -140,7 +140,7 @@ resource_groups: {}
 """
     )
 
-    cfg = config.load_config(config_path)
+    cfg = config.Config.from_file(config_path)
     assert isinstance(cfg, config.Config)
     assert cfg.version == "1.0"
     assert "test-context" in cfg.resources

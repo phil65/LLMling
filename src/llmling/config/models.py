@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Sequence as TypingSequence  # noqa: TC003
 import os  # noqa: TC003
-from typing import Any, Literal
+from typing import Any, Literal, Self
 import warnings
 
+import logfire
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 import upath
+import yamling
 
 from llmling import config_resources
+from llmling.core import exceptions
+from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import Prompt  # noqa: TC001
@@ -19,6 +23,8 @@ from llmling.resources.watching import WatchConfig  # noqa: TC001
 
 ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+logger = get_logger(__name__)
 
 
 class GlobalSettings(BaseModel):
@@ -308,9 +314,49 @@ class Config(BaseModel):
 
         return yamling.dump_yaml(self.model_dump(exclude_none=True))
 
+    @classmethod
+    @logfire.instrument("Loading configuration from {path}")
+    def from_file(cls, path: str | os.PathLike[str]) -> Self:
+        """Load configuration from YAML file.
+
+        This function only handles the basic loading and model validation.
+        For full validation and management, use ConfigManager.load() instead.
+
+        Args:
+            path: Path to configuration file
+
+        Returns:
+            Loaded configuration
+
+        Raises:
+            ConfigError: If loading fails
+        """
+        logger.debug("Loading configuration from %s", path)
+
+        try:
+            content = yamling.load_yaml_file(path)
+        except Exception as exc:
+            msg = f"Failed to load YAML from {path!r}"
+            raise exceptions.ConfigError(msg) from exc
+
+        # Validate basic structure
+        if not isinstance(content, dict):
+            msg = "Configuration must be a dictionary"
+            raise exceptions.ConfigError(msg)
+
+        try:
+            config = cls.model_validate(content)
+        except Exception as exc:
+            msg = f"Failed to validate configuration from {path}"
+            raise exceptions.ConfigError(msg) from exc
+        else:
+            msg = "Loaded raw configuration: version=%s, resources=%d"
+            logger.debug(msg, config.version, len(config.resources))
+            return config
+
 
 if __name__ == "__main__":
-    from llmling.config.loading import load_config
+    from llmling import Config
 
-    config = load_config(config_resources.TEST_CONFIG)  # type: ignore[has-type]
+    config = Config.from_file(config_resources.TEST_CONFIG)  # type: ignore[has-type]
     print(config)

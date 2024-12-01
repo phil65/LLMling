@@ -12,7 +12,6 @@ from llmling.config.models import (
 )
 
 # from llmling.config.runtime import RuntimeConfig
-from llmling.config.loading import load_config
 
 
 __all__ = [
@@ -23,5 +22,4 @@ __all__ = [
     "Resource",
     # "RuntimeConfig",
     "SourceResource",
-    "load_config",
 ]

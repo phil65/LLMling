@@ -14,7 +14,7 @@ import logfire
 from upath import UPath
 import yamling
 
-from llmling.config.models import PromptConfig
+from llmling.config.models import Config, PromptConfig
 from llmling.core import exceptions
 from llmling.core.log import get_logger, setup_logging
 from llmling.prompts.models import Prompt
@@ -22,8 +22,6 @@ from llmling.prompts.models import Prompt
 
 if TYPE_CHECKING:
     import os
-
-    from llmling.config.models import Config
 
 
 logger = get_logger(__name__)
@@ -245,10 +243,8 @@ class ConfigManager:
         Raises:
             ConfigError: If loading fails
         """
-        from llmling.config.loading import load_config
-
         try:
-            config = load_config(path)
+            config = Config.from_file(path)
             setup_logging(level=config.global_settings.log_level)
             return cls(config)
         except Exception as exc:
