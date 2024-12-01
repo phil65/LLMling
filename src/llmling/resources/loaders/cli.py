@@ -33,33 +33,24 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
         processor_registry: ProcessorRegistry | None,
     ) -> LoadedResource:
         """Execute command and load output."""
+        command = cmd if isinstance((cmd := resource.command), str) else " ".join(cmd)
         try:
-            cmd = (
-                resource.command
-                if isinstance(resource.command, str)
-                else " ".join(resource.command)
-            )
-
             if resource.shell:
                 proc = await asyncio.create_subprocess_shell(
-                    cmd,
+                    command,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                     cwd=resource.cwd,
                 )
             else:
-                cmd_parts = cmd.split() if isinstance(cmd, str) else list(cmd)
                 proc = await asyncio.create_subprocess_exec(
-                    *cmd_parts,
+                    *command.split(),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                     cwd=resource.cwd,
                 )
-
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=resource.timeout,
-            )
+            coro = proc.communicate()
+            stdout, stderr = await asyncio.wait_for(coro, timeout=resource.timeout)
 
             if proc.returncode != 0:
                 error = stderr.decode().strip()
@@ -71,16 +62,16 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
             if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-            meta = {"command": cmd, "exit_code": proc.returncode}
+            meta = {"command": command, "exit_code": proc.returncode}
             return create_loaded_resource(
                 content=content,
                 source_type="cli",
                 uri=self.create_uri(name=name),
                 mime_type=self.supported_mime_types[0],
-                name=resource.description or f"CLI Output: {cmd}",
+                name=resource.description or f"CLI Output: {command}",
                 description=resource.description,
                 additional_metadata=meta,
             )
         except Exception as exc:
-            msg = "CLI command execution failed"
+            msg = f"CLI command execution failed: {command}"
             raise exceptions.LoaderError(msg) from exc
