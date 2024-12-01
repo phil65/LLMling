@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import logging
 from logging.handlers import RotatingFileHandler
-import queue
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import logfire
 import platformdirs
@@ -16,7 +15,6 @@ from upath import UPath
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from mcp.server import Server
     from mcp.types import LoggingLevel
 
 
@@ -104,37 +102,6 @@ def setup_logging(
             logging.getLevelName(level),
             LOG_FILE,
         )
-
-
-class MCPHandler(logging.Handler):
-    """Handler that sends logs via MCP protocol."""
-
-    def __init__(self, mcp_server: Server) -> None:
-        """Initialize handler with MCP server instance."""
-        super().__init__()
-        self.server = mcp_server
-        self.queue: queue.Queue[tuple[LoggingLevel, Any, str | None]] = queue.Queue()
-
-    def emit(self, record: logging.LogRecord) -> None:
-        """Queue log message for async sending."""
-        try:
-            # Try to get current session from server's request context
-            try:
-                _ = self.server.request_context  # Check if we have a context
-            except LookupError:
-                # No active session - fall back to stderr
-                print(self.format(record), file=sys.stderr)
-                return
-
-            # Convert Python logging level to MCP level
-            level = LEVEL_MAP.get(record.levelno, "info")
-            # Format message
-            message: Any = self.format(record)
-            # Queue for async processing
-            self.queue.put((level, message, record.name))
-
-        except Exception:  # noqa: BLE001
-            self.handleError(record)
 
 
 def get_logger(name: str) -> logging.Logger:
