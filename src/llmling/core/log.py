@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+from logging.handlers import RotatingFileHandler
 import queue
 import sys
 from typing import TYPE_CHECKING, Any
 
+import logfire
 import platformdirs
 from upath import UPath
 
@@ -14,12 +16,12 @@ from upath import UPath
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from mcp import types
     from mcp.server import Server
+    from mcp.types import LoggingLevel
 
 
 # Map Python logging levels to MCP logging levels
-LEVEL_MAP: dict[int, types.LoggingLevel] = {
+LEVEL_MAP: dict[int, LoggingLevel] = {
     logging.DEBUG: "debug",
     logging.INFO: "info",
     logging.WARNING: "warning",
@@ -52,11 +54,7 @@ def setup_logging(
         format_string: Optional custom format string
         log_to_file: Whether to log to file in addition to stdout
     """
-    # Configure logfire first
-    import logfire
-
     logfire.configure()
-
     logger = logging.getLogger("llmling")
     logger.setLevel(logging.DEBUG)  # Always set root logger to DEBUG
 
@@ -78,10 +76,6 @@ def setup_logging(
             try:
                 # Create log directory if it doesn't exist
                 LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-                # Use RotatingFileHandler for log rotation
-                from logging.handlers import RotatingFileHandler
-
                 file_handler = RotatingFileHandler(
                     LOG_FILE,
                     maxBytes=MAX_LOG_SIZE,
@@ -119,9 +113,7 @@ class MCPHandler(logging.Handler):
         """Initialize handler with MCP server instance."""
         super().__init__()
         self.server = mcp_server
-        self.queue: queue.Queue[tuple[types.LoggingLevel, Any, str | None]] = (
-            queue.Queue()
-        )
+        self.queue: queue.Queue[tuple[LoggingLevel, Any, str | None]] = queue.Queue()
 
     def emit(self, record: logging.LogRecord) -> None:
         """Queue log message for async sending."""
@@ -136,10 +128,8 @@ class MCPHandler(logging.Handler):
 
             # Convert Python logging level to MCP level
             level = LEVEL_MAP.get(record.levelno, "info")
-
             # Format message
             message: Any = self.format(record)
-
             # Queue for async processing
             self.queue.put((level, message, record.name))
 

@@ -61,14 +61,11 @@ class FunctionProcessor(ChainableProcessor):
 
             # Convert result to string
             content = str(result)
-
+            is_coro = asyncio.iscoroutinefunction(self.func)
             return ProcessorResult(
                 content=content,
                 original_content=context.original_content,
-                metadata={
-                    "function": self.config.import_path,
-                    "is_async": asyncio.iscoroutinefunction(self.func),
-                },
+                metadata={"function": self.config.import_path, "is_async": is_coro},
             )
         except Exception as exc:
             msg = f"Function execution failed: {exc}"

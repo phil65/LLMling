@@ -66,11 +66,7 @@ class MCPHandler(logging.Handler):
                 # Process all available messages
                 while not self.queue.empty():
                     level, data, logger = self.queue.get_nowait()
-                    await session.send_log_message(
-                        level=level,
-                        data=data,
-                        logger=logger,
-                    )
+                    await session.send_log_message(level, data=data, logger=logger)
                     self.queue.task_done()
 
             except LookupError:

@@ -106,11 +106,7 @@ class LLMLingServer:
                 python_level = conversions.LOG_LEVEL_MAP[level]
                 logger.setLevel(python_level)
                 data = f"Log level set to {level}"
-                await self.current_session.send_log_message(
-                    level,
-                    data=data,
-                    logger=self.name,
-                )
+                await self.current_session.send_log_message(level, data, logger=self.name)
             except Exception as exc:
                 error = mcp.McpError("Error setting log level")
                 error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))

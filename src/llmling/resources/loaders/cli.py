@@ -71,7 +71,7 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
             if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-
+            meta = {"command": cmd, "exit_code": proc.returncode}
             return create_loaded_resource(
                 content=content,
                 source_type="cli",
@@ -79,10 +79,7 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
                 mime_type=self.supported_mime_types[0],
                 name=resource.description or f"CLI Output: {cmd}",
                 description=resource.description,
-                additional_metadata={
-                    "command": cmd,
-                    "exit_code": proc.returncode,
-                },
+                additional_metadata=meta,
             )
         except Exception as exc:
             msg = "CLI command execution failed"

@@ -32,25 +32,20 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
     ) -> LoadedResource:
         """Execute callable and load result."""
         try:
-            content = await calling.execute_callable(
-                resource.import_path,
-                **resource.keyword_args,
-            )
+            kwargs = resource.keyword_args
+            content = await calling.execute_callable(resource.import_path, **kwargs)
 
             if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-
+            meta = {"import_path": resource.import_path, "args": resource.keyword_args}
             return create_loaded_resource(
                 content=content,
                 source_type="callable",
                 uri=self.create_uri(name=name),
                 name=resource.description or resource.import_path,
                 description=resource.description,
-                additional_metadata={
-                    "import_path": resource.import_path,
-                    "args": resource.keyword_args,
-                },
+                additional_metadata=meta,
             )
         except Exception as exc:
             msg = f"Failed to execute callable {resource.import_path}"

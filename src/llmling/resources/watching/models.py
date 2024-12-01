@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class WatchConfig(BaseModel):
     """Watch configuration for resources."""
 
     enabled: bool = False
-    patterns: list[str] | None = Field(
-        default=None,
-        description="List of pathspec patterns (.gitignore style)",
-    )
-    ignore_file: str | None = Field(
-        default=None,
-        description="Path to .gitignore-style file",
-    )
+    """Whether the watch is enabled"""
+
+    patterns: list[str] | None = None
+    """List of pathspec patterns (.gitignore style)"""
+
+    ignore_file: str | None = None
+    """Path to .gitignore-style file"""

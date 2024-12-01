@@ -67,9 +67,8 @@ class MCPInProcSession:
                     line = await asyncio.get_event_loop().run_in_executor(None, fn)
                     if not line:
                         break
-                    print(
-                        f"Server stderr: {line.decode().strip()}"
-                    )  # Print directly for visibility
+                    # Print directly for visibility
+                    print(f"Server stderr: {line.decode().strip()}")
                 except Exception as e:  # noqa: BLE001
                     print(f"Error reading stderr: {e}")
 
