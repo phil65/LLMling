@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import logging
 from types import UnionType
 from typing import TYPE_CHECKING, Any
 
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
+from llmling.core.log import get_logger
 from llmling.prompts.function import create_prompt_from_callable
 from llmling.prompts.models import ExtendedPromptArgument, Prompt, PromptMessage
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:

@@ -4,22 +4,21 @@ from __future__ import annotations
 
 import functools
 import inspect
-import logging
 import string
 import sys
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
+
+from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 P = ParamSpec("P")
 R = TypeVar("R")
+
+logger = get_logger(__name__)
 
 
 def error_handler(

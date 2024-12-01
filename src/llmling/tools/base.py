@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import inspect
-import logging
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import py2openai
 
 from llmling.core.descriptors import classproperty
+from llmling.core.log import get_logger
 from llmling.utils import calling
 
 
 T = TypeVar("T", bound="LLMCallableTool")
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
