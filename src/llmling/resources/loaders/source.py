@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+import sys
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from llmling.config.models import SourceResource
 from llmling.core import exceptions
@@ -57,3 +58,16 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
         except Exception as exc:
             msg = f"Failed to load source from {resource.import_path}"
             raise exceptions.LoaderError(msg) from exc
+
+    async def get_completions(
+        self,
+        current_value: str,
+        argument_name: str | None = None,
+        **options: Any,
+    ) -> list[str]:
+        """Get Python import path completions."""
+        try:
+            return [name for name in sys.modules if name.startswith(current_value or "")]
+        except Exception:
+            logger.exception("Import completion failed")
+            return []

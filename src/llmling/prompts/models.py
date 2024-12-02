@@ -6,8 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from llmling.completions import CompletionFunction  # noqa: TC001
 from llmling.core.typedefs import MessageContent, MessageRole
-from llmling.prompts.completion import CompletionFunction  # noqa: TC001
 
 
 class ExtendedPromptArgument(BaseModel):

@@ -371,30 +371,30 @@ class RuntimeConfig(EventEmitter):
 
     async def get_prompt_completions(
         self,
-        prompt_name: str,
-        argument_name: str,
         current_value: str,
+        argument_name: str,
+        prompt_name: str,
+        **options: Any,
     ) -> list[str]:
-        """Get completions for a prompt argument.
+        """Get completions for a prompt argument."""
+        return await self._prompt_registry.get_completions(
+            current_value=current_value,
+            argument_name=argument_name,
+            prompt_name=prompt_name,
+            **options,
+        )
 
-        Args:
-            prompt_name: Name of the prompt
-            argument_name: Name of the argument
-            current_value: Current input value
-
-        Returns:
-            List of completion suggestions
-
-        Raises:
-            LLMLingError: If prompt not found
-        """
-        try:
-            return await self._prompt_registry.get_completions(
-                prompt_name, argument_name, current_value
-            )
-        except KeyError as exc:
-            msg = f"Prompt not found: {prompt_name}"
-            raise exceptions.LLMLingError(msg) from exc
-        except Exception as exc:
-            msg = f"Completion failed: {exc}"
-            raise exceptions.LLMLingError(msg) from exc
+    async def get_resource_completions(
+        self,
+        uri: str,
+        current_value: str,
+        argument_name: str | None = None,
+        **options: Any,
+    ) -> list[str]:
+        """Get completions for a resource."""
+        loader = self._loader_registry.find_loader_for_uri(uri)
+        return await loader.get_completions(
+            current_value=current_value,
+            argument_name=argument_name,
+            **options,
+        )

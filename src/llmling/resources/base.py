@@ -13,6 +13,7 @@ import urllib.parse
 import logfire
 import upath
 
+from llmling.completions.protocols import CompletionProvider
 from llmling.config.models import BaseResource
 from llmling.core import exceptions
 from llmling.core.descriptors import classproperty
@@ -96,7 +97,7 @@ class LoaderContext[TResource]:
         return f"{cls_name}(name={self.name!r}, type={resource.resource_type})"
 
 
-class ResourceLoader[TResource](ABC):
+class ResourceLoader[TResource](ABC, CompletionProvider):
     """Base class for resource loaders."""
 
     context_class: type[TResource]
@@ -108,6 +109,15 @@ class ResourceLoader[TResource](ABC):
     def __init__(self, context: LoaderContext[TResource] | None = None) -> None:
         """Initialize loader with optional context."""
         self.context = context
+
+    async def get_completions(
+        self,
+        current_value: str,
+        argument_name: str | None = None,
+        **options: Any,
+    ) -> list[str]:
+        """Get completions for this resource type. Override to implement."""
+        return []
 
     @classmethod
     def create(cls, resource: TResource, name: str) -> ResourceLoader[TResource]:

@@ -5,11 +5,12 @@ from __future__ import annotations
 from types import UnionType
 from typing import TYPE_CHECKING, Any
 
+from llmling.completions.protocols import CompletionProvider
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
 from llmling.prompts.function import create_prompt_from_callable
-from llmling.prompts.models import ExtendedPromptArgument, Prompt, PromptMessage
+from llmling.prompts.models import ExtendedPromptArgument, Prompt
 
 
 logger = get_logger(__name__)
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class PromptRegistry(BaseRegistry[str, Prompt]):
+class PromptRegistry(BaseRegistry[str, Prompt], CompletionProvider):
     """Registry for prompt templates."""
 
     @property
@@ -48,68 +49,35 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
         prompt = create_prompt_from_callable(fn, name_override=name)
         self.register(prompt.name, prompt, replace=replace)
 
-    async def get_messages(
-        self,
-        name: str,
-        arguments: dict[str, Any] | None = None,
-    ) -> list[PromptMessage]:
-        """Get formatted messages for a prompt."""
-        prompt = self[name]
-        return await prompt.format(arguments or {})
-
     async def get_completions(
         self,
-        prompt_name: str,
-        argument_name: str,
         current_value: str,
+        argument_name: str | None = None,
+        **options: Any,
     ) -> list[str]:
-        """Get completions for a prompt argument.
-
-        This method tries different completion sources in order:
-        1. Custom completion function (if provided)
-        2. Type-based completions (Literal, bool, etc.)
-        3. Description-based completions (from "one of:" syntax)
-        4. Default value (if no current value)
-
-        Args:
-            prompt_name: Name of the prompt
-            argument_name: Name of the argument
-            current_value: Current input value
-
-        Returns:
-            List of possible completions
-
-        Raises:
-            LLMLingError: If prompt not found
-        """
-        # Handle unknown prompt
+        """Get completions for a prompt argument."""
         try:
+            prompt_name = options.get("prompt_name")
+            if not prompt_name or not argument_name:
+                return []
+
             prompt = self[prompt_name]
-        except KeyError as exc:
-            msg = f"Prompt not found: {prompt_name}"
-            raise exceptions.LLMLingError(msg) from exc
+            arg = next(
+                (a for a in prompt.arguments if a.name == argument_name),
+                None,
+            )
+            if not arg:
+                return []
 
-        # Find matching argument (return empty list if not found)
-        arg = next(
-            (a for a in prompt.arguments if a.name == argument_name),
-            None,
-        )
-        if not arg:
-            msg = "Argument %s not found in prompt %s"
-            logger.debug(msg, argument_name, prompt_name)
-            return []
+            completions: list[str] = []
 
-        completions: list[str] = []
-
-        try:
             # 1. Try custom completion function
             if arg.completion_function:
                 try:
                     if items := arg.completion_function(current_value):
                         completions.extend(str(item) for item in items)
                 except Exception:
-                    msg = "Custom completion failed for %s.%s"
-                    logger.exception(msg, prompt_name, argument_name)
+                    logger.exception("Custom completion failed")
 
             # 2. Add type-based completions
             if type_completions := self._get_type_completions(arg, current_value):
@@ -132,15 +100,10 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
 
             # Deduplicate while preserving order
             seen = set()
-            return [
-                x
-                for x in completions
-                if not (x in seen or seen.add(x))  # type: ignore
-            ]
+            return [x for x in completions if not (x in seen or seen.add(x))]  # type: ignore
 
         except Exception:
-            msg = "Completion failed for prompt=%s argument=%s"
-            logger.exception(msg, prompt_name, argument_name)
+            logger.exception("Completion failed")
             return []
 
     def _get_type_completions(
@@ -165,11 +128,13 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
             # If one of the args is None, process the other type
             if len(args) == 2 and type(None) in args:  # noqa: PLR2004
                 other_type = next(arg for arg in args if arg is not type(None))
-                # Process the non-None type directly instead of using replace
-                arg = ExtendedPromptArgument(
-                    name=arg.name, type_hint=other_type, description=arg.description
+                # Process the non-None type directly
+                return self._get_type_completions(
+                    ExtendedPromptArgument(
+                        name=arg.name, type_hint=other_type, description=arg.description
+                    ),
+                    current_value,
                 )
-                return self._get_type_completions(arg, current_value)
 
         # Handle bool
         if type_hint is bool:
@@ -189,10 +154,7 @@ class PromptRegistry(BaseRegistry[str, Prompt]):
         try:
             options_part = arg.description.split("one of:", 1)[1]
             # Clean up options properly
-            options = [
-                opt.strip().rstrip(")")  # Remove trailing )
-                for opt in options_part.split(",")
-            ]
+            options = [opt.strip().rstrip(")") for opt in options_part.split(",")]
             return [opt for opt in options if opt]  # Remove empty strings
         except IndexError:
             return []

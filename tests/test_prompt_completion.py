@@ -4,7 +4,6 @@ from typing import Literal, Optional
 
 import pytest
 
-from llmling.core import exceptions
 from llmling.prompts.function import create_prompt_from_callable
 from llmling.prompts.registry import PromptRegistry
 
@@ -55,46 +54,73 @@ def registry() -> PromptRegistry:
 @pytest.mark.asyncio
 async def test_custom_completion(registry: PromptRegistry) -> None:
     """Test custom completion function."""
-    completions = await registry.get_completions("test_prompt", "text", "dj")
+    completions = await registry.get_completions(
+        current_value="dj",
+        argument_name="text",
+        prompt_name="test_prompt",
+    )
     assert completions == ["django"]
 
 
 @pytest.mark.asyncio
 async def test_literal_completion(registry: PromptRegistry) -> None:
     """Test completion for Literal type."""
-    completions = await registry.get_completions("test_prompt", "mode", "s")
+    completions = await registry.get_completions(
+        current_value="s",
+        argument_name="mode",
+        prompt_name="test_prompt",
+    )
     assert sorted(completions) == ["simple"]
 
 
 @pytest.mark.asyncio
 async def test_optional_literal_completion(registry: PromptRegistry) -> None:
     """Test completion for Optional[Literal] type."""
-    completions = await registry.get_completions("test_prompt", "tags", "t")
+    completions = await registry.get_completions(
+        current_value="t",
+        argument_name="tags",
+        prompt_name="test_prompt",
+    )
     assert sorted(completions) == ["tech"]
 
 
 @pytest.mark.asyncio
 async def test_bool_completion(registry: PromptRegistry) -> None:
     """Test completion for bool type."""
-    completions = await registry.get_completions("test_prompt", "active", "t")
+    completions = await registry.get_completions(
+        current_value="t",
+        argument_name="active",
+        prompt_name="test_prompt",
+    )
     assert completions == ["true"]
 
-    completions = await registry.get_completions("test_prompt", "active", "f")
+    completions = await registry.get_completions(
+        current_value="f",
+        argument_name="active",
+        prompt_name="test_prompt",
+    )
     assert completions == ["false"]
 
 
 @pytest.mark.asyncio
 async def test_default_value_completion(registry: PromptRegistry) -> None:
     """Test completion includes default value."""
-    # Empty input should include default
-    completions = await registry.get_completions("test_prompt", "mode", "")
+    completions = await registry.get_completions(
+        current_value="",
+        argument_name="mode",
+        prompt_name="test_prompt",
+    )
     assert "simple" in completions
 
 
 @pytest.mark.asyncio
 async def test_description_based_completion(registry: PromptRegistry) -> None:
     """Test completion from 'one of:' in description."""
-    completions = await registry.get_completions("test_prompt", "count", "")
+    completions = await registry.get_completions(
+        current_value="",
+        argument_name="count",
+        prompt_name="test_prompt",
+    )
     assert "1" in completions  # Default
     assert all(str(x) in completions for x in (1, 2, 3))  # From description
 
@@ -102,22 +128,34 @@ async def test_description_based_completion(registry: PromptRegistry) -> None:
 @pytest.mark.asyncio
 async def test_completion_with_no_matches(registry: PromptRegistry) -> None:
     """Test completion with no matching values."""
-    completions = await registry.get_completions("test_prompt", "mode", "xyz")
+    completions = await registry.get_completions(
+        current_value="xyz",
+        argument_name="mode",
+        prompt_name="test_prompt",
+    )
     assert completions == []
 
 
 @pytest.mark.asyncio
 async def test_completion_for_unknown_argument(registry: PromptRegistry) -> None:
     """Test completion for non-existent argument."""
-    completions = await registry.get_completions("test_prompt", "unknown", "")
+    completions = await registry.get_completions(
+        current_value="",
+        argument_name="unknown",
+        prompt_name="test_prompt",
+    )
     assert completions == []
 
 
 @pytest.mark.asyncio
 async def test_completion_for_unknown_prompt(registry: PromptRegistry) -> None:
     """Test completion for non-existent prompt."""
-    with pytest.raises(exceptions.LLMLingError, match="Item not found"):
-        await registry.get_completions("unknown_prompt", "text", "")
+    completions = await registry.get_completions(
+        current_value="",
+        argument_name="text",
+        prompt_name="unknown_prompt",
+    )
+    assert completions == []
 
 
 def test_create_prompt_with_completions() -> None:
@@ -162,7 +200,11 @@ async def test_combined_completions(registry: PromptRegistry) -> None:
     registry["combined"] = prompt
 
     # Should get both Literal values and custom completion
-    completions = await registry.get_completions("combined", "fmt", "")
+    completions = await registry.get_completions(
+        current_value="",
+        argument_name="fmt",
+        prompt_name="combined",
+    )
     assert set(completions) == {"md", "txt", "rst", "html"}
 
 
@@ -184,7 +226,11 @@ async def test_completion_order_priority(registry: PromptRegistry) -> None:
     prompt = create_prompt_from_callable(process, completions={"choice": custom_complete})
     registry["priority"] = prompt
 
-    completions = await registry.get_completions("priority", "choice", "")
+    completions = await registry.get_completions(
+        current_value="",
+        argument_name="choice",
+        prompt_name="priority",
+    )
     completions_list = list(completions)
 
     assert completions_list[0] == "custom"  # Custom completion first

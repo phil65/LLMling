@@ -18,7 +18,6 @@ from mcp.types import (
     Resource,
     TextContent,
 )
-from pydantic import AnyUrl
 
 from llmling.config.manager import ConfigManager
 from llmling.config.models import PathResource, SourceResource
@@ -33,6 +32,8 @@ from llmling.server.observers import PromptObserver, ResourceObserver, ToolObser
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine
     import os
+
+    from pydantic import AnyUrl
 
     from llmling.prompts.models import Prompt
 
@@ -214,28 +215,35 @@ class LLMLingServer:
         @self.server.completion()
         async def handle_completion(
             ref: mcp.types.PromptReference | mcp.types.ResourceReference,
-            argument: CompletionArgument,
-        ) -> Completion | None:
+            argument: mcp.types.CompletionArgument,
+        ) -> mcp.types.Completion:
             """Handle completion requests."""
             try:
                 match ref:
                     case mcp.types.PromptReference():
-                        return await self._complete_prompt_argument(
-                            self.runtime.get_prompt(ref.name),
-                            argument.name,
-                            argument.value,
+                        values = await self.runtime.get_prompt_completions(
+                            current_value=argument.value,
+                            argument_name=argument.name,
+                            prompt_name=ref.name,
                         )
                     case mcp.types.ResourceReference():
-                        url = AnyUrl(ref.uri)
-                        return await self._complete_resource(url, argument)
+                        values = await self.runtime.get_resource_completions(
+                            uri=ref.uri,
+                            current_value=argument.value,
+                            argument_name=argument.name,
+                        )
                     case _:
                         msg = f"Invalid reference type: {type(ref)}"
-                        error = mcp.McpError(msg)
-                        error.error = mcp.ErrorData(code=INVALID_PARAMS, message=msg)
-                        raise error  # noqa: TRY301
+                        raise ValueError(msg)  # noqa: TRY301
+
+                return mcp.types.Completion(
+                    values=values[:100],
+                    total=len(values),
+                    hasMore=len(values) > 100,  # noqa: PLR2004
+                )
             except Exception:
                 logger.exception("Completion failed")
-                return None  # Let MCP convert to empty Completion
+                return mcp.types.Completion(values=[], total=0, hasMore=False)
 
         @self.server.progress_notification()
         async def handle_progress(
