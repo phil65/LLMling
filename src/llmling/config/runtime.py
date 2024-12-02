@@ -73,11 +73,9 @@ class RuntimeConfig(EventEmitter):
         self._resource_registry = resource_registry
         self._prompt_registry = prompt_registry
         self._tool_registry = tool_registry
+        self._initialized = False
 
-    async def __aenter__(self) -> Self:
-        """Initialize dependencies and registries."""
         settings = self._config.global_settings
-        logger.debug("Setting up dependency management")
         self._dep_manager = depkit.DependencyManager(
             prefer_uv=settings.prefer_uv,
             requirements=settings.requirements,
@@ -85,18 +83,43 @@ class RuntimeConfig(EventEmitter):
             pip_index_url=settings.pip_index_url,
             scripts=settings.scripts,
         )
-        # First enter dependency context
-        await self._dep_manager.__aenter__()
 
-        # Now we can safely initialize everything that might need dependencies
-        logger.debug("Initializing registries")
-        await self._initialize_registries()
+    def __enter__(self) -> Self:
+        """Synchronous context manager entry."""
+        self._dep_manager.__enter__()
         return self
 
-    async def _initialize_registries(self) -> None:
-        """Initialize all registries after dependencies are set up."""
-        # Register default loaders
-        # Register processors from config
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
+        """Synchronous context manager exit."""
+        self._dep_manager.__exit__(exc_type, exc_val, exc_tb)
+
+    async def __aenter__(self) -> Self:
+        """Initialize dependencies and registries."""
+        await self._dep_manager.__aenter__()
+        if not self._initialized:
+            await self._initialize_registries()
+            self._initialized = True
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
+        """Clean up dependencies and registries."""
+        try:
+            await self.shutdown()
+        finally:
+            await self._dep_manager.__aexit__(exc_type, exc_val, exc_tb)
+
+    def _register_default_components(self) -> None:
+        """Register all default components and config items."""
         from llmling.resources import (
             CallableResourceLoader,
             CLIResourceLoader,
@@ -112,14 +135,13 @@ class RuntimeConfig(EventEmitter):
         self._loader_registry["source"] = SourceResourceLoader
         self._loader_registry["callable"] = CallableResourceLoader
         self._loader_registry["image"] = ImageResourceLoader
+
         for name, proc_config in self._config.context_processors.items():
             self._processor_registry[name] = proc_config
 
-        # Register resources
         for name, resource in self._config.resources.items():
             self._resource_registry[name] = resource
 
-        # Register explicit tools
         for name, tool_config in self._config.tools.items():
             tool = LLMCallableTool.from_callable(
                 tool_config.import_path,
@@ -128,7 +150,6 @@ class RuntimeConfig(EventEmitter):
             )
             self._tool_registry[name] = tool
 
-        # Load tools from toolsets
         if self._config.toolsets:
             loader = ToolsetLoader()
             for name, tool in loader.load_items(self._config.toolsets).items():
@@ -140,7 +161,6 @@ class RuntimeConfig(EventEmitter):
                         name,
                     )
 
-        # Initialize prompts
         for name, prompt_config in self._config.prompts.items():
             match prompt_config:
                 case Prompt():
@@ -154,20 +174,10 @@ class RuntimeConfig(EventEmitter):
                     )
                     self._prompt_registry[name] = prompt
 
-        # Start up all registries
+    async def _initialize_registries(self) -> None:
+        """Initialize all registries."""
+        self._register_default_components()
         await self.startup()
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None,
-    ) -> None:
-        """Clean up dependencies and registries."""
-        try:
-            await self.shutdown()
-        finally:
-            await self._dep_manager.__aexit__(exc_type, exc_val, exc_tb)
 
     @classmethod
     async def create(cls, config: Config) -> Self:
@@ -197,7 +207,6 @@ class RuntimeConfig(EventEmitter):
         Returns:
             Initialized runtime configuration
         """
-        # Only create registries but don't initialize them yet
         loader_registry = ResourceLoaderRegistry()
         processor_registry = ProcessorRegistry()
         resource_registry = ResourceRegistry(
@@ -232,19 +241,53 @@ class RuntimeConfig(EventEmitter):
 
     # Resource Management
     async def load_resource(self, name: str) -> LoadedResource:
-        """Load a resource by name."""
+        """Load a resource by name.
+
+        Args:
+            name: Name of the resource to load
+
+        Returns:
+            Loaded resource content and metadata
+
+        Raises:
+            ResourceError: If resource cannot be loaded
+        """
         return await self._resource_registry.load(name)
 
     async def load_resource_by_uri(self, uri: str) -> LoadedResource:
-        """Load a resource by URI."""
+        """Load a resource by URI.
+
+        Args:
+            uri: URI of the resource to load
+
+        Returns:
+            Loaded resource content and metadata
+
+        Raises:
+            ResourceError: If resource cannot be loaded
+        """
         return await self._resource_registry.load_by_uri(uri)
 
     def list_resources(self) -> Sequence[str]:
-        """List all available resource names."""
+        """List all available resource names.
+
+        Returns:
+            List of registered resource names
+        """
         return self._resource_registry.list_items()
 
     def get_resource_uri(self, name: str) -> str:
-        """Get URI for a resource."""
+        """Get URI for a resource.
+
+        Args:
+            name: Name of the resource
+
+        Returns:
+            URI for the resource
+
+        Raises:
+            ResourceError: If resource not found
+        """
         return self._resource_registry.get_uri(name)
 
     def register_resource(
@@ -254,38 +297,94 @@ class RuntimeConfig(EventEmitter):
         *,
         replace: bool = False,
     ) -> None:
-        """Register a new resource."""
+        """Register a new resource.
+
+        Args:
+            name: Name for the resource
+            resource: Resource to register
+            replace: Whether to replace existing resource
+
+        Raises:
+            ResourceError: If name exists and replace=False
+        """
         self._resource_registry.register(name, resource, replace=replace)
 
     def get_resource_loader(self, resource: Resource) -> Any:  # type: ignore[return]
-        """Get loader for a resource type."""
+        """Get loader for a resource type.
+
+        Args:
+            resource: Resource to get loader for
+
+        Returns:
+            Resource loader instance
+
+        Raises:
+            LoaderError: If no loader found for resource type
+        """
         return self._loader_registry.get_loader(resource)
 
     # Tool Management
     def list_tools(self) -> Sequence[str]:
-        """List all available tool names."""
+        """List all available tool names.
+
+        Returns:
+            List of registered tool names
+        """
         return self._tool_registry.list_items()
 
     @property
     def tools(self) -> dict[str, LLMCallableTool]:
-        """Get all registered tools."""
+        """Get all registered tools.
+
+        Returns:
+            Dictionary mapping tool names to tools
+        """
         return dict(self._tool_registry)
 
     async def execute_tool(self, name: str, **params: Any) -> Any:
-        """Execute a tool by name."""
+        """Execute a tool by name.
+
+        Args:
+            name: Name of the tool to execute
+            **params: Parameters to pass to the tool
+
+        Returns:
+            Tool execution result
+
+        Raises:
+            ToolError: If tool execution fails
+        """
         return await self._tool_registry.execute(name, **params)
 
     def get_tool(self, name: str) -> LLMCallableTool:
-        """Get a tool by name."""
+        """Get a tool by name.
+
+        Args:
+            name: Name of the tool
+
+        Returns:
+            The tool
+
+        Raises:
+            ToolError: If tool not found
+        """
         return self._tool_registry[name]
 
     def get_tools(self) -> Sequence[LLMCallableTool]:
-        """Get all registered tools."""
+        """Get all registered tools.
+
+        Returns:
+            List of all tools
+        """
         return list(self._tool_registry.values())
 
     # Prompt Management
     def list_prompts(self) -> Sequence[str]:
-        """List all available prompt names."""
+        """List all available prompt names.
+
+        Returns:
+            List of registered prompt names
+        """
         return self._prompt_registry.list_items()
 
     async def render_prompt(
@@ -334,39 +433,71 @@ class RuntimeConfig(EventEmitter):
             raise exceptions.LLMLingError(msg) from exc
 
     def get_prompts(self) -> Sequence[Prompt]:
-        """Get all registered prompts."""
+        """Get all registered prompts.
+
+        Returns:
+            List of all prompts
+        """
         return list(self._prompt_registry.values())
 
     # Registry Observation
     def add_resource_observer(self, observer: RegistryEvents[str, Resource]) -> None:
-        """Add observer for resource changes."""
+        """Add observer for resource changes.
+
+        Args:
+            observer: Observer to add
+        """
         self._resource_registry.add_observer(observer)
 
     def add_prompt_observer(self, observer: RegistryEvents[str, Prompt]) -> None:
-        """Add observer for prompt changes."""
+        """Add observer for prompt changes.
+
+        Args:
+            observer: Observer to add
+        """
         self._prompt_registry.add_observer(observer)
 
     def add_tool_observer(self, observer: RegistryEvents[str, LLMCallableTool]) -> None:
-        """Add observer for tool changes."""
+        """Add observer for tool changes.
+
+        Args:
+            observer: Observer to add
+        """
         self._tool_registry.add_observer(observer)
 
     def remove_resource_observer(self, observer: RegistryEvents[str, Resource]) -> None:
-        """Remove resource observer."""
+        """Remove resource observer.
+
+        Args:
+            observer: Observer to remove
+        """
         self._resource_registry.remove_observer(observer)
 
     def remove_prompt_observer(self, observer: RegistryEvents[str, Prompt]) -> None:
-        """Remove prompt observer."""
+        """Remove prompt observer.
+
+        Args:
+            observer: Observer to remove
+        """
         self._prompt_registry.remove_observer(observer)
 
     def remove_tool_observer(
         self, observer: RegistryEvents[str, LLMCallableTool]
     ) -> None:
-        """Remove tool observer."""
+        """Remove tool observer.
+
+        Args:
+            observer: Observer to remove
+        """
         self._tool_registry.remove_observer(observer)
 
     @property
     def original_config(self) -> Config:
-        """Get the original static configuration."""
+        """Get the original static configuration.
+
+        Returns:
+            Original configuration
+        """
         return self._config
 
     async def get_prompt_completions(
@@ -376,7 +507,17 @@ class RuntimeConfig(EventEmitter):
         prompt_name: str,
         **options: Any,
     ) -> list[str]:
-        """Get completions for a prompt argument."""
+        """Get completions for a prompt argument.
+
+        Args:
+            current_value: Current input value
+            argument_name: Name of the argument
+            prompt_name: Name of the prompt
+            **options: Additional options
+
+        Returns:
+            List of completion suggestions
+        """
         return await self._prompt_registry.get_completions(
             current_value=current_value,
             argument_name=argument_name,
@@ -391,10 +532,29 @@ class RuntimeConfig(EventEmitter):
         argument_name: str | None = None,
         **options: Any,
     ) -> list[str]:
-        """Get completions for a resource."""
+        """Get completions for a resource.
+
+        Args:
+            uri: Resource URI
+            current_value: Current input value
+            argument_name: Optional argument name
+            **options: Additional options
+
+        Returns:
+            List of completion suggestions
+        """
         loader = self._loader_registry.find_loader_for_uri(uri)
         return await loader.get_completions(
             current_value=current_value,
             argument_name=argument_name,
             **options,
         )
+
+
+if __name__ == "__main__":
+    from llmling.config.models import Config
+
+    cfg = Config.from_file("E:/mcp_zed.yml")
+    runtime = RuntimeConfig.from_config(cfg)
+    with runtime as ctx:
+        pass
