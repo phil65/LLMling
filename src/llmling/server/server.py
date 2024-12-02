@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import glob
 from typing import TYPE_CHECKING, Any, Self
 
@@ -19,7 +20,9 @@ from mcp.types import (
 )
 from pydantic import AnyUrl
 
+from llmling.config.manager import ConfigManager
 from llmling.config.models import PathResource, SourceResource
+from llmling.config.runtime import RuntimeConfig
 from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.server import conversions
@@ -28,10 +31,9 @@ from llmling.server.observers import PromptObserver, ResourceObserver, ToolObser
 
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import AsyncGenerator, Coroutine
     import os
 
-    from llmling.config.runtime import RuntimeConfig
     from llmling.prompts.models import Prompt
 
 
@@ -69,27 +71,32 @@ class LLMLingServer:
         self._setup_observers()
 
     @classmethod
-    def from_config_file(
+    @asynccontextmanager
+    async def from_config_file(
         cls,
         config_path: str | os.PathLike[str],
         *,
         name: str = "llmling-server",
-    ) -> LLMLingServer:
-        """Create server from config file.
-
-        This is a convenience method that uses the factory internally.
-        For more control over server creation, use create_server() directly.
+    ) -> AsyncGenerator[LLMLingServer, None]:
+        """Create and run server from config file with proper context management.
 
         Args:
             config_path: Path to configuration file
             name: Optional server name
 
-        Returns:
-            Configured server instance
+        Example:
+            ```python
+            async with LLMLingServer.from_config_file("config.yml") as server:
+                await server.start()
+            ```
         """
-        from llmling.server.factory import create_server
-
-        return create_server(config_path, name=name)
+        manager = ConfigManager.load(config_path)
+        async with RuntimeConfig.from_config(manager.config) as runtime:
+            server = cls(runtime, name=name)
+            try:
+                yield server
+            finally:
+                await server.shutdown()
 
     def _create_task(self, coro: Coroutine[None, None, Any]) -> asyncio.Task[Any]:
         """Create and track an asyncio task."""
@@ -253,9 +260,6 @@ class LLMLingServer:
     async def start(self, *, raise_exceptions: bool = False) -> None:
         """Start the server."""
         try:
-            # Initialize runtime
-            await self.runtime.startup()
-
             # Start MCP server
             handler = configure_server_logging(self.server)
             options = self.server.create_initialization_options()
@@ -281,6 +285,7 @@ class LLMLingServer:
                 for task in self._tasks:
                     task.cancel()
                 await asyncio.gather(*self._tasks, return_exceptions=True)
+                self._tasks.clear()
 
             # Remove observers
             self.runtime.remove_resource_observer(self.resource_observer.events)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import depkit
+import logfire
 
 from llmling import config_resources
 from llmling.config.manager import ConfigManager
@@ -21,43 +21,60 @@ logger = get_logger(__name__)
 
 
 def create_server(
-    config_path: str | os.PathLike[str] | None = None,
+    runtime: RuntimeConfig,
     *,
     name: str = "llmling-server",
-    install_requirements: bool = True,
 ) -> LLMLingServer:
-    """Create a fully configured server instance.
+    """Create a server instance from a runtime configuration.
 
     Args:
-        config_path: Path to config file (defaults to test config)
-        name: Server name
-        install_requirements: Whether to install missing requirements
+        runtime: Initialized runtime configuration
+        name: Server name for MCP protocol
 
     Returns:
         Configured server instance
-
-    Raises:
-        ConfigError: If configuration loading or validation fails
     """
-    # Load and validate config
+    return LLMLingServer(runtime, name=name)
+
+
+@logfire.instrument("Creating runtime configuration")
+def create_runtime_config(
+    config_path: str | os.PathLike[str] | None = None,
+) -> RuntimeConfig:
+    """Create runtime configuration for server setup.
+
+    This is a helper function for setting up server configuration.
+    The caller is responsible for managing the RuntimeConfig context.
+
+    Warning:
+            The returned RuntimeConfig must be used within a context manager
+            to ensure proper dependency initialization and cleanup:
+            ```python
+            runtime = create_runtime_config("config.yml")
+            async with runtime as r:
+                # Use runtime here
+                resource = await r.load_resource("name")
+
+
+    Args:
+        config_path: Optional path to config file (uses test config if None)
+
+    Returns:
+        Uninitialized RuntimeConfig instance
+
+    Example:
+        ```python
+        runtime = create_runtime_config("myconfig.yml")
+        async with runtime as r:
+            server = create_server(r)
+            await server.start()
+        ```
+    """
     path = config_path or config_resources.TEST_CONFIG
     manager = ConfigManager.load(path)
-
-    # Log any validation warnings
     if warnings := manager.validate():
         logger.warning("Configuration warnings:\n%s", "\n".join(warnings))
-
-    # Handle dependencies if requested
-    with depkit.DependencyManager(
-        prefer_uv=manager.config.global_settings.prefer_uv,
-        requirements=manager.config.global_settings.requirements,
-        extra_paths=manager.config.global_settings.extra_paths,
-        pip_index_url=manager.config.global_settings.pip_index_url,
-        scripts=manager.config.global_settings.scripts,
-    ):
-        # Create runtime config
-        runtime = RuntimeConfig.from_config(manager.config)
-        return LLMLingServer(runtime, name=name)
+    return RuntimeConfig.from_config(manager.config)
 
 
 if __name__ == "__main__":

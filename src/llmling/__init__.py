@@ -16,7 +16,7 @@ from llmling.core.exceptions import (
     LLMError,
 )
 from llmling.processors.registry import ProcessorRegistry
-from llmling.server import LLMLingServer, serve
+from llmling.server import LLMLingServer
 
 
 __version__ = "0.8.2"
@@ -35,7 +35,6 @@ __all__ = [
     "ResourceLoader",
     "RuntimeConfig",
     "resource_registry",
-    "serve",
 ]
 
 # llmling/

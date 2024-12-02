@@ -6,7 +6,7 @@ import asyncio
 import sys
 
 from llmling.core.log import get_logger
-from llmling.server.factory import create_server
+from llmling.server.factory import create_runtime_config, create_server
 
 
 logger = get_logger(__name__)
@@ -20,8 +20,10 @@ async def main() -> None:
     config_path = sys.argv[1] if len(sys.argv) > 1 else None
 
     try:
-        server = create_server(config_path)
-        await server.start(raise_exceptions=True)
+        runtime = create_runtime_config(config_path)
+        async with runtime as r:
+            server = create_server(r)
+            await server.start(raise_exceptions=True)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception:

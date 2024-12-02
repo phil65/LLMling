@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self
 
+import depkit
 import logfire
 
 from llmling.config.models import Prompt, PromptConfig
@@ -22,7 +23,6 @@ from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
 from llmling.tools.registry import ToolRegistry
-from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
-    from llmling.prompts.completion import CompletionFunction
     from llmling.prompts.models import PromptMessage
     from llmling.resources.models import LoadedResource
 
@@ -75,13 +74,96 @@ class RuntimeConfig(EventEmitter):
         self._tool_registry = tool_registry
 
     async def __aenter__(self) -> Self:
-        """Initialize all components on context entry."""
-        await self.startup()
+        """Initialize dependencies and registries."""
+        settings = self._config.global_settings
+        logger.debug("Setting up dependency management")
+        self._dep_manager = depkit.DependencyManager(
+            prefer_uv=settings.prefer_uv,
+            requirements=settings.requirements,
+            extra_paths=settings.extra_paths,
+            pip_index_url=settings.pip_index_url,
+            scripts=settings.scripts,
+        )
+        # First enter dependency context
+        await self._dep_manager.__aenter__()
+
+        # Now we can safely initialize everything that might need dependencies
+        logger.debug("Initializing registries")
+        await self._initialize_registries()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Ensure cleanup on context exit."""
-        await self.shutdown()
+    async def _initialize_registries(self) -> None:
+        """Initialize all registries after dependencies are set up."""
+        # Register default loaders
+        # Register processors from config
+        from llmling.resources import (
+            CallableResourceLoader,
+            CLIResourceLoader,
+            ImageResourceLoader,
+            PathResourceLoader,
+            SourceResourceLoader,
+            TextResourceLoader,
+        )
+
+        self._loader_registry["path"] = PathResourceLoader
+        self._loader_registry["text"] = TextResourceLoader
+        self._loader_registry["cli"] = CLIResourceLoader
+        self._loader_registry["source"] = SourceResourceLoader
+        self._loader_registry["callable"] = CallableResourceLoader
+        self._loader_registry["image"] = ImageResourceLoader
+        for name, proc_config in self._config.context_processors.items():
+            self._processor_registry[name] = proc_config
+
+        # Register resources
+        for name, resource in self._config.resources.items():
+            self._resource_registry[name] = resource
+
+        # Register explicit tools
+        for name, tool_config in self._config.tools.items():
+            tool = LLMCallableTool.from_callable(
+                tool_config.import_path,
+                name_override=tool_config.name,
+                description_override=tool_config.description,
+            )
+            self._tool_registry[name] = tool
+
+        # Load tools from toolsets
+        if self._config.toolsets:
+            loader = ToolsetLoader()
+            for name, tool in loader.load_items(self._config.toolsets).items():
+                if name not in self._tool_registry:
+                    self._tool_registry[name] = tool
+                else:
+                    logger.warning(
+                        "Tool %s from toolset overlaps with configured tool",
+                        name,
+                    )
+
+        # Initialize prompts
+        for name, prompt_config in self._config.prompts.items():
+            match prompt_config:
+                case Prompt():
+                    self._prompt_registry[name] = prompt_config
+                case PromptConfig():
+                    prompt = create_prompt_from_callable(
+                        prompt_config.import_path,
+                        name_override=prompt_config.name or name,
+                        description_override=prompt_config.description,
+                        template_override=prompt_config.template,
+                    )
+                    self._prompt_registry[name] = prompt
+
+        # Start up all registries
+        await self.startup()
+
+    async def __aexit__(self, *exc: object) -> None:
+        """Clean up dependencies and registries."""
+        try:
+            await self.shutdown()
+        finally:
+            if self._dep_manager:
+                await self._dep_manager.__aexit__(*exc)
+                self._dep_manager = None
 
     @classmethod
     async def create(cls, config: Config) -> Self:
@@ -97,8 +179,8 @@ class RuntimeConfig(EventEmitter):
             Initialized runtime configuration
         """
         runtime = cls.from_config(config)
-        await runtime.startup()
-        return runtime
+        async with runtime as initialized:
+            return initialized
 
     @classmethod
     @logfire.instrument("Creating runtime configuration")
@@ -111,85 +193,15 @@ class RuntimeConfig(EventEmitter):
         Returns:
             Initialized runtime configuration
         """
-        # Create core registries first
+        # Only create registries but don't initialize them yet
         loader_registry = ResourceLoaderRegistry()
         processor_registry = ProcessorRegistry()
-
-        # Create dependent registries
         resource_registry = ResourceRegistry(
             loader_registry=loader_registry,
             processor_registry=processor_registry,
         )
         prompt_registry = PromptRegistry()
         tool_registry = ToolRegistry()
-
-        # Register default loaders
-        from llmling.resources import (
-            CallableResourceLoader,
-            CLIResourceLoader,
-            ImageResourceLoader,
-            PathResourceLoader,
-            SourceResourceLoader,
-            TextResourceLoader,
-        )
-
-        loader_registry["text"] = TextResourceLoader
-        loader_registry["path"] = PathResourceLoader
-        loader_registry["cli"] = CLIResourceLoader
-        loader_registry["source"] = SourceResourceLoader
-        loader_registry["callable"] = CallableResourceLoader
-        loader_registry["image"] = ImageResourceLoader
-
-        # Initialize from config
-        for name, proc_config in config.context_processors.items():
-            processor_registry[name] = proc_config
-
-        for name, resource in config.resources.items():
-            resource_registry[name] = resource
-
-        # Register explicit tools
-        for name, tool_config in config.tools.items():
-            tool = LLMCallableTool.from_callable(
-                tool_config.import_path,
-                name_override=tool_config.name,
-                description_override=tool_config.description,
-            )
-            tool_registry[name] = tool
-
-        # Load tools from toolsets
-        if config.toolsets:
-            loader = ToolsetLoader()
-            for name, tool in loader.load_items(config.toolsets).items():
-                if name not in tool_registry:
-                    tool_registry[name] = tool
-                else:
-                    msg = "Tool %s from toolset overlaps with configured tool"
-                    logger.warning(msg, name)
-
-        for name, prompt_config in config.prompts.items():
-            match prompt_config:
-                case Prompt():
-                    prompt_registry[name] = prompt_config
-                case PromptConfig():
-                    # Create prompt from function
-                    completion_funcs: dict[str, CompletionFunction] = {}
-                    if prompt_config.completions:
-                        for arg_name, path in prompt_config.completions.items():
-                            try:
-                                func = importing.import_callable(path)
-                                completion_funcs[arg_name] = func
-                            except Exception:
-                                msg = "Failed to import completion function: %s"
-                                logger.exception(msg, path)
-
-                    prompt = create_prompt_from_callable(
-                        prompt_config.import_path,
-                        name_override=prompt_config.name or name,
-                        description_override=prompt_config.description,
-                        template_override=prompt_config.template,
-                        completions=completion_funcs,
-                    )
-                    prompt_registry[name] = prompt
 
         return cls(
             config=config,
