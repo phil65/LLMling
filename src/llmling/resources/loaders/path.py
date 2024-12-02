@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+import upath
 from upath import UPath
 
 from llmling.config.models import PathResource
@@ -39,10 +40,16 @@ class PathResourceLoader(ResourceLoader[PathResource]):
             msg = f"Invalid URI: {uri}"
             raise exceptions.LoaderError(msg) from exc
 
-    @classmethod
-    def create_uri(cls, *, name: str) -> str:
-        """Create a URI from a path."""
+    def create_uri(self, *, name: str) -> str:
+        """Create a URI based on resource path basename or explicit URI."""
         try:
+            if self.context and self.context.resource:
+                if self.context.resource.uri:
+                    return paths.path_to_uri(self.context.resource.uri)
+                # Use basename of the configured path
+                path = upath.UPath(self.context.resource.path)
+                return paths.path_to_uri(path.name)
+            # Fallback to name if no context
             return paths.path_to_uri(name)
         except ValueError as exc:
             msg = f"Failed to create URI from {name}"
@@ -100,5 +107,5 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
 
 if __name__ == "__main__":
-    uri = PathResourceLoader.create_uri(name="/path/to/file.txt")
+    uri = PathResourceLoader().create_uri(name="/path/to/file.txt")
     print(uri)  # file:///path/to/file.txt

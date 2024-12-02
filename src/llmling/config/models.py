@@ -62,6 +62,7 @@ class BaseResource(BaseModel):
 
     resource_type: str = Field(init=False)
     description: str = ""
+    uri: str | None = None  # Add this field
     processors: list[ProcessingStep] = Field(
         default_factory=list
     )  # Optional with empty default

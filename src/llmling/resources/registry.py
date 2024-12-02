@@ -144,6 +144,7 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         """Get URI for a resource by name."""
         resource = self[name]
         loader = self.loader_registry.get_loader(resource)
+        loader = loader.create(resource, name)  # Create instance
         return loader.create_uri(name=name)
 
     @logfire.instrument("Loading resource {name}")

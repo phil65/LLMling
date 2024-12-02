@@ -183,8 +183,7 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         else:
             return normalized
 
-    @classmethod
-    def create_uri(cls, *, name: str) -> str:
+    def create_uri(self, *, name: str) -> str:
         """Create a valid URI for this resource type.
 
         Args:
@@ -196,8 +195,7 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         # Remove any existing scheme
         if "://" in name:
             name = name.split("://", 1)[1]
-
-        return cls.get_uri_template().format(name=name)
+        return self.get_uri_template().format(name=name)
 
     def __repr__(self) -> str:
         """Show loader type and context."""

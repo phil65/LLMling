@@ -222,7 +222,9 @@ def test_uri_creation(uri_template: str, name: str, expected: str) -> None:
         (TextResourceLoader,),
         {"get_uri_template": staticmethod(lambda: uri_template)},
     )
-    assert test_loader.create_uri(name=name) == expected  # type: ignore
+    # Create instance with no context
+    loader = test_loader(None)
+    assert loader.create_uri(name=name) == expected  # type: ignore
 
 
 def test_create_loaded_resource() -> None:

@@ -35,11 +35,10 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
         """Image URIs follow the same pattern as file URIs."""
         return "image:///{name}"
 
-    @classmethod
-    def create_uri(cls, *, name: str) -> str:
+    def create_uri(self, *, name: str) -> str:
         """Handle image paths properly."""
         normalized = name.replace("\\", "/").lstrip("/")
-        return cls.get_uri_template().format(name=normalized)
+        return self.get_uri_template().format(name=normalized)
 
     @classmethod
     def get_name_from_uri(cls, uri: str) -> str:

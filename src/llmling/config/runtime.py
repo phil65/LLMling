@@ -288,6 +288,7 @@ class RuntimeConfig(EventEmitter):
             logger.debug("Trying as resource name")
             resource = self._resource_registry[uri_or_name]
             loader = self._loader_registry.get_loader(resource)
+            loader = loader.create(resource, uri_or_name)  # Create instance
             uri = loader.create_uri(name=uri_or_name)
         except KeyError:
             pass
@@ -298,13 +299,13 @@ class RuntimeConfig(EventEmitter):
         if "/" in uri_or_name or "\\" in uri_or_name or "." in uri_or_name:
             try:
                 logger.debug("Trying as file path")
-                uri = PathResourceLoader.create_uri(name=uri_or_name)
                 resource = PathResource(path=uri_or_name)
+                loader = PathResourceLoader.create(resource, uri_or_name)
+                uri = loader.create_uri(name=uri_or_name)
             except Exception as exc:  # noqa: BLE001
                 logger.debug("Failed to create file URI: %s", exc)
             else:
                 return uri, resource
-
         msg = (
             f"Could not resolve resource {uri_or_name!r}. Expected resource name or path."
         )
