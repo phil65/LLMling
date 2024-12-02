@@ -605,9 +605,9 @@ class RuntimeConfig(EventEmitter):
 
 
 if __name__ == "__main__":
-    from llmling.config.models import Config
+    from llmling import Config
 
-    cfg = Config.from_file("E:/mcp_zed.yml")
+    cfg = Config.from_file("E:/mcp_zed.yml")  # type: ignore
     runtime = RuntimeConfig.from_config(cfg)
     with runtime as ctx:
         pass
