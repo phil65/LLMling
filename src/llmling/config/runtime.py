@@ -12,6 +12,7 @@ import logfire
 
 from llmling.config.models import Prompt, PromptConfig
 from llmling.core import exceptions
+from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
 from llmling.extensions.loaders import ToolsetLoader
 from llmling.processors.registry import ProcessorRegistry
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class RuntimeConfig:
+class RuntimeConfig(EventEmitter):
     """Fully initialized runtime configuration.
 
     This represents the "live" state of a Config, with all components
@@ -65,6 +66,7 @@ class RuntimeConfig:
             prompt_registry: Registry for prompts
             tool_registry: Registry for tools
         """
+        super().__init__()
         self._config = config
         self._loader_registry = loader_registry
         self._processor_registry = processor_registry
@@ -247,6 +249,11 @@ class RuntimeConfig:
     def list_tools(self) -> Sequence[str]:
         """List all available tool names."""
         return self._tool_registry.list_items()
+
+    @property
+    def tools(self) -> dict[str, LLMCallableTool]:
+        """Get all registered tools."""
+        return dict(self._tool_registry)
 
     async def execute_tool(self, name: str, **params: Any) -> Any:
         """Execute a tool by name."""

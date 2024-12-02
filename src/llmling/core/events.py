@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, TypeVar
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+
+from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
@@ -10,9 +16,88 @@ if TYPE_CHECKING:
 
     from llmling.core.typedefs import MetadataDict
 
+logger = get_logger(__name__)
+
 
 TKey = TypeVar("TKey")
 TItem = TypeVar("TItem")
+
+
+class EventType(Enum):
+    """Unified event types for LLMling."""
+
+    # Registry-related events (aligned with RegistryEvents)
+    ITEM_ADDED = auto()
+    ITEM_MODIFIED = auto()
+    ITEM_REMOVED = auto()
+    LIST_CHANGED = auto()
+    RESET = auto()
+
+    # Resource-specific events
+    RESOURCE_CONTENT_CHANGED = auto()
+    RESOURCE_METADATA_CHANGED = auto()
+    RESOURCE_WATCHING_STARTED = auto()
+    RESOURCE_WATCHING_STOPPED = auto()
+
+    # Processor-specific events
+    PROCESSOR_STARTED = auto()
+    PROCESSOR_COMPLETED = auto()
+    PROCESSOR_FAILED = auto()
+
+    # Tool-specific events
+    TOOL_CALLED = auto()
+    TOOL_COMPLETED = auto()
+    TOOL_FAILED = auto()
+
+
+@dataclass
+class Event:
+    """Unified event type for LLMling."""
+
+    type: EventType
+    source: str  # Component that emitted the event
+    timestamp: datetime = field(default_factory=datetime.now)
+    name: str | None = None  # Item name if applicable
+    data: Any | None = None  # The actual item/data
+    metadata: dict[str, Any] | None = field(default_factory=dict)
+
+    def __repr__(self) -> str:
+        """Readable string representation."""
+        return (
+            f"Event(type={self.type.name}, source={self.source!r}, "
+            f"name={self.name!r}, timestamp={self.timestamp})"
+        )
+
+
+class EventHandler(Protocol):
+    """Protocol for unified event handling."""
+
+    async def handle_event(self, event: Event) -> None:
+        """Handle an event."""
+
+
+class EventEmitter:
+    """Base class for components that emit events."""
+
+    def __init__(self) -> None:
+        """Initialize event emitter."""
+        self._event_handlers: set[EventHandler] = set()
+
+    async def emit_event(self, event: Event) -> None:
+        """Emit an event to all registered handlers."""
+        for handler in self._event_handlers:
+            try:
+                await handler.handle_event(event)
+            except Exception:
+                logger.exception("Error handling event: %s", event)
+
+    def add_event_handler(self, handler: EventHandler) -> None:
+        """Add an event handler."""
+        self._event_handlers.add(handler)
+
+    def remove_event_handler(self, handler: EventHandler) -> None:
+        """Remove an event handler."""
+        self._event_handlers.discard(handler)
 
 
 class RegistryEvents(Generic[TKey, TItem]):
