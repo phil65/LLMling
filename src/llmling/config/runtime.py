@@ -27,6 +27,7 @@ from llmling.tools.registry import ToolRegistry
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    import types
 
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
@@ -156,14 +157,17 @@ class RuntimeConfig(EventEmitter):
         # Start up all registries
         await self.startup()
 
-    async def __aexit__(self, *exc: object) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
         """Clean up dependencies and registries."""
         try:
             await self.shutdown()
         finally:
-            if self._dep_manager:
-                await self._dep_manager.__aexit__(*exc)
-                self._dep_manager = None
+            await self._dep_manager.__aexit__(exc_type, exc_val, exc_tb)
 
     @classmethod
     async def create(cls, config: Config) -> Self:
