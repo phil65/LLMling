@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import defaultdict
 from contextlib import asynccontextmanager
 import glob
 from typing import TYPE_CHECKING, Any, Self
@@ -18,6 +19,7 @@ from mcp.types import (
     Resource,
     TextContent,
 )
+from pydantic import AnyUrl
 
 from llmling.config.manager import ConfigManager
 from llmling.config.models import PathResource, SourceResource
@@ -32,8 +34,6 @@ from llmling.server.observers import PromptObserver, ResourceObserver, ToolObser
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine
     import os
-
-    from pydantic import AnyUrl
 
     from llmling.prompts.models import Prompt
 
@@ -58,6 +58,7 @@ class LLMLingServer:
         """
         self.name = name
         self.runtime = runtime
+        self._subscriptions: defaultdict[str, set[mcp.ServerSession]] = defaultdict(set)
 
         # Create MCP server
         self.server = Server(name)
@@ -253,6 +254,24 @@ class LLMLingServer:
             msg = "Progress notification: %s %.1f/%.1f"
             logger.debug(msg, token, progress, total or 0.0)
 
+        @self.server.subscribe_resource()
+        async def handle_subscribe(uri: AnyUrl) -> None:
+            """Subscribe to resource updates."""
+            uri_str = str(uri)
+            self._subscriptions[uri_str].add(self.current_session)
+            logger.debug("Added subscription for %s", uri)
+
+        @self.server.unsubscribe_resource()
+        async def handle_unsubscribe(uri: AnyUrl) -> None:
+            """Unsubscribe from resource updates."""
+            uri_str = str(uri)
+            if uri_str in self._subscriptions:
+                self._subscriptions[uri_str].discard(self.current_session)
+                if not self._subscriptions[uri_str]:
+                    del self._subscriptions[uri_str]
+                msg = "Removed subscription for %s: %s"
+                logger.debug(msg, uri, self.current_session)
+
     def _setup_observers(self) -> None:
         """Set up registry observers for MCP notifications."""
         self.resource_observer = ResourceObserver(self)
@@ -358,15 +377,13 @@ class LLMLingServer:
             logger.exception("Failed to send resource list change notification")
 
     async def notify_resource_change(self, uri: str) -> None:
-        """Notify clients about resource changes."""
-        try:
-            url = conversions.to_mcp_uri(uri)
-            self._create_task(self.current_session.send_resource_updated(url))
-            self._create_task(self.current_session.send_resource_list_changed())
-        except RuntimeError:
-            logger.debug("No active session for notification")
-        except Exception:
-            logger.exception("Failed to send resource change notification")
+        """Notify subscribers about resource changes."""
+        if uri in self._subscriptions:
+            try:
+                await self.current_session.send_resource_updated(AnyUrl(uri))
+            except Exception:
+                msg = "Failed to notify subscribers about resource change: %s"
+                logger.exception(msg, uri)
 
     async def notify_prompt_list_changed(self) -> None:
         """Notify clients about prompt list changes."""
