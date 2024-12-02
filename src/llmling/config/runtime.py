@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Self
 import depkit
 import logfire
 
-from llmling.config.models import Prompt, PromptConfig
+from llmling.config.models import PathResource, Prompt, PromptConfig
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
@@ -20,6 +20,7 @@ from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.function import create_prompt_from_callable
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
+from llmling.resources.loaders.path import PathResourceLoader
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
 from llmling.tools.registry import ToolRegistry
@@ -254,19 +255,71 @@ class RuntimeConfig(EventEmitter):
         """
         return await self._resource_registry.load(name)
 
-    async def load_resource_by_uri(self, uri: str) -> LoadedResource:
-        """Load a resource by URI.
+    async def resolve_resource_uri(self, uri_or_name: str) -> tuple[str, Resource]:
+        """Resolve a resource identifier to a proper URI and resource.
 
         Args:
-            uri: URI of the resource to load
+            uri_or_name: Can be:
+                - Resource name: "test.txt"
+                - Full URI: "file:///test.txt"
+                - Local path: "/path/to/file.txt"
 
         Returns:
-            Loaded resource content and metadata
+            Tuple of (resolved URI, resource object)
 
         Raises:
-            ResourceError: If resource cannot be loaded
+            ResourceError: If resolution fails
         """
-        return await self._resource_registry.load_by_uri(uri)
+        logger.debug("Resolving resource identifier: %s", uri_or_name)
+
+        # 1. If it's already a URI, use directly
+        if "://" in uri_or_name:
+            logger.debug("Using direct URI")
+            loader = self._loader_registry.find_loader_for_uri(uri_or_name)
+            name = loader.get_name_from_uri(uri_or_name)
+            if name in self._resource_registry:
+                return uri_or_name, self._resource_registry[name]
+            # Create temporary resource for the URI
+            resource: Resource = PathResource(path=uri_or_name)
+            return uri_or_name, resource
+
+        # 2. Try as resource name
+        try:
+            logger.debug("Trying as resource name")
+            resource = self._resource_registry[uri_or_name]
+            loader = self._loader_registry.get_loader(resource)
+            uri = loader.create_uri(name=uri_or_name)
+        except KeyError:
+            pass
+        else:
+            return uri, resource
+
+        # 3. If it looks like a path, try as file
+        if "/" in uri_or_name or "\\" in uri_or_name or "." in uri_or_name:
+            try:
+                logger.debug("Trying as file path")
+                uri = PathResourceLoader.create_uri(name=uri_or_name)
+                resource = PathResource(path=uri_or_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Failed to create file URI: %s", exc)
+            else:
+                return uri, resource
+
+        msg = (
+            f"Could not resolve resource {uri_or_name!r}. Expected resource name or path."
+        )
+        raise exceptions.ResourceError(msg)
+
+    async def load_resource_by_uri(self, uri: str) -> LoadedResource:
+        """Load a resource by URI."""
+        try:
+            resolved_uri, resource = await self.resolve_resource_uri(uri)
+            loader = self._loader_registry.get_loader(resource)
+            loader = loader.create(resource, loader.get_name_from_uri(resolved_uri))
+            return await loader.load(processor_registry=self._processor_registry)
+        except Exception as exc:
+            msg = f"Failed to load resource from URI {uri}"
+            raise exceptions.ResourceError(msg) from exc
 
     def list_resources(self) -> Sequence[str]:
         """List all available resource names.
