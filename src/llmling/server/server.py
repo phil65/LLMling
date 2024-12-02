@@ -133,13 +133,11 @@ class LLMLingServer:
             arguments: dict[str, Any] | None = None,
         ) -> list[TextContent]:
             """Handle tools/call request."""
+            arguments = arguments or {}
+            # Filter out _meta from arguments
+            args = {k: v for k, v in arguments.items() if not k.startswith("_")}
             try:
-                # Filter out _meta from arguments
-                tool_args = {
-                    k: v for k, v in (arguments or {}).items() if not k.startswith("_")
-                }
-
-                result = await self.runtime.execute_tool(name, **tool_args)
+                result = await self.runtime.execute_tool(name, **args)
                 return [TextContent(type="text", text=str(result))]
             except Exception as exc:
                 logger.exception("Tool execution failed: %s", name)
