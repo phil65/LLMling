@@ -15,6 +15,7 @@ from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
     import os
 
     from llmling.processors.registry import ProcessorRegistry
@@ -63,7 +64,7 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
         resource: ImageResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
+    ) -> AsyncIterator[LoadedResource]:
         """Load and process image content."""
         try:
             path_obj = upath.UPath(resource.path)
@@ -87,7 +88,7 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
             if resource.alt_text:
                 placeholder_text = f"{placeholder_text} - {resource.alt_text}"
 
-            return create_loaded_resource(
+            yield create_loaded_resource(
                 content=placeholder_text,
                 source_type="image",
                 uri=self.create_uri(name=name),

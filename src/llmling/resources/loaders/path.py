@@ -15,6 +15,8 @@ from llmling.utils import paths
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
 
@@ -82,25 +84,56 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         resource: PathResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
-        """Load content from a file or URL."""
+    ) -> AsyncGenerator[LoadedResource, None]:
+        """Load content from file(s)."""
         try:
             path = UPath(resource.path)
-            content = path.read_text("utf-8")
 
-            if processor_registry and (procs := resource.processors):
-                processed = await processor_registry.process(content, procs)
-                content = processed.content
-            meta = {"type": "path", "path": str(path), "scheme": path.protocol}
-            return create_loaded_resource(
-                content=content,
-                source_type="path",
-                uri=self.create_uri(name=name),
-                mime_type=self.supported_mime_types[0],
-                name=resource.description or path.name,
-                description=resource.description,
-                additional_metadata=meta,
-            )
+            if path.is_dir():
+                # Handle directory recursively
+                for file_path in path.rglob("*"):
+                    if file_path.is_file():
+                        content = file_path.read_text("utf-8")
+                        if processor_registry and (procs := resource.processors):
+                            processed = await processor_registry.process(content, procs)
+                            content = processed.content
+
+                        yield create_loaded_resource(
+                            content=content,
+                            source_type="path",
+                            uri=self.create_uri(
+                                name=file_path.name
+                            ),  # Use filename for URI
+                            mime_type=self.supported_mime_types[0],
+                            name=resource.description or file_path.name,
+                            description=resource.description,
+                            additional_metadata={
+                                "type": "path",
+                                "path": str(file_path),
+                                "scheme": file_path.protocol,
+                                "relative_to": str(path),  # Add original directory
+                            },
+                        )
+            else:
+                # Handle single file
+                content = path.read_text("utf-8")
+                if processor_registry and (procs := resource.processors):
+                    processed = await processor_registry.process(content, procs)
+                    content = processed.content
+
+                yield create_loaded_resource(
+                    content=content,
+                    source_type="path",
+                    uri=self.create_uri(name=name),
+                    mime_type=self.supported_mime_types[0],
+                    name=resource.description or path.name,
+                    description=resource.description,
+                    additional_metadata={
+                        "type": "path",
+                        "path": str(path),
+                        "scheme": path.protocol,
+                    },
+                )
         except Exception as exc:
             msg = f"Failed to load content from {resource.path}"
             raise exceptions.LoaderError(msg) from exc

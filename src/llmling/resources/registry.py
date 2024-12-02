@@ -23,6 +23,8 @@ from llmling.resources.watching import ResourceWatcher
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.loaders.registry import ResourceLoaderRegistry
     from llmling.resources.models import LoadedResource
@@ -147,43 +149,53 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         loader = loader.create(resource, name)  # Create instance
         return loader.create_uri(name=name)
 
-    @logfire.instrument("Loading resource {name}")
-    async def load(self, name: str, *, force_reload: bool = False) -> LoadedResource:
-        """Load a resource by name."""
+    async def load_all(
+        self, name: str, *, force_reload: bool = False
+    ) -> AsyncIterator[LoadedResource]:
+        """Load all resources for a given name."""
         try:
             resource = self[name]
             uri = self.get_uri(name)
 
             # Check cache unless force reload
             if not force_reload and uri in self._cache:
-                return self._cache[uri]
+                yield self._cache[uri]
+                return
 
             # Get loader and initialize with context
             loader = self.loader_registry.get_loader(resource)
-            loader = loader.create(resource, name)  # Create with named context
+            loader = loader.create(resource, name)
 
-            loaded = await loader.load(
-                context=loader.context,  # Pass the context we created
+            async for loaded in loader.load(
+                context=loader.context,
                 processor_registry=self.processor_registry,
-            )
+            ):
+                # Ensure the URI is set correctly
+                if loaded.metadata.uri != uri:
+                    msg = "Loader returned different URI than expected: %s != %s"
+                    logger.warning(msg, loaded.metadata.uri, uri)
+                    loaded.metadata.uri = uri
 
-            # Ensure the URI is set correctly
-            if loaded.metadata.uri != uri:
-                msg = "Loader returned different URI than expected: %s != %s"
-                logger.warning(msg, loaded.metadata.uri, uri)
-                loaded.metadata.uri = uri
+                # Update cache using URI
+                self._cache[uri] = loaded
+                self._last_loaded[uri] = datetime.now()
 
-            # Update cache using URI
-            self._cache[uri] = loaded
-            self._last_loaded[uri] = datetime.now()
+                yield loaded
+
         except KeyError as exc:
             msg = f"Resource not found: {name}"
             raise exceptions.ResourceError(msg) from exc
         except Exception as exc:
             msg = f"Failed to load resource {name}: {exc}"
             raise exceptions.ResourceError(msg) from exc
-        else:
-            return loaded
+
+    @logfire.instrument("Loading resource {name}")
+    async def load(self, name: str, *, force_reload: bool = False) -> LoadedResource:
+        """Load first/single resource (backward compatibility)."""
+        async for resource in self.load_all(name, force_reload=force_reload):
+            return resource
+        msg = f"No resources loaded for {name}"
+        raise exceptions.ResourceError(msg)
 
     async def load_by_uri(self, uri: str) -> LoadedResource:
         """Load a resource by URI."""

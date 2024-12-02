@@ -11,6 +11,8 @@ from llmling.utils import importing
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
 
@@ -30,7 +32,7 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
         resource: SourceResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
+    ) -> AsyncIterator[LoadedResource]:
         """Load Python source content."""
         try:
             content = importing.get_module_source(
@@ -43,7 +45,7 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
-            return create_loaded_resource(
+            yield create_loaded_resource(
                 content=content,
                 source_type="source",
                 uri=self.create_uri(name=name),

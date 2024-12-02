@@ -317,7 +317,10 @@ class RuntimeConfig(EventEmitter):
             resolved_uri, resource = await self.resolve_resource_uri(uri)
             loader = self._loader_registry.get_loader(resource)
             loader = loader.create(resource, loader.get_name_from_uri(resolved_uri))
-            return await loader.load(processor_registry=self._processor_registry)
+            async for res in loader.load(processor_registry=self._processor_registry):
+                return res  # Return first resource
+            msg = "No resources loaded"
+            raise exceptions.ResourceError(msg)  # noqa: TRY301
         except Exception as exc:
             msg = f"Failed to load resource from URI {uri}"
             raise exceptions.ResourceError(msg) from exc

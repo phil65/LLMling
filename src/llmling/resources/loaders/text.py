@@ -9,6 +9,8 @@ from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
 
@@ -28,15 +30,15 @@ class TextResourceLoader(ResourceLoader[TextResource]):
         resource: TextResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
-        """Implement actual loading logic."""
+    ) -> AsyncIterator[LoadedResource]:
+        """Load text content."""
         try:
             content = resource.content
             if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
-            return create_loaded_resource(
+            yield create_loaded_resource(
                 content=content,
                 source_type="text",
                 uri=self.create_uri(name=name),
@@ -46,6 +48,5 @@ class TextResourceLoader(ResourceLoader[TextResource]):
                 additional_metadata={"type": "text"},
             )
         except Exception as exc:
-            logger.exception("Failed to load text content")
-            msg = "Failed to load text content"
+            msg = f"Failed to load text content: {exc}"
             raise exceptions.LoaderError(msg) from exc

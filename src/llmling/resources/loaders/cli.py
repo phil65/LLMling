@@ -12,6 +12,8 @@ from llmling.resources.base import ResourceLoader, create_loaded_resource
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
 
@@ -31,7 +33,7 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
         resource: CLIResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
+    ) -> AsyncIterator[LoadedResource]:
         """Execute command and load output."""
         command = cmd if isinstance((cmd := resource.command), str) else " ".join(cmd)
         try:
@@ -63,7 +65,7 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
             meta = {"command": command, "exit_code": proc.returncode}
-            return create_loaded_resource(
+            yield create_loaded_resource(
                 content=content,
                 source_type="cli",
                 uri=self.create_uri(name=name),

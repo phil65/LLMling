@@ -10,6 +10,8 @@ from llmling.utils import calling
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
 
@@ -29,7 +31,7 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
         resource: CallableResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
+    ) -> AsyncIterator[LoadedResource]:
         """Execute callable and load result."""
         try:
             kwargs = resource.keyword_args
@@ -39,7 +41,7 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
             meta = {"import_path": resource.import_path, "args": resource.keyword_args}
-            return create_loaded_resource(
+            yield create_loaded_resource(
                 content=content,
                 source_type="callable",
                 uri=self.create_uri(name=name),

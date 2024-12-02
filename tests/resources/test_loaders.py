@@ -13,6 +13,9 @@ from llmling.config.models import (
     TextResource,
 )
 from llmling.core import exceptions
+from llmling.core.typedefs import ProcessingStep
+from llmling.processors.base import ProcessorConfig
+from llmling.processors.registry import ProcessorRegistry
 from llmling.resources import (
     CallableResourceLoader,
     CLIResourceLoader,
@@ -27,8 +30,6 @@ from llmling.resources.loaders.registry import ResourceLoaderRegistry
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from llmling.processors.registry import ProcessorRegistry
 
 
 @pytest.fixture
@@ -46,8 +47,8 @@ def loader_registry() -> ResourceLoaderRegistry:
 
 @pytest.fixture
 def processor_registry() -> ProcessorRegistry:
-    """Mock processor registry."""
-    return None  # type: ignore
+    """Create a processor registry for testing."""
+    return ProcessorRegistry()
 
 
 @pytest.mark.parametrize(
@@ -155,7 +156,7 @@ async def test_text_loader(processor_registry: ProcessorRegistry) -> None:
     resource = TextResource(content=content)
     loader = TextResourceLoader(LoaderContext(resource=resource, name="test"))
 
-    result = await loader.load(processor_registry=processor_registry)
+    result = await anext(loader.load(processor_registry=processor_registry))
     assert result.content == content
     assert result.metadata.mime_type == "text/plain"
     assert result.source_type == "text"
@@ -175,7 +176,7 @@ async def test_path_loader(
     resource = PathResource(path=str(test_file))
     loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
 
-    result = await loader.load(processor_registry=processor_registry)
+    result = await anext(loader.load(processor_registry=processor_registry))
     assert result.content == content
     assert result.source_type == "path"
 
@@ -187,7 +188,7 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
     resource = CLIResource(command="echo test", shell=True)
     loader = CLIResourceLoader(LoaderContext(resource=resource, name="test"))
 
-    result = await loader.load(processor_registry=processor_registry)
+    result = await anext(loader.load(processor_registry=processor_registry))
     assert result.content.strip() == "test"
     assert result.source_type == "cli"
 
@@ -198,7 +199,7 @@ async def test_source_loader(processor_registry: ProcessorRegistry) -> None:
     resource = SourceResource(import_path="llmling.core.log")
     loader = SourceResourceLoader(LoaderContext(resource=resource, name="test"))
 
-    result = await loader.load(processor_registry=processor_registry)
+    result = await anext(loader.load(processor_registry=processor_registry))
     assert "get_logger" in result.content
     assert result.source_type == "source"
     assert result.metadata.mime_type == "text/x-python"
@@ -282,6 +283,85 @@ def test_registry_uri_templates(loader_registry: ResourceLoaderRegistry) -> None
     templates = loader_registry.get_uri_templates()
     assert len(templates) == 6  # One for each loader type  # noqa: PLR2004
     assert all("scheme" in t and "template" in t and "mimeTypes" in t for t in templates)
+
+
+@pytest.mark.asyncio
+async def test_path_loader_directory(
+    tmp_path: Path,
+    processor_registry: ProcessorRegistry,
+) -> None:
+    """Test PathResourceLoader with directory."""
+    # Create test directory structure
+    (tmp_path / "subdir").mkdir()
+    (tmp_path / "file1.txt").write_text("content 1")
+    (tmp_path / "file2.md").write_text("content 2")
+    (tmp_path / "subdir" / "file3.txt").write_text("content 3")
+
+    resource = PathResource(path=str(tmp_path))
+    loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
+
+    # Collect all loaded resources using async list comp
+    files = [
+        result async for result in loader.load(processor_registry=processor_registry)
+    ]
+
+    # Test results
+    assert len(files) == 3  # noqa: PLR2004
+    assert {f.content for f in files} == {"content 1", "content 2", "content 3"}
+    # Test URIs use basenames
+    assert all(f.metadata.uri.startswith("file:///") for f in files)
+    assert {f.metadata.name for f in files} == {"file1.txt", "file2.md", "file3.txt"}
+    # Test relative path metadata
+    assert all("relative_to" in f.metadata.extra for f in files)
+    assert str(tmp_path) == files[0].metadata.extra["relative_to"]
+
+
+@pytest.mark.asyncio
+async def test_path_loader_empty_directory(
+    tmp_path: Path,
+    processor_registry: ProcessorRegistry,
+) -> None:
+    """Test loading from an empty directory."""
+    resource = PathResource(path=str(tmp_path))
+    loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
+
+    files = [
+        result async for result in loader.load(processor_registry=processor_registry)
+    ]
+
+    assert len(files) == 0
+
+
+@pytest.mark.asyncio
+async def test_path_loader_directory_with_processors(
+    tmp_path: Path,
+    processor_registry: ProcessorRegistry,
+) -> None:
+    """Test directory loading with processors applied to each file."""
+    # Create test files
+    (tmp_path / "file1.txt").write_text("test1")
+    (tmp_path / "file2.txt").write_text("test2")
+
+    # Set up processor
+    processor_registry.register(
+        "reverse",
+        ProcessorConfig(
+            type="function",
+            import_path="llmling.testing.processors.reverse_text",
+        ),
+    )
+
+    resource = PathResource(
+        path=str(tmp_path),
+        processors=[ProcessingStep(name="reverse")],
+    )
+    loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
+    files = [
+        result async for result in loader.load(processor_registry=processor_registry)
+    ]
+
+    assert len(files) == 2  # noqa: PLR2004
+    assert {f.content for f in files} == {"1tset", "2tset"}  # Reversed content
 
 
 if __name__ == "__main__":

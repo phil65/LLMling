@@ -10,7 +10,6 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 import urllib.parse
 
-import logfire
 import upath
 
 from llmling.completions.protocols import CompletionProvider
@@ -24,6 +23,8 @@ from llmling.utils import paths
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from llmling.processors.registry import ProcessorRegistry
 
 
@@ -208,31 +209,31 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         return fields["resource_type"].default  # type: ignore
 
     @overload
-    async def load(
+    def load(
         self,
         context: LoaderContext[TResource],
         processor_registry: ProcessorRegistry | None = None,
-    ) -> LoadedResource: ...
+    ) -> AsyncIterator[LoadedResource]: ...
 
     @overload
-    async def load(
+    def load(
         self,
         context: TResource,
         processor_registry: ProcessorRegistry | None = None,
-    ) -> LoadedResource: ...
+    ) -> AsyncIterator[LoadedResource]: ...
 
     @overload
-    async def load(
+    def load(
         self,
         context: None = None,
         processor_registry: ProcessorRegistry | None = None,
-    ) -> LoadedResource: ...
+    ) -> AsyncIterator[LoadedResource]: ...
 
     async def load(
         self,
-        context: LoaderContext[TResource] | TResource | None = None,
+        context: LoaderContext[TResource] | None = None,
         processor_registry: ProcessorRegistry | None = None,
-    ) -> LoadedResource:
+    ) -> AsyncIterator[LoadedResource]:
         """Load and process content.
 
         Args:
@@ -262,12 +263,11 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
             case _:
                 msg = f"Invalid context type: {type(context)}"
                 raise exceptions.LoaderError(msg)
-        with logfire.span(
-            "Loading resource",
-            resource_type=self.resource_type,
-            name=name,
-        ):
-            return await self._load_impl(resource, name, processor_registry)
+
+        generator = self._load_impl(resource, name, processor_registry)
+        # Then yield from the generator
+        async for result in generator:
+            yield result
 
     @abstractmethod
     async def _load_impl(
@@ -275,5 +275,6 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         resource: TResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> LoadedResource:
+    ) -> AsyncIterator[LoadedResource]:
         """Implementation of actual loading logic."""
+        yield NotImplemented  # type: ignore

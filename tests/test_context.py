@@ -90,7 +90,7 @@ async def test_text_loader_basic() -> None:
     """Test basic text loading functionality."""
     context = TextResource(content=SAMPLE_TEXT, description="Test text")
     loader = TextResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    result = await anext(loader.load(context, ProcessorRegistry()))
 
     assert isinstance(result, LoadedResource)
     assert result.content == SAMPLE_TEXT
@@ -108,7 +108,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
         steps = [ProcessingStep(name="reverse")]
         context = TextResource(content=SAMPLE_TEXT, description="test", processors=steps)
         loader = TextResourceLoader()
-        result = await loader.load(context, processor_registry)
+        result = await anext(loader.load(context, processor_registry))
         assert result.content == REVERSED_TEXT
     finally:
         await processor_registry.shutdown()
@@ -120,7 +120,8 @@ async def test_path_loader_file(tmp_file: Path) -> None:
     """Test loading from a file."""
     context = PathResource(path=str(tmp_file), description="Test file")
     loader = PathResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    coro = loader.load(context, ProcessorRegistry())
+    result = await anext(coro)
 
     assert result.content == TEST_FILE_CONTENT
     assert result.metadata.extra["type"] == "path"
@@ -141,7 +142,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
     context = PathResource(path=file_url, description="Test file URL")
 
     loader = PathResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    result = await anext(loader.load(context, ProcessorRegistry()))
 
     assert result.content == TEST_FILE_CONTENT
     assert result.metadata.extra["path"] == file_url
@@ -156,7 +157,7 @@ async def test_path_loader_error() -> None:
     loader = PathResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
-        await loader.load(context, ProcessorRegistry())
+        await anext(loader.load(context, ProcessorRegistry()))
 
 
 # CLI Loader Tests
@@ -168,7 +169,7 @@ async def test_cli_loader_basic() -> None:
         command=ECHO_COMMAND, description="Test command", shell=is_shell
     )
     loader = CLIResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    result = await anext(loader.load(context, ProcessorRegistry()))
 
     assert "test" in result.content.strip()
     assert result.metadata.extra["exit_code"] == 0
@@ -181,7 +182,7 @@ async def test_cli_loader_timeout() -> None:
     loader = CLIResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
-        await loader.load(context, ProcessorRegistry())
+        await anext(loader.load(context, ProcessorRegistry()))
 
 
 # Source Loader Tests
@@ -191,7 +192,7 @@ async def test_source_loader_basic() -> None:
     path = "llmling.resources.loaders.text"
     context = SourceResource(import_path=path, description="Test source")
     loader = SourceResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    result = await anext(loader.load(context, ProcessorRegistry()))
 
     assert "class TextResourceLoader" in result.content
     assert result.metadata.extra["import_path"] == context.import_path
@@ -206,7 +207,7 @@ async def test_source_loader_invalid_module() -> None:
     loader = SourceResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
-        await loader.load(context, ProcessorRegistry())
+        await anext(loader.load(context, ProcessorRegistry()))
 
 
 # Callable Loader Tests
@@ -219,7 +220,7 @@ async def test_callable_loader_sync() -> None:
         keyword_args={"test": "value"},
     )
     loader = CallableResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    result = await anext(loader.load(context, processor_registry=ProcessorRegistry()))
 
     assert "Sync result with" in result.content
     assert result.metadata.extra["import_path"] == context.import_path
@@ -234,7 +235,7 @@ async def test_callable_loader_async() -> None:
         keyword_args={"test": "value"},
     )
     loader = CallableResourceLoader()
-    result = await loader.load(context, ProcessorRegistry())
+    result = await anext(loader.load(context, ProcessorRegistry()))
 
     assert "Async result with" in result.content
     assert result.metadata.extra["import_path"] == context.import_path
@@ -272,7 +273,7 @@ async def test_all_loaders_with_processors(
 
     for context in resources:
         loader = loaders[context.resource_type]
-        result = await loader.load(context, processor_registry)
+        result = await anext(loader.load(context, processor_registry))
         assert isinstance(result, LoadedResource)
         assert result.content
         assert result.content.startswith("'")
