@@ -24,30 +24,28 @@ TItem = TypeVar("TItem")
 
 
 class EventType(Enum):
-    """Unified event types for LLMling."""
+    """Registry state change events."""
 
-    # Registry-related events (aligned with RegistryEvents)
-    ITEM_ADDED = auto()
-    ITEM_MODIFIED = auto()
-    ITEM_REMOVED = auto()
-    LIST_CHANGED = auto()
-    RESET = auto()
+    # Resource events
+    RESOURCE_ADDED = auto()
+    RESOURCE_MODIFIED = auto()
+    RESOURCE_REMOVED = auto()
+    RESOURCE_LIST_CHANGED = auto()
 
-    # Resource-specific events
-    RESOURCE_CONTENT_CHANGED = auto()
-    RESOURCE_METADATA_CHANGED = auto()
-    RESOURCE_WATCHING_STARTED = auto()
-    RESOURCE_WATCHING_STOPPED = auto()
+    # Tool events
+    TOOL_ADDED = auto()
+    TOOL_MODIFIED = auto()
+    TOOL_REMOVED = auto()
+    TOOL_LIST_CHANGED = auto()
 
-    # Processor-specific events
-    PROCESSOR_STARTED = auto()
-    PROCESSOR_COMPLETED = auto()
-    PROCESSOR_FAILED = auto()
+    # Prompt events
+    PROMPT_ADDED = auto()
+    PROMPT_MODIFIED = auto()
+    PROMPT_REMOVED = auto()
+    PROMPT_LIST_CHANGED = auto()
 
-    # Tool-specific events
-    TOOL_CALLED = auto()
-    TOOL_COMPLETED = auto()
-    TOOL_FAILED = auto()
+    # General registry events
+    REGISTRY_RESET = auto()
 
 
 @dataclass
