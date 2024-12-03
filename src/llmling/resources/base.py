@@ -10,8 +10,6 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 import urllib.parse
 
-import upath
-
 from llmling.completions.protocols import CompletionProvider
 from llmling.config.models import BaseResource
 from llmling.core import exceptions
@@ -137,10 +135,10 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
 
     @classmethod
     def get_name_from_uri(cls, uri: str) -> str:
-        """Extract resource name from URI.
+        """Extract resource name from URI, ignoring parameters.
 
         Args:
-            uri: URI in format "{scheme}://{name}"
+            uri: URI in format "{scheme}://{name}[?param1=value1]"
 
         Returns:
             Resource name
@@ -153,12 +151,13 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
                 msg = f"Unsupported URI: {uri}"
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
-            path = upath.UPath(uri)
+            parsed = urllib.parse.urlparse(uri)
+            path = parsed.netloc or parsed.path.lstrip("/")
 
             # Get parts excluding protocol info
             parts = [
                 urllib.parse.unquote(str(part))  # URL decode each part
-                for part in path.parts
+                for part in path.split("/")
                 if not paths.is_ignorable_part(str(part))
             ]
 
@@ -178,24 +177,44 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         except Exception as exc:
             if isinstance(exc, exceptions.LoaderError):
                 raise
-            msg = f"Invalid URI: {uri}"
+            msg = f"Invalid URI format: {uri}"
             raise exceptions.LoaderError(msg) from exc
         else:
             return normalized
 
-    def create_uri(self, *, name: str) -> str:
+    @classmethod
+    def get_params_from_uri(cls, uri: str) -> dict[str, str]:
+        """Extract parameters from URI.
+
+        Args:
+            uri: URI containing query parameters
+
+        Returns:
+            Dictionary of parameters
+        """
+        parsed = urllib.parse.urlparse(uri)
+        return dict(urllib.parse.parse_qsl(parsed.query))
+
+    def create_uri(self, *, name: str, params: dict[str, str] | None = None) -> str:
         """Create a valid URI for this resource type.
 
         Args:
             name: Resource name or identifier
+            params: Optional URI parameters
 
         Returns:
-            URI in format "{scheme}://{name}"
+            URI in format "{scheme}://{name}[?param1=value1&...]"
         """
         # Remove any existing scheme
         if "://" in name:
             name = name.split("://", 1)[1]
-        return self.get_uri_template().format(name=name)
+
+        base_uri = self.get_uri_template().format(name=name)
+        if not params:
+            return base_uri
+
+        query = urllib.parse.urlencode(params)
+        return f"{base_uri}?{query}"
 
     def __repr__(self) -> str:
         """Show loader type and context."""

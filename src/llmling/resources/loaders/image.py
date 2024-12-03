@@ -36,7 +36,7 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
         """Image URIs follow the same pattern as file URIs."""
         return "image:///{name}"
 
-    def create_uri(self, *, name: str) -> str:
+    def create_uri(self, *, name: str, params: dict[str, str] | None = None) -> str:
         """Handle image paths properly."""
         normalized = name.replace("\\", "/").lstrip("/")
         return self.get_uri_template().format(name=normalized)

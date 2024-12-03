@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class CallableResourceLoader(ResourceLoader[CallableResource]):
-    """Loads context from Python callable execution."""
+    """Loads context from Python callable execution with URI parameter support."""
 
     context_class = CallableResource
     uri_scheme = "callable"
@@ -32,15 +32,30 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
         name: str,
         processor_registry: ProcessorRegistry | None,
     ) -> AsyncIterator[LoadedResource]:
-        """Execute callable and load result."""
+        """Execute callable with parameters from URI if present."""
         try:
-            kwargs = resource.keyword_args
+            # Get base kwargs from resource config
+            kwargs = resource.keyword_args.copy()
+
+            # If we have a URI context, extract and merge parameters
+            if self.context:
+                uri_params = self.get_params_from_uri(
+                    self.create_uri(name=self.context.name)
+                )
+                kwargs.update(uri_params)
+
+            # Execute the callable with combined parameters
             content = await calling.execute_callable(resource.import_path, **kwargs)
 
             if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-            meta = {"import_path": resource.import_path, "args": resource.keyword_args}
+
+            meta = {
+                "import_path": resource.import_path,
+                "args": kwargs,
+            }
+
             yield create_loaded_resource(
                 content=content,
                 source_type="callable",

@@ -42,7 +42,7 @@ class PathResourceLoader(ResourceLoader[PathResource]):
             msg = f"Invalid URI: {uri}"
             raise exceptions.LoaderError(msg) from exc
 
-    def create_uri(self, *, name: str) -> str:
+    def create_uri(self, *, name: str, params: dict[str, str] | None = None) -> str:
         """Create a URI based on resource path basename or explicit URI."""
         try:
             if self.context and self.context.resource:
