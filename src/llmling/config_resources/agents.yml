@@ -1,0 +1,38 @@
+responses:
+  SupportResult:
+    description: "Support agent response"
+    fields:
+      support_advice:
+        type: str
+        description: "Advice returned to customer"
+      risk:
+        type: int
+        description: "Risk level"
+        constraints:
+          ge: 0
+          le: 10
+
+  ResearchResult:
+    description: "Research agent response"
+    fields:
+      findings:
+        type: str
+        description: "Research findings"
+
+agents:
+  support: # Agent identifier
+    name: "Support Agent"
+    description: "Handles customer support inquiries"
+    model: "openai:gpt-3.5-turbo"
+    result_model: "SupportResult"
+    system_prompts:
+      - type: "text"
+        value: "You are a helpful support agent."
+
+  researcher: # Another agent
+    name: "Research Agent"
+    model: "openai:gpt-4"
+    result_model: "ResearchResult"
+    system_prompts:
+      - type: "text"
+        value: "You are a thorough researcher."

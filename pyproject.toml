@@ -51,6 +51,8 @@ dependencies = [
     "watchdog",
     "platformdirs>=4.3.6",
     "depkit>=0.3.5",
+    "pydantic-ai>=0.0.8",
+    "typing-extensions>=4.12.2",
 ]
 
 [project.scripts]
