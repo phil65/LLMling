@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence as TypingSequence  # noqa: TC003
+import inspect
 import os  # noqa: TC003
 from typing import Any, Literal, Self
 import warnings
@@ -19,6 +20,7 @@ from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import Prompt  # noqa: TC001
 from llmling.resources.watching import WatchConfig  # noqa: TC001
+from llmling.utils.importing import import_callable
 
 
 ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
@@ -79,6 +81,10 @@ class BaseResource(BaseModel):
         """Tell if this resource should be watched."""
         return self.supports_watching and self.watch is not None and self.watch.enabled
 
+    def is_templated(self) -> bool:
+        """Whether this resource supports URI templates."""
+        return False  # Default: resources are static
+
 
 class PathResource(BaseResource):
     """Resource loaded from a file or URL."""
@@ -104,6 +110,10 @@ class PathResource(BaseResource):
             msg = "Path cannot be empty"
             raise ValueError(msg)
         return self
+
+    def is_templated(self) -> bool:
+        """Path resources are templated if they contain placeholders."""
+        return "{" in str(self.path)
 
 
 class TextResource(BaseResource):
@@ -177,6 +187,12 @@ class CallableResource(BaseResource):
             msg = f"Invalid import path: {self.import_path}"
             raise ValueError(msg)
         return self
+
+    def is_templated(self) -> bool:
+        """Callable resources are templated if they take parameters."""
+        fn = import_callable(self.import_path)
+        sig = inspect.signature(fn)
+        return bool(sig.parameters)
 
 
 class ImageResource(BaseResource):
