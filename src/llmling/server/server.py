@@ -379,12 +379,20 @@ class LLMLingServer:
 
     @property
     def current_session(self) -> mcp.ServerSession:
-        """Get current session from request context."""
+        """Get client info from request context."""
         try:
             return self.server.request_context.session
         except LookupError as exc:
             msg = "No active request context"
             raise RuntimeError(msg) from exc
+
+    @property
+    def client_info(self) -> mcp.Implementation | None:
+        """Get current session from request context."""
+        session = self.current_session
+        if not session.client_params:
+            return None
+        return session.client_params.clientInfo
 
     def notify_progress(
         self,
