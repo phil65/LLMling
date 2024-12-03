@@ -15,6 +15,7 @@ from llmling.config.models import PathResource, Prompt, PromptConfig
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
+from llmling.core.typedefs import ProcessingStep
 from llmling.extensions.loaders import ToolsetLoader
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.function import create_prompt_from_callable
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
 
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
+    from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import PromptMessage
     from llmling.resources.models import LoadedResource
 
@@ -494,6 +496,29 @@ class RuntimeConfig(EventEmitter):
             List of all prompts
         """
         return list(self._prompt_registry.values())
+
+    async def process_content(
+        self,
+        content: str,
+        processor_name: str,
+        **kwargs: Any,
+    ) -> ProcessorResult:
+        """Process content with a named processor.
+
+        Args:
+            content: Content to process
+            processor_name: Name of processor to use
+            **kwargs: Additional processor arguments
+
+        Returns:
+            Processing result
+
+        Raises:
+            ProcessorError: If processing fails
+        """
+        return await self._processor_registry.process(
+            content, [ProcessingStep(name=processor_name, kwargs=kwargs)]
+        )
 
     # Registry Observation
     def add_resource_observer(self, observer: RegistryEvents[str, Resource]) -> None:
