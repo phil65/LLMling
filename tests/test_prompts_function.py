@@ -181,10 +181,7 @@ def test_prompt_with_completions():
         languages = ["python", "javascript", "rust"]
         return [lang for lang in languages if lang.startswith(current)]
 
-    def example_func(
-        language: Literal["python", "javascript"],
-        other: str,
-    ) -> None:
+    def example_func(language: Literal["python", "javascript"], other: str) -> None:
         """Example function with completions."""
 
     prompt = create_prompt_from_callable(

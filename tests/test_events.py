@@ -25,12 +25,14 @@ class Registry(BaseRegistry[str, RegItem]):
         return exceptions.LLMLingError
 
     def _validate_item(self, item: Any) -> RegItem:
-        if isinstance(item, RegItem):
-            return item
-        if isinstance(item, str):
-            return RegItem(item)
-        msg = f"Invalid item type: {type(item)}"
-        raise self._error_class(msg)
+        match item:
+            case RegItem():
+                return item
+            case str():
+                return RegItem(item)
+            case _:
+                msg = f"Invalid item type: {type(item)}"
+                raise self._error_class(msg)
 
 
 # Tests

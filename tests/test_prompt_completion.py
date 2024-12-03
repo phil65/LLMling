@@ -42,10 +42,8 @@ def registry() -> PromptRegistry:
     registry = PromptRegistry()
 
     # Create prompt with custom completion
-    prompt = create_prompt_from_callable(
-        example_function,
-        completions={"text": get_framework_completions},
-    )
+    comps = {"text": get_framework_completions}
+    prompt = create_prompt_from_callable(example_function, completions=comps)
     registry["test_prompt"] = prompt
 
     return registry

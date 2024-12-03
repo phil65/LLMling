@@ -74,11 +74,7 @@ def test_processor_config_structure() -> None:
     assert proc.template == ""
 
     # Test setting values
-    proc = ProcessorConfig(
-        type="function",
-        import_path="test.func",
-        async_execution=True,
-    )
+    proc = ProcessorConfig(type="function", import_path="test.func", async_execution=True)
     assert proc.import_path == "test.func"
     assert proc.async_execution
 

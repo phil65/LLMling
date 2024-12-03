@@ -53,10 +53,7 @@ def function_config() -> ProcessorConfig:
 @pytest.fixture
 def template_config() -> ProcessorConfig:
     """Create a test template processor config."""
-    return ProcessorConfig(
-        type="template",
-        template="Processed: {{ content }}",
-    )
+    return ProcessorConfig(type="template", template="Processed: {{ content }}")
 
 
 @pytest.fixture

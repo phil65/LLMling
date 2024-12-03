@@ -83,24 +83,16 @@ def test_validate_config(valid_config: Config) -> None:
 def test_validate_processor_config(valid_config: Config) -> None:
     """Test processor configuration validation."""
     manager = ConfigManager(valid_config)
-
+    procs = manager.config.context_processors
     # Test missing import path
-    manager.config.context_processors["invalid_import"] = ProcessorConfig(
-        type="function",
-        import_path="",  # Now allowed by Pydantic, but caught by ConfigManager
-    )
+    # Now allowed by Pydantic, but caught by ConfigManager
+    procs["invalid_import"] = ProcessorConfig(type="function", import_path="")
 
     # Test non-existent module
-    manager.config.context_processors["invalid_module"] = ProcessorConfig(
-        type="function",
-        import_path="nonexistent.module.function",
-    )
+    procs["invalid_module"] = ProcessorConfig(type="function", import_path="non.existent")
 
     # Test missing template
-    manager.config.context_processors["invalid_template"] = ProcessorConfig(
-        type="template",
-        template="",
-    )
+    procs["invalid_template"] = ProcessorConfig(type="template", template="")
 
     warnings = manager.validate()
     assert len(warnings) == 3  # noqa: PLR2004
@@ -142,10 +134,8 @@ def test_validate_processor_references(valid_config: Config) -> None:
     manager = ConfigManager(valid_config)
 
     # Add resource with non-existent processor
-    manager.config.resources["invalid"] = TextResource(
-        content="test",
-        processors=[{"name": "nonexistent", "required": True}],
-    )
+    procs = [{"name": "nonexistent", "required": True}]
+    manager.config.resources["invalid"] = TextResource(content="test", processors=procs)
 
     warnings = manager.validate()
     assert warnings
