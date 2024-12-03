@@ -316,7 +316,8 @@ class RuntimeConfig(EventEmitter):
         try:
             resolved_uri, resource = await self.resolve_resource_uri(uri)
             loader = self._loader_registry.get_loader(resource)
-            loader = loader.create(resource, loader.get_name_from_uri(resolved_uri))
+            name = loader.get_name_from_uri(resolved_uri)
+            loader = loader.create(resource, name)
             async for res in loader.load(processor_registry=self._processor_registry):
                 return res  # Return first resource
             msg = "No resources loaded"
