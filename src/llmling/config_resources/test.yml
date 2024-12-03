@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/phil65/LLMling/refs/heads/main/schema/config-schema.json
+
 global_settings:
   scripts:
     - "https://gist.githubusercontent.com/phil65/9b57d35ea63f354cf056e0c7d4a62885/raw/d69c01f1bc56a18a1a0e3292a32003f6c4ab6a6f/get_readme.py"
@@ -75,6 +77,7 @@ resource_groups:
 
 prompts:
   code_review:
+    name: test
     description: "Review code changes"
     messages:
       - role: system
