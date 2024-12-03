@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from collections.abc import Callable
+from typing import Any, ClassVar, TypeVar
 
 from epregistry import EntryPointRegistry
 
 from llmling.core.log import get_logger
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 logger = get_logger(__name__)
@@ -30,9 +27,9 @@ class BaseExtensionLoader[T]:
     component_type: ClassVar[str]
     converter: Callable[[Any], T]
 
-    def __init__(self) -> None:
+    def __init__(self):
         """Initialize loader."""
-        self.registry = EntryPointRegistry[Any]("llmling")
+        self.registry = EntryPointRegistry[Callable[..., Any]]("llmling")
 
     def load_items(self, module_names: list[str]) -> dict[str, T]:
         """Load items from specified modules."""

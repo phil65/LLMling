@@ -13,6 +13,7 @@ from typing import (
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
 from llmling.prompts.models import ExtendedPromptArgument, Prompt, PromptMessage
+from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -49,8 +50,6 @@ def create_prompt_from_callable(
     """
     # Import if string path provided
     if isinstance(fn, str):
-        from llmling.utils import importing
-
         fn = importing.import_callable(fn)
 
     # Get function metadata
@@ -77,17 +76,15 @@ def create_prompt_from_callable(
         type_hint = hints.get(param_name, Any)
         required = param.default == param.empty
         arg_desc = arg_docs.get(param_name, "")
-
-        arguments.append(
-            ExtendedPromptArgument(
-                name=param_name,
-                description=arg_desc,
-                required=required,
-                type_hint=type_hint,  # Store original type hint
-                default=None if param.default is param.empty else param.default,
-                completion_function=completion_funcs.get(param_name),
-            )
+        arg = ExtendedPromptArgument(
+            name=param_name,
+            description=arg_desc,
+            required=required,
+            type_hint=type_hint,  # Store original type hint
+            default=None if param.default is param.empty else param.default,
+            completion_function=completion_funcs.get(param_name),
         )
+        arguments.append(arg)
 
     # Create message template. Will be formatted with function result
     template = template_override if template_override else "{result}"

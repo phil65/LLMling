@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from llmling.completions import CompletionFunction  # noqa: TC001
 from llmling.core.typedefs import MessageContent, MessageRole
+from llmling.utils import calling
 
 
 class ExtendedPromptArgument(BaseModel):
@@ -92,8 +93,6 @@ class Prompt(BaseModel):
         # If this is a function prompt, execute it
         if self.metadata.get("source") == "function":
             try:
-                from llmling.utils import calling
-
                 import_path = self.metadata["import_path"]
                 result = await calling.execute_callable(import_path, **args)
                 format_args = {"result": result}

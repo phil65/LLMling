@@ -167,10 +167,9 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
                 raise exceptions.LoaderError(msg)  # noqa: TRY301
 
             # Validate path components
-            for part in parts:
-                if cls.invalid_chars_pattern.search(part):
-                    msg = f"Invalid characters in path component: {part}"
-                    raise exceptions.LoaderError(msg)  # noqa: TRY301
+            if any(cls.invalid_chars_pattern.search(part) for part in parts):
+                msg = "Invalid characters in path component"
+                raise exceptions.LoaderError(msg)  # noqa: TRY301
 
             # Join with forward slashes and normalize path
             joined = "/".join(parts)

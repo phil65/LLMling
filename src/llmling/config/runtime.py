@@ -157,10 +157,8 @@ class RuntimeConfig(EventEmitter):
                 if name not in self._tool_registry:
                     self._tool_registry[name] = tool
                 else:
-                    logger.warning(
-                        "Tool %s from toolset overlaps with configured tool",
-                        name,
-                    )
+                    msg = "Tool %s from toolset overlaps with configured tool"
+                    logger.warning(msg, name)
 
         for name, prompt_config in self._config.prompts.items():
             match prompt_config:
