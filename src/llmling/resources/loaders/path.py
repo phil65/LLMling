@@ -15,7 +15,7 @@ from llmling.utils import paths
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncIterator
 
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.models import LoadedResource
@@ -84,7 +84,7 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         resource: PathResource,
         name: str,
         processor_registry: ProcessorRegistry | None,
-    ) -> AsyncGenerator[LoadedResource, None]:
+    ) -> AsyncIterator[LoadedResource]:
         """Load content from file(s)."""
         try:
             path = UPath(resource.path)

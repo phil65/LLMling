@@ -18,7 +18,7 @@ from mcp.types import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncIterator
 
 
 T_Stream = TypeVar("T_Stream")
@@ -39,15 +39,14 @@ class TestStreamPair[T_Stream]:
 
 
 @asynccontextmanager
-async def create_test_server_session() -> AsyncGenerator[
+async def create_test_server_session() -> AsyncIterator[
     tuple[
         ServerSession,
         tuple[
             MemoryObjectReceiveStream[JSONRPCMessage],  # Client read stream
             MemoryObjectSendStream[JSONRPCMessage],  # Client write stream
         ],
-    ],
-    None,
+    ]
 ]:
     """Create a test server session with streams."""
     # Create the streams

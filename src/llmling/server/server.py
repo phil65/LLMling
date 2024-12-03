@@ -32,7 +32,7 @@ from llmling.server.observers import PromptObserver, ResourceObserver, ToolObser
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Coroutine
+    from collections.abc import AsyncIterator, Coroutine
     import os
 
     from llmling.prompts.models import Prompt
@@ -79,7 +79,7 @@ class LLMLingServer:
         config_path: str | os.PathLike[str],
         *,
         name: str = "llmling-server",
-    ) -> AsyncGenerator[LLMLingServer, None]:
+    ) -> AsyncIterator[LLMLingServer]:
         """Create and run server from config file with proper context management.
 
         Args:

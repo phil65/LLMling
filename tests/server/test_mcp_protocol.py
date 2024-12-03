@@ -13,7 +13,7 @@ from llmling.server.mcp_inproc_session import MCPInProcSession
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncIterator
     from pathlib import Path
 
 
@@ -52,7 +52,7 @@ async def config_file(tmp_path: Path, test_config: Config) -> Path:
 
 
 @pytest.fixture
-async def configured_client(config_file: Path) -> AsyncGenerator[MCPInProcSession, None]:
+async def configured_client(config_file: Path) -> AsyncIterator[MCPInProcSession]:
     """Create client with test configuration."""
     client = MCPInProcSession(config_path=str(config_file))
     try:

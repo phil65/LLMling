@@ -23,7 +23,7 @@ from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncIterator
 
 
 @pytest.fixture
@@ -89,7 +89,7 @@ def runtime_config(base_config: Config) -> RuntimeConfig:
 
 
 @pytest.fixture
-async def server(runtime_config: RuntimeConfig) -> AsyncGenerator[LLMLingServer, None]:
+async def server(runtime_config: RuntimeConfig) -> AsyncIterator[LLMLingServer]:
     """Create configured test server."""
     server = LLMLingServer(runtime=runtime_config, name="llmling-server")
 
@@ -102,7 +102,7 @@ async def server(runtime_config: RuntimeConfig) -> AsyncGenerator[LLMLingServer,
 @pytest.fixture
 async def running_server(
     server: LLMLingServer,
-) -> AsyncGenerator[tuple[LLMLingServer, tuple[Any, Any]], None]:
+) -> AsyncIterator[tuple[LLMLingServer, tuple[Any, Any]]]:
     """Create and start test server with memory streams."""
     async with create_client_server_memory_streams() as (client_streams, server_streams):
         task = asyncio.create_task(

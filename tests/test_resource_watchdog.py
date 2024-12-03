@@ -15,11 +15,11 @@ from llmling.resources.registry import ResourceRegistry
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncIterator, Generator
 
 
 @pytest.fixture
-async def resource_registry() -> AsyncGenerator[ResourceRegistry, None]:
+async def resource_registry() -> AsyncIterator[ResourceRegistry]:
     """Create a test resource registry."""
     loader_registry = ResourceLoaderRegistry()
     # Explicitly register the path loader
