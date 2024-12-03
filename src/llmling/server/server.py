@@ -5,28 +5,16 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from contextlib import asynccontextmanager
-import glob
 from typing import TYPE_CHECKING, Any, Self
 
 import mcp
 from mcp.server import NotificationOptions, Server
-from mcp.types import (
-    INTERNAL_ERROR,
-    INVALID_PARAMS,
-    Completion,
-    CompletionArgument,
-    GetPromptResult,
-    Resource,
-    TextContent,
-)
 from pydantic import AnyUrl
 
 from llmling.config.manager import ConfigManager
-from llmling.config.models import PathResource, SourceResource
 from llmling.config.runtime import RuntimeConfig
-from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.server import conversions
+from llmling.server.handlers import register_handlers
 from llmling.server.log import configure_server_logging, run_logging_processor
 from llmling.server.observers import PromptObserver, ResourceObserver, ToolObserver
 
@@ -34,8 +22,6 @@ from llmling.server.observers import PromptObserver, ResourceObserver, ToolObser
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Coroutine
     import os
-
-    from llmling.prompts.models import Prompt
 
 
 logger = get_logger(__name__)
@@ -59,8 +45,6 @@ class LLMLingServer:
         self.name = name
         self.runtime = runtime
         self._subscriptions: defaultdict[str, set[mcp.ServerSession]] = defaultdict(set)
-
-        # Create MCP server
         self.server = Server(name)
         self.server.notification_options = NotificationOptions(
             prompts_changed=True,
@@ -109,222 +93,13 @@ class LLMLingServer:
 
     def _setup_handlers(self) -> None:
         """Register MCP protocol handlers."""
-
-        @self.server.set_logging_level()
-        async def handle_set_level(level: mcp.LoggingLevel) -> None:
-            """Handle logging level changes."""
-            try:
-                python_level = conversions.LOG_LEVEL_MAP[level]
-                logger.setLevel(python_level)
-                data = f"Log level set to {level}"
-                await self.current_session.send_log_message(level, data, logger=self.name)
-            except Exception as exc:
-                error = mcp.McpError("Error setting log level")
-                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
-                raise error from exc
-
-        @self.server.list_tools()
-        async def handle_list_tools() -> list[mcp.types.Tool]:
-            """Handle tools/list request."""
-            return [conversions.to_mcp_tool(tool) for tool in self.runtime.get_tools()]
-
-        @self.server.call_tool()
-        async def handle_call_tool(
-            name: str,
-            arguments: dict[str, Any] | None = None,
-        ) -> list[TextContent]:
-            """Handle tools/call request."""
-            arguments = arguments or {}
-            # Filter out _meta from arguments
-            args = {k: v for k, v in arguments.items() if not k.startswith("_")}
-            try:
-                result = await self.runtime.execute_tool(name, **args)
-                return [TextContent(type="text", text=str(result))]
-            except Exception as exc:
-                logger.exception("Tool execution failed: %s", name)
-                error_msg = f"Tool execution failed: {exc}"
-                return [TextContent(type="text", text=error_msg)]
-
-        @self.server.list_prompts()
-        async def handle_list_prompts() -> list[mcp.types.Prompt]:
-            """Handle prompts/list request."""
-            return [conversions.to_mcp_prompt(p) for p in self.runtime.get_prompts()]
-
-        @self.server.get_prompt()
-        async def handle_get_prompt(
-            name: str,
-            arguments: dict[str, str] | None = None,
-        ) -> GetPromptResult:
-            """Handle prompts/get request."""
-            try:
-                prompt = self.runtime.get_prompt(name)
-                messages = await prompt.format(arguments or {})  # Note: now async
-                mcp_msgs = [conversions.to_mcp_message(msg) for msg in messages]
-                return GetPromptResult(description=prompt.description, messages=mcp_msgs)
-            except exceptions.LLMLingError as exc:
-                msg = str(exc)
-                error = mcp.McpError(msg)
-                code = INVALID_PARAMS if "not found" in msg else INTERNAL_ERROR
-                error.error = mcp.ErrorData(code=code, message=msg)
-                raise error from exc
-
-        @self.server.list_resources()
-        async def handle_list_resources() -> list[Resource]:
-            """Handle resources/list request."""
-            resources = []
-            for name in self.runtime.list_resources():
-                try:
-                    # First get URI and basic info without loading
-                    uri = self.runtime.get_resource_uri(name)
-                    mcp_uri = conversions.to_mcp_uri(uri)
-                    dsc = self.runtime._config.resources[name].description
-                    mime = "text/plain"  # Default, could be made more specific
-                    res = Resource(uri=mcp_uri, name=name, description=dsc, mimeType=mime)
-                    resources.append(res)
-                except Exception:
-                    msg = "Failed to create resource listing for %r. Config: %r"
-                    logger.exception(msg, name, self.runtime._config.resources.get(name))
-                    continue
-
-            return resources
-
-        # @self.server.list_resource_templates()
-        # async def handle_list_resource_templates(self) -> list[ResourceTemplate]:
-        #     """List available resource templates."""
-        #     if self.force_regular_resources:
-        #         return []
-
-        #     templates = []
-        #     for name in self.runtime.list_resources():
-        #         try:
-        #             resource = self.runtime._config.resources[name]
-        #             if resource.is_templated():
-        #                 loader = self.runtime.get_resource_loader(resource)
-        #                 sig = inspect.signature(resource.callable)
-
-        #                 # Build template URI
-        #                 uri = f"{loader.uri_scheme}:///{name}"
-
-        #                 # Add positional args to path
-        #                 pos_args = [
-        #                     name
-        #                     for name, param in sig.parameters.items()
-        #                     if param.kind
-        #                     in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
-        #                 ]
-        #                 if pos_args:
-        #                     uri += "/" + "/".join(f"{{{arg}}}" for arg in pos_args)
-
-        #                 # Add kwargs as query parameters
-        #                 kw_args = [
-        #                     name
-        #                     for name, param in sig.parameters.items()
-        #                     if param.kind in (param.KEYWORD_ONLY, param.VAR_KEYWORD)
-        #                 ]
-        #                 if kw_args:
-        #                     uri += f"{{?{','.join(kw_args)}}}"
-
-        #                 templates.append(
-        #                     conversions.to_mcp_resource_template(
-        #                         uri, name, resource.description, "text/plain"
-        #                     )
-        #                 )
-        #         except Exception:
-        #             logger.exception("Failed to create template for %r", name)
-        #             continue
-
-        #     return templates
-
-        @self.server.read_resource()
-        async def handle_read_resource(uri: mcp.types.AnyUrl) -> str | bytes:
-            """Handle direct resource content requests."""
-            try:
-                internal_uri = conversions.from_mcp_uri(str(uri))
-                logger.debug("Loading resource from internal URI: %s", internal_uri)
-
-                if "://" not in internal_uri:
-                    resource = await self.runtime.load_resource(internal_uri)
-                else:
-                    resource = await self.runtime.load_resource_by_uri(internal_uri)
-
-                if resource.metadata.mime_type.startswith("text/"):
-                    return resource.content
-                return resource.content_items[0].content.encode()
-
-            except Exception as exc:
-                msg = f"Failed to read resource: {exc}"
-                logger.exception(msg)
-                error = mcp.McpError(msg)
-                error.error = mcp.ErrorData(code=INTERNAL_ERROR, message=str(exc))
-                raise error from exc
-
-        @self.server.completion()
-        async def handle_completion(
-            ref: mcp.types.PromptReference | mcp.types.ResourceReference,
-            argument: mcp.types.CompletionArgument,
-        ) -> mcp.types.Completion:
-            """Handle completion requests."""
-            try:
-                match ref:
-                    case mcp.types.PromptReference():
-                        values = await self.runtime.get_prompt_completions(
-                            current_value=argument.value,
-                            argument_name=argument.name,
-                            prompt_name=ref.name,
-                        )
-                    case mcp.types.ResourceReference():
-                        values = await self.runtime.get_resource_completions(
-                            uri=ref.uri,
-                            current_value=argument.value,
-                            argument_name=argument.name,
-                        )
-                    case _:
-                        msg = f"Invalid reference type: {type(ref)}"
-                        raise ValueError(msg)  # noqa: TRY301
-
-                return mcp.types.Completion(
-                    values=values[:100],
-                    total=len(values),
-                    hasMore=len(values) > 100,  # noqa: PLR2004
-                )
-            except Exception:
-                logger.exception("Completion failed")
-                return mcp.types.Completion(values=[], total=0, hasMore=False)
-
-        @self.server.progress_notification()
-        async def handle_progress(
-            token: str | int,
-            progress: float,
-            total: float | None,
-        ) -> None:
-            """Handle progress notifications from client."""
-            msg = "Progress notification: %s %.1f/%.1f"
-            logger.debug(msg, token, progress, total or 0.0)
-
-        @self.server.subscribe_resource()
-        async def handle_subscribe(uri: AnyUrl) -> None:
-            """Subscribe to resource updates."""
-            uri_str = str(uri)
-            self._subscriptions[uri_str].add(self.current_session)
-            logger.debug("Added subscription for %s", uri)
-
-        @self.server.unsubscribe_resource()
-        async def handle_unsubscribe(uri: AnyUrl) -> None:
-            """Unsubscribe from resource updates."""
-            uri_str = str(uri)
-            if uri_str in self._subscriptions:
-                self._subscriptions[uri_str].discard(self.current_session)
-                if not self._subscriptions[uri_str]:
-                    del self._subscriptions[uri_str]
-                msg = "Removed subscription for %s: %s"
-                logger.debug(msg, uri, self.current_session)
+        register_handlers(self)
 
     def _setup_observers(self) -> None:
         """Set up registry observers for MCP notifications."""
         self.resource_observer = ResourceObserver(self)
         self.prompt_observer = PromptObserver(self)
         self.tool_observer = ToolObserver(self)
-
         self.runtime.add_resource_observer(self.resource_observer.events)
         self.runtime.add_prompt_observer(self.prompt_observer.events)
         self.runtime.add_tool_observer(self.tool_observer.events)
@@ -458,96 +233,10 @@ class LLMLingServer:
         except Exception:
             logger.exception("Failed to send tool list change notification")
 
-    async def _complete_prompt_argument(
-        self,
-        prompt: Prompt,
-        arg_name: str,
-        current_value: str,
-    ) -> Completion:
-        """Generate completions for prompt arguments."""
-        try:
-            # Get completions through runtime
-            completions = await self.runtime.get_prompt_completions(
-                prompt.name, arg_name, current_value
-            )
-
-            # Add any available defaults if no current value
-            arg = next((a for a in prompt.arguments if a.name == arg_name), None)
-            if arg and not current_value:
-                if arg.default is not None:
-                    completions.append(str(arg.default))
-
-                # Add description-based suggestions
-                if arg.description and "one of:" in arg.description:
-                    try:
-                        options_part = arg.description.split("one of:", 1)[1]
-                        options = [opt.strip() for opt in options_part.split(",")]
-                        completions.extend(
-                            opt for opt in options if opt.startswith(current_value)
-                        )
-                    except IndexError:
-                        pass
-
-            # Deduplicate while preserving order
-            seen = set()
-            unique_completions = [
-                x
-                for x in completions
-                if not (x in seen or seen.add(x))  # type: ignore
-            ]
-
-            return Completion(
-                values=unique_completions[:100],
-                total=len(unique_completions),
-                hasMore=len(unique_completions) > 100,  # noqa: PLR2004
-            )
-
-        except Exception:
-            logger.exception(
-                "Completion failed for prompt=%s argument=%s", prompt.name, arg_name
-            )
-            return Completion(values=[], total=0, hasMore=False)
-
-    async def _complete_resource(
-        self,
-        uri: AnyUrl,
-        argument: CompletionArgument,
-    ) -> Completion:
-        """Generate completions for resource fields."""
-        try:
-            # Convert AnyUrl to string for resource lookup
-            str_uri = str(uri)
-            resource = await self.runtime.load_resource_by_uri(str_uri)
-            values: list[str] = []
-
-            # Different completion logic based on resource type
-            match resource:
-                case PathResource():
-                    # Complete paths
-                    pattern = f"{argument.value}*"
-                    values = list(glob.glob(pattern))  # noqa: PTH207
-
-                case SourceResource():
-                    # Complete Python import paths
-                    names = self._get_importable_names()
-                    values = [name for name in names if name.startswith(argument.value)]
-
-            return Completion(
-                values=values[:100],
-                total=len(values),
-                hasMore=len(values) > 100,  # noqa: PLR2004
-            )
-
-        except Exception:
-            logger.exception("Resource completion failed")
-            return Completion(values=[], total=0, hasMore=False)
-
 
 if __name__ == "__main__":
-    import asyncio
     import sys
 
     from llmling import config_resources
 
     config_path = sys.argv[1] if len(sys.argv) > 1 else config_resources.TEST_CONFIG
-    # asyncio.run(serve(config_path))
