@@ -45,11 +45,8 @@ class BaseExtensionLoader[T]:
                             name = getattr(converted, "name", str(item))
                             items[name] = converted
                         except Exception as exc:  # noqa: BLE001
-                            logger.warning(
-                                "Failed to load item from %s: %s",
-                                module,
-                                exc,
-                            )
+                            msg = "Failed to load item from %s: %s"
+                            logger.warning(msg, module, exc)
             except Exception:
                 logger.exception("Failed to load module %s", module)
         return items

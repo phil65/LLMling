@@ -8,7 +8,7 @@ import py2openai
 
 from llmling.core.descriptors import classproperty
 from llmling.core.log import get_logger
-from llmling.utils import calling
+from llmling.utils import calling, importing
 
 
 T = TypeVar("T", bound="LLMCallableTool")
@@ -93,7 +93,7 @@ class LLMCallableTool(ABC):
             ValueError: If callable cannot be imported or is invalid
         """
         # If string provided, import the callable
-        callable_obj = calling.import_callable(fn) if isinstance(fn, str) else fn
+        callable_obj = importing.import_callable(fn) if isinstance(fn, str) else fn
         module = inspect.getmodule(callable_obj)
         if not module:
             msg = f"Could not find module for callable: {callable_obj}"

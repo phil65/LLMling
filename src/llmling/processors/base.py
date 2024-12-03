@@ -82,20 +82,14 @@ class ProcessorConfig(BaseModel):
         if self.type != "function":
             msg = "Not a function processor configuration"
             raise ValueError(msg)
-        return {
-            "import_path": self.import_path,
-            "async_execution": self.async_execution,
-        }
+        return {"import_path": self.import_path, "async_execution": self.async_execution}
 
     def get_template_config(self) -> TemplateProcessorConfig:
         """Get template processor specific configuration."""
         if self.type != "template":
             msg = "Not a template processor configuration"
             raise ValueError(msg)
-        return {
-            "template": self.template,
-            "template_engine": self.template_engine,
-        }
+        return {"template": self.template, "template_engine": self.template_engine}
 
 
 class ProcessorResult(BaseModel):

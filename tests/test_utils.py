@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from llmling.utils.calling import import_callable
+from llmling.utils.importing import import_callable
 
 
 if TYPE_CHECKING:
