@@ -6,7 +6,8 @@ import asyncio
 import sys
 
 from llmling.core.log import get_logger
-from llmling.server.factory import create_runtime_config, create_server
+from llmling.server.factory import create_runtime_config
+from llmling.server.server import LLMLingServer
 
 
 logger = get_logger(__name__)
@@ -22,7 +23,7 @@ async def main() -> None:
     try:
         runtime = create_runtime_config(config_path)
         async with runtime as r:
-            server = create_server(r)
+            server = LLMLingServer(r)
             await server.start(raise_exceptions=True)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")

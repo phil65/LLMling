@@ -10,7 +10,6 @@ from llmling import config_resources
 from llmling.config.manager import ConfigManager
 from llmling.config.runtime import RuntimeConfig
 from llmling.core.log import get_logger
-from llmling.server.server import LLMLingServer
 
 
 if TYPE_CHECKING:
@@ -18,23 +17,6 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-
-
-def create_server(
-    runtime: RuntimeConfig,
-    *,
-    name: str = "llmling-server",
-) -> LLMLingServer:
-    """Create a server instance from a runtime configuration.
-
-    Args:
-        runtime: Initialized runtime configuration
-        name: Server name for MCP protocol
-
-    Returns:
-        Configured server instance
-    """
-    return LLMLingServer(runtime, name=name)
 
 
 @logfire.instrument("Creating runtime configuration")
