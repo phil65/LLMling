@@ -106,7 +106,12 @@ class ResourceWatcher:
         self.handlers: dict[str, ResourceEventHandler] = {}
         # Track watch directories to avoid duplicates
         self._watched_paths: set[str] = set()
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Fallback for cases where no loop is running yet
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
 
     async def start(self) -> None:
         """Start the file system observer."""
