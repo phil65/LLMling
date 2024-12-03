@@ -188,6 +188,53 @@ class LLMLingServer:
 
             return resources
 
+        # @self.server.list_resource_templates()
+        # async def handle_list_resource_templates(self) -> list[ResourceTemplate]:
+        #     """List available resource templates."""
+        #     if self.force_regular_resources:
+        #         return []
+
+        #     templates = []
+        #     for name in self.runtime.list_resources():
+        #         try:
+        #             resource = self.runtime._config.resources[name]
+        #             if resource.is_templated():
+        #                 loader = self.runtime.get_resource_loader(resource)
+        #                 sig = inspect.signature(resource.callable)
+
+        #                 # Build template URI
+        #                 uri = f"{loader.uri_scheme}:///{name}"
+
+        #                 # Add positional args to path
+        #                 pos_args = [
+        #                     name
+        #                     for name, param in sig.parameters.items()
+        #                     if param.kind
+        #                     in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD)
+        #                 ]
+        #                 if pos_args:
+        #                     uri += "/" + "/".join(f"{{{arg}}}" for arg in pos_args)
+
+        #                 # Add kwargs as query parameters
+        #                 kw_args = [
+        #                     name
+        #                     for name, param in sig.parameters.items()
+        #                     if param.kind in (param.KEYWORD_ONLY, param.VAR_KEYWORD)
+        #                 ]
+        #                 if kw_args:
+        #                     uri += f"{{?{','.join(kw_args)}}}"
+
+        #                 templates.append(
+        #                     conversions.to_mcp_resource_template(
+        #                         uri, name, resource.description, "text/plain"
+        #                     )
+        #                 )
+        #         except Exception:
+        #             logger.exception("Failed to create template for %r", name)
+        #             continue
+
+        #     return templates
+
         @self.server.read_resource()
         async def handle_read_resource(uri: mcp.types.AnyUrl) -> str | bytes:
             """Handle direct resource content requests."""
