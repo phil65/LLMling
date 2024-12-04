@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from llmling.config.models import CLIResource
 from llmling.core import exceptions
@@ -37,20 +37,15 @@ class CLIResourceLoader(ResourceLoader[CLIResource]):
         """Execute command and load output."""
         command = cmd if isinstance((cmd := resource.command), str) else " ".join(cmd)
         try:
+            kwargs: dict[str, Any] = dict(
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=resource.cwd,
+            )
             if resource.shell:
-                proc = await asyncio.create_subprocess_shell(
-                    command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    cwd=resource.cwd,
-                )
+                proc = await asyncio.create_subprocess_shell(command, **kwargs)
             else:
-                proc = await asyncio.create_subprocess_exec(
-                    *command.split(),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    cwd=resource.cwd,
-                )
+                proc = await asyncio.create_subprocess_exec(*command.split(), **kwargs)
             coro = proc.communicate()
             stdout, stderr = await asyncio.wait_for(coro, timeout=resource.timeout)
 
