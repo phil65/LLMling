@@ -1,35 +1,47 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
+import jinja2
+
+from llmling.config.models import Jinja2Config
 from llmling.core import exceptions
+from llmling.core.log import get_logger
+from llmling.processors.base import BaseProcessor, ProcessorResult
 
 
-async def render_template(content: str, **kwargs: Any) -> str:
-    """Render content as a Jinja2 template.
+if TYPE_CHECKING:
+    from llmling.resources.models import ProcessingContext
 
-    This processor uses the global Jinja2 environment from RuntimeConfig.
 
-    Args:
-        content: Template content to render
-        **kwargs: Variables to pass to the template
+logger = get_logger(__name__)
 
-    Returns:
-        Rendered template content
 
-    Raises:
-        ProcessorError: If template rendering fails
-    """
-    try:
-        # RuntimeConfig's template engine is injected via kwargs
-        template_engine = kwargs.pop("template_engine", None)
-        if not template_engine:
-            msg = "No template engine provided"
-            raise ValueError(msg)  # noqa: TRY301
+class Jinja2Processor(BaseProcessor):
+    """Processor that renders content using Jinja2."""
 
-        result = await template_engine.render(content, **kwargs)
-    except Exception as exc:
-        msg = f"Template rendering failed: {exc}"
-        raise exceptions.ProcessorError(msg) from exc
-    else:
-        return result
+    def __init__(self, jinja_settings: Jinja2Config | None = None) -> None:
+        super().__init__()
+        settings = jinja_settings or Jinja2Config()
+        jinja_kwargs = settings.create_environment_kwargs()
+        jinja_filters = jinja_kwargs.pop("filters", {})
+        jinja_globals = jinja_kwargs.pop("globals", {})
+        jinja_tests = jinja_kwargs.pop("tests", {})
+        self._env = jinja2.Environment(**jinja_kwargs)
+        self._env.filters = jinja_filters
+        self._env.globals = jinja_globals
+        self._env.tests = jinja_tests
+        self._initialized = True
+
+    async def process(self, context: ProcessingContext) -> ProcessorResult:
+        try:
+            template = self._env.from_string(context.current_content)
+            content = await template.render_async(**context.kwargs)
+            return ProcessorResult(
+                content=content,
+                original_content=context.original_content,
+                metadata={"template_vars": list(context.kwargs.keys())},
+            )
+        except Exception as exc:
+            msg = f"Template rendering failed: {exc}"
+            raise exceptions.ProcessorError(msg) from exc

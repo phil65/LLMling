@@ -44,6 +44,24 @@ class ProcessorResult(BaseModel):
 class BaseProcessor(ABC):
     """Base class for all processors."""
 
+    def __init__(self) -> None:
+        """Initialize processor."""
+        self._initialized = False
+
+    async def startup(self) -> None:
+        """Initialize processor resources.
+
+        Override this method if the processor needs async initialization.
+        """
+        self._initialized = True
+
+    async def shutdown(self) -> None:
+        """Clean up processor resources.
+
+        Override this method if the processor needs cleanup.
+        """
+        self._initialized = False
+
     @abstractmethod
     async def process(self, context: ProcessingContext) -> ProcessorResult:
         """Process content with given context."""
@@ -53,8 +71,8 @@ class Processor(BaseProcessor):
     """Content processor that executes a callable."""
 
     def __init__(self, config: ProcessorConfig) -> None:
+        super().__init__()
         self.config = config
-        self._initialized = False
         self._callable: Any = None
 
     async def startup(self) -> None:

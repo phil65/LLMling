@@ -18,6 +18,7 @@ from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
 from llmling.extensions.loaders import ToolsetLoader
+from llmling.processors.jinjaprocessor import Jinja2Processor
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
@@ -78,7 +79,11 @@ class RuntimeConfig(EventEmitter):
         self._prompt_registry = prompt_registry
         self._tool_registry = tool_registry
         self._initialized = False
-
+        # Register builtin processors
+        self._processor_registry.register(
+            "jinja_template",
+            Jinja2Processor(config.global_settings.jinja_environment),
+        )
         settings = self._config.global_settings
         self._dep_manager = depkit.DependencyManager(
             prefer_uv=settings.prefer_uv,

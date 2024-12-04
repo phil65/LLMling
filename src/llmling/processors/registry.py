@@ -8,7 +8,12 @@ import logfire
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
-from llmling.processors.base import Processor, ProcessorConfig, ProcessorResult
+from llmling.processors.base import (
+    BaseProcessor,
+    Processor,
+    ProcessorConfig,
+    ProcessorResult,
+)
 from llmling.resources.models import ProcessingContext
 
 
@@ -19,37 +24,24 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ProcessorRegistry(BaseRegistry[str, Processor]):
+class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
     """Registry for content processors."""
 
     def __init__(self, *args, **kwargs) -> None:
         """Initialize registry with builtin processors."""
         super().__init__(*args, **kwargs)
-        self._register_builtins()
-
-    def _register_builtins(self) -> None:
-        """Register builtin processors."""
-        self.register(
-            "template",
-            ProcessorConfig(
-                name="template",
-                description="Render content as Jinja2 template",
-                import_path="llmling.processors.jinjaprocessor.render_template",
-            ),
-        )
-        logger.debug("Registered builtin processors")
 
     @property
     def _error_class(self) -> type[exceptions.ProcessorError]:
         return exceptions.ProcessorError
 
-    def _validate_item(self, item: Any) -> Processor:
+    def _validate_item(self, item: Any) -> BaseProcessor:
         """Validate and transform items."""
         match item:
-            case Processor():
+            case BaseProcessor():
                 return item
             case ProcessorConfig():
-                return Processor(item)
+                return Processor(item)  # Creates function-based processor
             case _ if callable(item):
                 config = ProcessorConfig(
                     import_path=f"{item.__module__}.{item.__qualname__}",
@@ -126,7 +118,7 @@ class ProcessorRegistry(BaseRegistry[str, Processor]):
             )
         )
 
-    async def get_processor(self, name: str) -> Processor:
+    async def get_processor(self, name: str) -> BaseProcessor:
         """Get a processor by name."""
         processor = self.get(name)
         if not getattr(processor, "_initialized", False):
