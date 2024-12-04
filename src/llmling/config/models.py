@@ -18,7 +18,7 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
-from llmling.prompts.models import Prompt  # noqa: TC001
+from llmling.prompts.models import PromptType  # noqa: TC001
 from llmling.resources.watching import WatchConfig  # noqa: TC001
 from llmling.utils.importing import import_callable
 
@@ -245,26 +245,6 @@ class ToolConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class PromptConfig(BaseModel):
-    """Configuration for prompts from functions."""
-
-    import_path: str
-    """Import path to the function implementation (e.g. 'mymodule.prompts.my_func')"""
-
-    name: str | None = None
-    """Optional override for prompt name"""
-
-    description: str | None = None
-    """Optional override for prompt description"""
-
-    template: str | None = None
-    """Optional message template override"""
-
-    completions: dict[str, str] | None = None
-
-    model_config = ConfigDict(frozen=True)
-
-
 class Config(BaseModel):
     """Root configuration model."""
 
@@ -275,7 +255,7 @@ class Config(BaseModel):
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
     toolsets: list[str] = Field(default_factory=list)
-    prompts: dict[str, Prompt | PromptConfig] = Field(default_factory=dict)
+    prompts: dict[str, PromptType] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,

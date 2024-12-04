@@ -6,7 +6,7 @@ from llmling.config.manager import ConfigManager
 from llmling.config.models import Config, GlobalSettings, TextResource, ToolConfig
 from llmling.config.runtime import RuntimeConfig
 from llmling.processors.registry import ProcessorRegistry
-from llmling.prompts.models import Prompt, PromptMessage
+from llmling.prompts.models import PromptMessage, StaticPrompt
 
 
 @pytest.fixture(autouse=True)
@@ -49,7 +49,7 @@ def test_config() -> Config:
             ),
         },
         prompts={
-            "test-prompt": Prompt(
+            "test-prompt": StaticPrompt(
                 name="test-prompt",
                 description="Test prompt",
                 messages=[prompt_msg],

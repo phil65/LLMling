@@ -13,8 +13,8 @@ from mcp import types
 if TYPE_CHECKING:
     from llmling.processors.base import ProcessorConfig
     from llmling.prompts.models import (
+        BasePrompt as InternalPrompt,
         ExtendedPromptArgument,
-        Prompt as InternalPrompt,
         PromptMessage,
     )
     from llmling.resources.models import LoadedResource

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from llmling.config.models import Resource
 from llmling.core.events import Event, EventType, RegistryEvents
 from llmling.core.log import get_logger
-from llmling.prompts.models import Prompt
+from llmling.prompts.models import BasePrompt
 from llmling.tools.base import LLMCallableTool
 
 
@@ -104,14 +104,14 @@ class PromptObserver:
 
     def __init__(self, server: LLMLingServer) -> None:
         self.server = server
-        self.events = RegistryEvents[str, Prompt]()
+        self.events = RegistryEvents[str, BasePrompt]()
         self.events.on_item_added = self._handle_prompt_added
         self.events.on_item_modified = self._handle_prompt_modified
         self.events.on_item_removed = self._handle_prompt_removed
         self.events.on_list_changed = self._handle_prompt_list_changed
         self.events.on_reset = self._handle_registry_reset
 
-    def _handle_prompt_added(self, key: str, prompt: Prompt) -> None:
+    def _handle_prompt_added(self, key: str, prompt: BasePrompt) -> None:
         """Handle prompt addition."""
         self.server._create_task(
             self.server.runtime.emit_event(
@@ -125,7 +125,7 @@ class PromptObserver:
         )
         self.server._create_task(self.server.notify_prompt_list_changed())
 
-    def _handle_prompt_modified(self, key: str, prompt: Prompt) -> None:
+    def _handle_prompt_modified(self, key: str, prompt: BasePrompt) -> None:
         """Handle prompt modification."""
         self.server._create_task(
             self.server.runtime.emit_event(
@@ -139,7 +139,7 @@ class PromptObserver:
         )
         self.server._create_task(self.server.notify_prompt_list_changed())
 
-    def _handle_prompt_removed(self, key: str, prompt: Prompt) -> None:
+    def _handle_prompt_removed(self, key: str, prompt: BasePrompt) -> None:
         """Handle prompt removal."""
         self.server._create_task(
             self.server.runtime.emit_event(

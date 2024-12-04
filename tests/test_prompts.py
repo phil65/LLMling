@@ -7,8 +7,8 @@ from llmling.config.models import Config
 from llmling.prompts.models import (
     ExtendedPromptArgument,
     MessageContent,
-    Prompt,
     PromptMessage,
+    StaticPrompt,
 )
 
 
@@ -19,6 +19,7 @@ def test_config_with_prompts():
         "resources": {},
         "prompts": {
             "analyze": {
+                "type": "static",
                 "name": "analyze",
                 "description": "Analyze code",
                 "messages": [{"role": "user", "content": "Analyze this code: {code}"}],
@@ -45,6 +46,7 @@ def test_config_with_resource_prompts():
         "resources": {},
         "prompts": {
             "review": {
+                "type": "static",
                 "name": "review",
                 "description": "Review code and tests",
                 "messages": [
@@ -67,7 +69,7 @@ def test_config_with_resource_prompts():
     }
     config = Config.model_validate(config_data)
     assert config.prompts["review"]
-    msg = config.prompts["review"].messages[0]  # type: ignore
+    msg = config.prompts["review"].messages[0]
     assert isinstance(msg.content, list)
     assert len(msg.content) == 2  # noqa: PLR2004
     assert msg.content[0].type == "text"
@@ -82,6 +84,7 @@ def test_invalid_prompt_config():
             "version": "1.0",
             "prompts": {
                 "invalid": {
+                    "type": "static",
                     "name": "invalid",
                     "messages": [
                         {
@@ -95,7 +98,7 @@ def test_invalid_prompt_config():
 
 
 @pytest.fixture
-def sample_prompt() -> Prompt:
+def sample_prompt() -> StaticPrompt:
     """Create a sample prompt for testing."""
     arg = ExtendedPromptArgument(
         name="name",
@@ -103,7 +106,7 @@ def sample_prompt() -> Prompt:
         description="Name to greet",
         required=True,
     )
-    return Prompt(
+    return StaticPrompt(
         name="test",
         description="Test prompt",
         messages=[PromptMessage(role="user", content="Hello {name}")],
@@ -114,7 +117,7 @@ def sample_prompt() -> Prompt:
 @pytest.mark.asyncio
 async def test_prompt_format():
     """Test prompt message formatting."""
-    prompt = Prompt(
+    prompt = StaticPrompt(
         name="test",
         description="Test prompt",
         messages=[
@@ -142,7 +145,7 @@ async def test_prompt_format():
 @pytest.mark.asyncio
 async def test_prompt_validation():
     """Test prompt argument validation."""
-    prompt = Prompt(
+    prompt = StaticPrompt(
         name="test",
         description="Test prompt",
         messages=[PromptMessage(role="user", content="Test {required_arg}")],

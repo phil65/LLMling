@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from llmling.config.models import Config, TextResource, ToolConfig
-from llmling.prompts.models import Prompt, PromptMessage
+from llmling.prompts.models import PromptMessage, StaticPrompt
 from llmling.server.mcp_inproc_session import MCPInProcSession
 
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 @pytest.fixture
 def test_config() -> Config:
     """Create test configuration."""
-    prompt = Prompt(
+    prompt = StaticPrompt(
         name="test",
         description="test",
         messages=[PromptMessage(role="system", content="test")],

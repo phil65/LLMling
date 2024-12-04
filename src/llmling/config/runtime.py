@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING, Any, Self
 import depkit
 import logfire
 
-from llmling.config.models import PathResource, Prompt, PromptConfig
+from llmling.config.manager import ConfigManager
+from llmling.config.models import PathResource
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
 from llmling.extensions.loaders import ToolsetLoader
 from llmling.processors.registry import ProcessorRegistry
-from llmling.prompts.function import create_prompt_from_callable
 from llmling.prompts.registry import PromptRegistry
 from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.loaders.path import PathResourceLoader
@@ -29,12 +29,13 @@ from llmling.tools.registry import ToolRegistry
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    import os
     import types
 
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
     from llmling.processors.base import ProcessorResult
-    from llmling.prompts.models import PromptMessage
+    from llmling.prompts.models import BasePrompt, PromptMessage
     from llmling.resources.models import LoadedResource
 
 
@@ -163,17 +164,7 @@ class RuntimeConfig(EventEmitter):
                     logger.warning(msg, name)
 
         for name, prompt_config in self._config.prompts.items():
-            match prompt_config:
-                case Prompt():
-                    self._prompt_registry[name] = prompt_config
-                case PromptConfig():
-                    prompt = create_prompt_from_callable(
-                        prompt_config.import_path,
-                        name_override=prompt_config.name or name,
-                        description_override=prompt_config.description,
-                        template_override=prompt_config.template,
-                    )
-                    self._prompt_registry[name] = prompt
+            self._prompt_registry[name] = prompt_config
 
     async def _initialize_registries(self) -> None:
         """Initialize all registries."""
@@ -196,6 +187,19 @@ class RuntimeConfig(EventEmitter):
         runtime = cls.from_config(config)
         async with runtime as initialized:
             return initialized
+
+    @classmethod
+    def from_file(cls, path: str | os.PathLike[str]) -> Self:
+        """Convenience function to directly create runtime config from a file.
+
+        Args:
+            path: Path to the config file
+
+        Returns:
+            Initialized runtime configuration
+        """
+        manager = ConfigManager.load(path)
+        return cls.from_config(manager.config)
 
     @classmethod
     @logfire.instrument("Creating runtime configuration")
@@ -472,7 +476,7 @@ class RuntimeConfig(EventEmitter):
             msg = f"Failed to format prompt {name}: {exc}"
             raise exceptions.LLMLingError(msg) from exc
 
-    def get_prompt(self, name: str) -> Prompt:
+    def get_prompt(self, name: str) -> BasePrompt:
         """Get a prompt by name.
 
         Args:
@@ -490,7 +494,7 @@ class RuntimeConfig(EventEmitter):
             msg = f"Prompt not found: {name}"
             raise exceptions.LLMLingError(msg) from exc
 
-    def get_prompts(self) -> Sequence[Prompt]:
+    def get_prompts(self) -> Sequence[BasePrompt]:
         """Get all registered prompts.
 
         Returns:
@@ -530,7 +534,7 @@ class RuntimeConfig(EventEmitter):
         """
         self._resource_registry.add_observer(observer)
 
-    def add_prompt_observer(self, observer: RegistryEvents[str, Prompt]) -> None:
+    def add_prompt_observer(self, observer: RegistryEvents[str, BasePrompt]) -> None:
         """Add observer for prompt changes.
 
         Args:
@@ -554,7 +558,7 @@ class RuntimeConfig(EventEmitter):
         """
         self._resource_registry.remove_observer(observer)
 
-    def remove_prompt_observer(self, observer: RegistryEvents[str, Prompt]) -> None:
+    def remove_prompt_observer(self, observer: RegistryEvents[str, BasePrompt]) -> None:
         """Remove prompt observer.
 
         Args:

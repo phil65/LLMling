@@ -7,8 +7,7 @@ from typing import Literal
 
 import pytest
 
-from llmling.prompts.function import create_prompt_from_callable
-from llmling.prompts.models import ExtendedPromptArgument
+from llmling.prompts.models import DynamicPrompt, ExtendedPromptArgument
 
 
 def example_function(
@@ -54,7 +53,7 @@ async def async_function(
 
 def test_create_prompt_basic():
     """Test basic prompt creation from function."""
-    prompt = create_prompt_from_callable(example_function)
+    prompt = DynamicPrompt.from_callable(example_function)
 
     assert prompt.name == "example_function"
     assert "Process text with given style" in prompt.description
@@ -66,7 +65,7 @@ def test_create_prompt_basic():
 
 def test_create_prompt_arguments():
     """Test argument conversion."""
-    prompt = create_prompt_from_callable(example_function)
+    prompt = DynamicPrompt.from_callable(example_function)
     args = {arg.name: arg for arg in prompt.arguments}
 
     # Check text argument
@@ -91,7 +90,7 @@ def test_create_prompt_arguments():
 
 def test_create_prompt_async():
     """Test prompt creation from async function."""
-    prompt = create_prompt_from_callable(async_function)
+    prompt = DynamicPrompt.from_callable(async_function)
 
     assert prompt.name == "async_function"
     assert "Process content asynchronously" in prompt.description
@@ -106,7 +105,7 @@ def test_create_prompt_async():
 @pytest.mark.asyncio
 async def test_prompt_formatting():
     """Test that created prompts format with function results."""
-    prompt = create_prompt_from_callable(example_function)
+    prompt = DynamicPrompt.from_callable(example_function)
 
     # Format with all arguments
     messages = await prompt.format({
@@ -124,7 +123,7 @@ async def test_prompt_formatting():
 
 def test_create_prompt_overrides():
     """Test prompt creation with overrides."""
-    prompt = create_prompt_from_callable(
+    prompt = DynamicPrompt.from_callable(
         example_function,
         name_override="custom_name",
         description_override="Custom description",
@@ -139,7 +138,7 @@ def test_create_prompt_overrides():
 @pytest.mark.asyncio
 async def test_create_prompt_from_import_path():
     """Test prompt creation from import path."""
-    prompt = create_prompt_from_callable("llmling.testing.processors.uppercase_text")
+    prompt = DynamicPrompt.from_callable("llmling.testing.processors.uppercase_text")
 
     assert prompt.name == "uppercase_text"
     assert "Convert text to uppercase" in prompt.description
@@ -152,13 +151,13 @@ async def test_create_prompt_from_import_path():
 def test_create_prompt_invalid_import():
     """Test prompt creation with invalid import path."""
     with pytest.raises(ValueError, match="Could not import callable"):
-        create_prompt_from_callable("nonexistent.module.function")
+        DynamicPrompt.from_callable("nonexistent.module.function")
 
 
 @pytest.mark.asyncio
 async def test_argument_validation():
     """Test argument validation in created prompts."""
-    prompt = create_prompt_from_callable(example_function)
+    prompt = DynamicPrompt.from_callable(example_function)
 
     # Should fail without required argument
     with pytest.raises(ValueError, match="Missing required arguments"):
@@ -167,7 +166,7 @@ async def test_argument_validation():
 
 def test_system_message():
     """Test that system message contains function info."""
-    prompt = create_prompt_from_callable(example_function)
+    prompt = DynamicPrompt.from_callable(example_function)
 
     system_msg = prompt.messages[0]
     assert system_msg.role == "system"
@@ -184,7 +183,7 @@ def test_prompt_with_completions():
     def example_func(language: Literal["python", "javascript"], other: str) -> None:
         """Example function with completions."""
 
-    prompt = create_prompt_from_callable(
+    prompt = DynamicPrompt.from_callable(
         example_func, completions={"other": get_language_completions}
     )
 
@@ -201,7 +200,7 @@ def test_prompt_with_completions():
 @pytest.mark.asyncio
 async def test_async_function_execution():
     """Test that async functions are properly executed."""
-    prompt = create_prompt_from_callable(async_function)
+    prompt = DynamicPrompt.from_callable(async_function)
 
     messages = await prompt.format({"content": "test", "mode": "upper"})
     assert messages[1].get_text_content() == "TEST"

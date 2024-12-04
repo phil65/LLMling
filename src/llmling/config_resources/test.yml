@@ -78,6 +78,7 @@ resource_groups:
 prompts:
   code_review:
     name: test
+    type: static
     description: "Review code changes"
     messages:
       - role: system
@@ -89,5 +90,6 @@ prompts:
         required: true
   get_readme:
     import_path: get_readme.get_readme
+    type: dynamic
     # name: "Fetch Readme for package"
     description: "Fetch README.md for PyPi package"

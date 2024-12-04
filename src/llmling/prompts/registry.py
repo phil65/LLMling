@@ -9,8 +9,12 @@ from llmling.completions.protocols import CompletionProvider
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
-from llmling.prompts.function import create_prompt_from_callable
-from llmling.prompts.models import ExtendedPromptArgument, Prompt
+from llmling.prompts.models import (
+    BasePrompt,
+    DynamicPrompt,
+    ExtendedPromptArgument,
+    StaticPrompt,
+)
 
 
 logger = get_logger(__name__)
@@ -20,20 +24,28 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class PromptRegistry(BaseRegistry[str, Prompt], CompletionProvider):
+class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
     """Registry for prompt templates."""
 
     @property
     def _error_class(self) -> type[exceptions.LLMLingError]:
         return exceptions.LLMLingError
 
-    def _validate_item(self, item: Any) -> Prompt:
-        """Validate and convert items to Prompt instances."""
+    def _validate_item(self, item: Any) -> BasePrompt:
+        """Validate and convert items to BasePrompt instances."""
         match item:
-            case Prompt():
+            case BasePrompt():
                 return item
             case dict():
-                return Prompt.model_validate(item)
+                if "type" not in item:
+                    msg = "Missing prompt type in configuration"
+                    raise ValueError(msg)
+                if item["type"] == "static":
+                    return StaticPrompt.model_validate(item)
+                if item["type"] == "dynamic":
+                    return DynamicPrompt.model_validate(item)
+                msg = f"Unknown prompt type: {item['type']}"
+                raise ValueError(msg)
             case _:
                 msg = f"Invalid prompt type: {type(item)}"
                 raise exceptions.LLMLingError(msg)
@@ -46,7 +58,7 @@ class PromptRegistry(BaseRegistry[str, Prompt], CompletionProvider):
         replace: bool = False,
     ) -> None:
         """Register a function as a prompt."""
-        prompt = create_prompt_from_callable(fn, name_override=name)
+        prompt = DynamicPrompt.from_callable(fn, name_override=name)
         self.register(prompt.name, prompt, replace=replace)
 
     async def get_completions(

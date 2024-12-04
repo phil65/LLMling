@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 import pytest
 
-from llmling.prompts.function import create_prompt_from_callable
+from llmling.prompts.models import DynamicPrompt
 from llmling.prompts.registry import PromptRegistry
 
 
@@ -43,7 +43,7 @@ def registry() -> PromptRegistry:
 
     # Create prompt with custom completion
     comps = {"text": get_framework_completions}
-    prompt = create_prompt_from_callable(example_function, completions=comps)
+    prompt = DynamicPrompt.from_callable(example_function, completions=comps)
     registry["test_prompt"] = prompt
 
     return registry
@@ -158,7 +158,7 @@ async def test_completion_for_unknown_prompt(registry: PromptRegistry) -> None:
 
 def test_create_prompt_with_completions() -> None:
     """Test prompt creation with completion functions."""
-    prompt = create_prompt_from_callable(
+    prompt = DynamicPrompt.from_callable(
         example_function, completions={"text": get_framework_completions}
     )
 
@@ -194,7 +194,7 @@ async def test_combined_completions(registry: PromptRegistry) -> None:
     def custom_complete(current: str) -> list[str]:
         return ["html"] if current.startswith("h") else []
 
-    prompt = create_prompt_from_callable(process, completions={"fmt": custom_complete})
+    prompt = DynamicPrompt.from_callable(process, completions={"fmt": custom_complete})
     registry["combined"] = prompt
 
     # Should get both Literal values and custom completion
@@ -221,7 +221,7 @@ async def test_completion_order_priority(registry: PromptRegistry) -> None:
     def custom_complete(current: str) -> list[str]:
         return ["custom"]
 
-    prompt = create_prompt_from_callable(process, completions={"choice": custom_complete})
+    prompt = DynamicPrompt.from_callable(process, completions={"choice": custom_complete})
     registry["priority"] = prompt
 
     completions = await registry.get_completions(

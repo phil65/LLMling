@@ -14,10 +14,10 @@ import logfire
 from upath import UPath
 import yamling
 
-from llmling.config.models import Config, PromptConfig
+from llmling.config.models import Config
 from llmling.core import exceptions
 from llmling.core.log import get_logger, setup_logging
-from llmling.prompts.models import Prompt
+from llmling.prompts.models import DynamicPrompt, StaticPrompt
 
 
 if TYPE_CHECKING:
@@ -141,20 +141,25 @@ class ConfigManager:
     def _validate_prompts(self) -> list[str]:
         """Validate prompt configuration."""
         warnings = []
-        for name, prompt_config in self.config.prompts.items():
-            match prompt_config:
-                case PromptConfig() if not prompt_config.import_path:
-                    warnings.append(f"Prompt {name} missing import_path")
-                case PromptConfig():
-                    # Try to import the module
-                    try:
-                        name = prompt_config.import_path.split(".")[0]
-                        importlib.import_module(name)
-                    except ImportError:
-                        path = prompt_config.import_path
-                        warnings.append(f"Cannot import module for prompt {name}: {path}")
-                case Prompt() if not prompt_config.messages:
-                    warnings.append(f"Prompt {name} has no messages")
+        for name, prompt in self.config.prompts.items():
+            match prompt:
+                case StaticPrompt():
+                    if not prompt.messages:
+                        warnings.append(f"Static prompt {name} has no messages")
+                case DynamicPrompt():
+                    if not prompt.import_path:
+                        warnings.append(f"Dynamic prompt {name} missing import_path")
+                    else:
+                        # Try to import the module
+                        try:
+                            module_name = prompt.import_path.split(".")[0]
+                            importlib.import_module(module_name)
+                        except ImportError:
+                            path = prompt.import_path
+                            msg = f"Cannot import module for prompt {name}: {path}"
+                            warnings.append(msg)
+                case _:
+                    warnings.append(f"Invalid prompt type for {name}: {type(prompt)}")
         return warnings
 
     def _validate_resources(self) -> list[str]:
