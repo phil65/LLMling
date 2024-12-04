@@ -22,6 +22,23 @@ logger = get_logger(__name__)
 class ProcessorRegistry(BaseRegistry[str, Processor]):
     """Registry for content processors."""
 
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize registry with builtin processors."""
+        super().__init__(*args, **kwargs)
+        self._register_builtins()
+
+    def _register_builtins(self) -> None:
+        """Register builtin processors."""
+        self.register(
+            "template",
+            ProcessorConfig(
+                name="template",
+                description="Render content as Jinja2 template",
+                import_path="llmling.processors.jinjaprocessor.render_template",
+            ),
+        )
+        logger.debug("Registered builtin processors")
+
     @property
     def _error_class(self) -> type[exceptions.ProcessorError]:
         return exceptions.ProcessorError
