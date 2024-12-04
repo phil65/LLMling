@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import importlib
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import logfire
 from upath import UPath
@@ -231,22 +231,39 @@ class ConfigManager:
         return warnings
 
     @classmethod
-    def load(cls, path: str | os.PathLike[str]) -> ConfigManager:
-        """Load configuration from file.
+    def load(
+        cls,
+        path: str | os.PathLike[str],
+        *,
+        validate: bool = True,
+        strict: bool = False,
+    ) -> Self:
+        """Load and optionally validate configuration from file.
 
         Args:
             path: Path to configuration file
+            validate: Whether to validate the config (default: True)
+            strict: Whether to raise on validation warnings (default: False)
 
         Returns:
             ConfigManager instance
 
         Raises:
-            ConfigError: If loading fails
+            ConfigError: If loading fails or validation fails with strict=True
         """
         try:
             config = Config.from_file(path)
+            manager = cls(config)
+
+            if validate and (warnings := manager.validate()):
+                if strict:
+                    msg = "Configuration validation failed:\n" + "\n".join(warnings)
+                    raise exceptions.ConfigError(msg)  # noqa: TRY301
+                logger.warning("Configuration warnings:\n%s", "\n".join(warnings))
+
             setup_logging(level=config.global_settings.log_level)
-            return cls(config)
         except Exception as exc:
             msg = f"Failed to load configuration from {path}"
             raise exceptions.ConfigError(msg) from exc
+        else:
+            return manager

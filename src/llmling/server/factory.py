@@ -54,8 +54,6 @@ def create_runtime_config(
     """
     path = config_path or config_resources.TEST_CONFIG
     manager = ConfigManager.load(path)
-    if warnings := manager.validate():
-        logger.warning("Configuration warnings:\n%s", "\n".join(warnings))
     return RuntimeConfig.from_config(manager.config)
 
 
