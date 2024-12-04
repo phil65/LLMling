@@ -197,22 +197,26 @@ class ConfigManager:
         return warnings
 
     def _validate_processors(self) -> list[str]:
-        """Validate processor configuration."""
+        """Validate processor configuration.
+
+        Checks:
+        - import_path is provided
+        - module can be imported
+        """
         warnings = []
         for name, processor in self.config.context_processors.items():
-            match processor.type:
-                case "function" if not processor.import_path:
-                    warnings.append(f"Processor {name} missing import_path")
-                case "function":
-                    # Try to import the module
-                    try:
-                        importlib.import_module(processor.import_path.split(".")[0])
-                    except ImportError:
-                        path = processor.import_path
-                        msg = f"Cannot import module for processor {name}: {path}"
-                        warnings.append(msg)
-                case "template" if not processor.template:
-                    warnings.append(f"Processor {name} missing template")
+            if not processor.import_path:
+                warnings.append(f"Processor {name} missing import_path")
+                continue
+
+            # Try to import the module
+            try:
+                importlib.import_module(processor.import_path.split(".")[0])
+            except ImportError:
+                path = processor.import_path
+                msg = f"Cannot import module for processor {name}: {path}"
+                warnings.append(msg)
+
         return warnings
 
     def _validate_tools(self) -> list[str]:

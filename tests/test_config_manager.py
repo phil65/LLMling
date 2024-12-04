@@ -22,7 +22,6 @@ VALID_CONFIG = {
     "version": VERSION,
     "context_processors": {
         "test_processor": {
-            "type": "function",
             "import_path": "llmling.testing.processors.uppercase_text",
         },
     },
@@ -86,19 +85,15 @@ def test_validate_processor_config(valid_config: Config) -> None:
     procs = manager.config.context_processors
     # Test missing import path
     # Now allowed by Pydantic, but caught by ConfigManager
-    procs["invalid_import"] = ProcessorConfig(type="function", import_path="")
+    procs["invalid_import"] = ProcessorConfig(import_path="")
 
     # Test non-existent module
-    procs["invalid_module"] = ProcessorConfig(type="function", import_path="non.existent")
-
-    # Test missing template
-    procs["invalid_template"] = ProcessorConfig(type="template", template="")
+    procs["invalid_module"] = ProcessorConfig(import_path="non.existent")
 
     warnings = manager.validate()
-    assert len(warnings) == 3  # noqa: PLR2004
+    assert len(warnings) == 2  # noqa: PLR2004
     assert any("missing import_path" in w for w in warnings)
     assert any("Cannot import module" in w for w in warnings)
-    assert any("missing template" in w for w in warnings)
 
 
 def test_validate_invalid_resource_group(valid_config: Config) -> None:

@@ -65,31 +65,22 @@ def test_processor_config_structure() -> None:
         ProcessorConfig(type="invalid")  # type: ignore
 
     # Test valid types with empty strings (now allowed)
-    proc = ProcessorConfig(type="function")
-    assert proc.type == "function"
-    assert proc.import_path == ""
-
-    proc = ProcessorConfig(type="template")
-    assert proc.type == "template"
-    assert proc.template == ""
+    proc = ProcessorConfig(import_path="test")
+    assert proc.import_path == "test"
 
     # Test setting values
-    proc = ProcessorConfig(type="function", import_path="test.func", async_execution=True)
+    proc = ProcessorConfig(import_path="test.func", async_execution=True)
     assert proc.import_path == "test.func"
     assert proc.async_execution
 
 
 def test_processor_config_defaults() -> None:
     """Test processor config default values."""
-    proc = ProcessorConfig(type="function")
+    proc = ProcessorConfig(import_path="test")
     assert proc.name is None
     assert proc.description is None
-    assert proc.import_path == ""
+    assert proc.import_path == "test"
     assert not proc.async_execution
-    assert proc.template == ""
-    assert proc.template_engine == "jinja2"
-    assert not proc.validate_output
-    assert proc.validate_schema is None
     assert proc.metadata == {}
 
 

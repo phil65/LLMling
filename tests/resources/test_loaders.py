@@ -327,10 +327,7 @@ async def test_path_loader_directory_with_processors(
     # Set up processor
     processor_registry.register(
         "reverse",
-        ProcessorConfig(
-            type="function",
-            import_path="llmling.testing.processors.reverse_text",
-        ),
+        ProcessorConfig(import_path="llmling.testing.processors.reverse_text"),
     )
 
     resource = PathResource(

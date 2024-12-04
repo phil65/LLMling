@@ -103,7 +103,7 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
     await processor_registry.startup()
     try:
         path = "llmling.testing.processors.reverse_text"
-        cfg = ProcessorConfig(type="function", import_path=path)
+        cfg = ProcessorConfig(import_path=path)
         processor_registry.register("reverse", cfg)
         steps = [ProcessingStep(name="reverse")]
         context = TextResource(content=SAMPLE_TEXT, description="test", processors=steps)
@@ -248,20 +248,46 @@ async def test_all_loaders_with_processors(
     tmp_file: Path,
 ) -> None:
     """Test all loaders with processor chain."""
-    cfg = ProcessorConfig(type="function", import_path="reprlib.repr")
-    processor_registry.register("upper", cfg)
-    cfg = ProcessorConfig(type="function", import_path=f"{__name__}.reverse_text")
-    processor_registry.register("reverse", cfg)
+    processor_registry.register(
+        "upper",
+        ProcessorConfig(import_path="llmling.testing.processors.uppercase_text"),
+    )
+    processor_registry.register(
+        "reverse",
+        ProcessorConfig(import_path="llmling.testing.processors.reverse_text"),
+    )
+
     processors = [ProcessingStep(name="upper"), ProcessingStep(name="reverse")]
 
-    resources: list[Resource] = [
-        TextResource(content=SAMPLE_TEXT, description="Test text", processors=processors),
-        PathResource(path=str(tmp_file), description="Test file", processors=processors),
-        CLIResource(
-            command=ECHO_COMMAND,
-            description="Test command",
-            shell=sys.platform == "win32",
-            processors=processors,
+    # Create test content
+    text_content = "Hello, World!"
+    file_content = "Test file content"
+    tmp_file.write_text(file_content)
+
+    # Use the actual ECHO_COMMAND content
+    echo_output = "test"  # 'echo test' command outputs just 'test'
+
+    resources: list[tuple[Resource, str]] = [
+        (
+            TextResource(
+                content=text_content, description="Test text", processors=processors
+            ),
+            text_content,
+        ),
+        (
+            PathResource(
+                path=str(tmp_file), description="Test file", processors=processors
+            ),
+            file_content,
+        ),
+        (
+            CLIResource(
+                command=ECHO_COMMAND,
+                description="Test command",
+                shell=sys.platform == "win32",
+                processors=processors,
+            ),
+            echo_output,
         ),
     ]
 
@@ -271,12 +297,14 @@ async def test_all_loaders_with_processors(
         "cli": CLIResourceLoader(),
     }
 
-    for context in resources:
+    for context, original_content in resources:
         loader = loaders[context.resource_type]
         result = await anext(loader.load(context, processor_registry))
         assert isinstance(result, LoadedResource)
         assert result.content
-        assert result.content.startswith("'")
+        # First uppercase, then reverse
+        expected = original_content.strip().upper()[::-1]
+        assert result.content.strip() == expected
 
 
 if __name__ == "__main__":

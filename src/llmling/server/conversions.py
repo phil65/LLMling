@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 import urllib.parse
 
 import mcp
@@ -11,7 +11,6 @@ from mcp import types
 
 
 if TYPE_CHECKING:
-    from llmling.processors.base import ProcessorConfig
     from llmling.prompts.models import (
         BasePrompt as InternalPrompt,
         ExtendedPromptArgument,
@@ -63,19 +62,6 @@ def to_mcp_message(msg: PromptMessage) -> types.PromptMessage:
             text=msg.get_text_content(),
         ),
     )
-
-
-def to_mcp_capability(proc_config: ProcessorConfig) -> dict[str, Any]:
-    """Convert to MCP capability format."""
-    capability = {
-        "name": proc_config.name,
-        "type": proc_config.type,
-        "description": proc_config.description,
-        "mimeTypes": proc_config.supported_mime_types,
-        "maxInputSize": proc_config.max_input_size,
-        "streaming": proc_config.streaming,
-    }
-    return {k: v for k, v in capability.items() if v is not None}
 
 
 def to_mcp_argument(prompt_arg: ExtendedPromptArgument) -> types.PromptArgument:

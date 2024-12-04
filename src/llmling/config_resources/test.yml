@@ -8,16 +8,7 @@ global_settings:
 # Resource processors definitions
 context_processors:
   uppercase:
-    type: function
     import_path: llmling.testing.processors.uppercase_text
-  add_metadata:
-    type: template
-    template: |
-      # Generated at: {{ now() }}
-      # Source: {{ source }}
-      # Version: {{ version }}
-
-      {{ content }}
 
 # Global tools definitions
 tools:
