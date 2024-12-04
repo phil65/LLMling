@@ -51,10 +51,7 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
 
-            meta = {
-                "import_path": resource.import_path,
-                "args": kwargs,
-            }
+            meta = {"import_path": resource.import_path, "args": kwargs}
 
             yield create_loaded_resource(
                 content=content,

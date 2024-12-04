@@ -44,7 +44,7 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
             if processor_registry and (procs := resource.processors):
                 processed = await processor_registry.process(content, procs)
                 content = processed.content
-
+            meta = {"import_path": resource.import_path, "recursive": resource.recursive}
             yield create_loaded_resource(
                 content=content,
                 source_type="source",
@@ -52,10 +52,7 @@ class SourceResourceLoader(ResourceLoader[SourceResource]):
                 mime_type="text/x-python",
                 name=resource.description or resource.import_path,
                 description=resource.description,
-                additional_metadata={
-                    "import_path": resource.import_path,
-                    "recursive": resource.recursive,
-                },
+                additional_metadata=meta,
             )
         except Exception as exc:
             msg = f"Failed to load source from {resource.import_path}"

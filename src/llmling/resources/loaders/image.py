@@ -88,7 +88,16 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
             placeholder_text = f"Image: {resource.path}"
             if resource.alt_text:
                 placeholder_text = f"{placeholder_text} - {resource.alt_text}"
-
+            message_content = MessageContent(
+                type=content_type,
+                content=image_content,
+                alt_text=resource.alt_text,
+            )
+            metadata = {
+                "path": str(resource.path),
+                "type": "url" if is_url else "local",
+                "alt_text": resource.alt_text,
+            }
             yield create_loaded_resource(
                 content=placeholder_text,
                 source_type="image",
@@ -96,18 +105,8 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
                 mime_type=guess_mime_type(path_obj),
                 name=path_obj.name,
                 description=resource.alt_text,
-                additional_metadata={
-                    "path": str(resource.path),
-                    "type": "url" if is_url else "local",
-                    "alt_text": resource.alt_text,
-                },
-                content_items=[
-                    MessageContent(
-                        type=content_type,
-                        content=image_content,
-                        alt_text=resource.alt_text,
-                    )
-                ],
+                additional_metadata=metadata,
+                content_items=[message_content],
             )
         except Exception as exc:
             msg = f"Failed to load image from {resource.path}"
