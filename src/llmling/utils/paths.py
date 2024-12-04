@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import mimetypes
 import re
 from typing import TYPE_CHECKING
 import urllib.parse
@@ -9,6 +10,7 @@ import urllib.parse
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    import os
 
 
 INVALID_CHARS_PATTERN = re.compile(r'[\x00-\x1F<>:"|?*\\]')
@@ -76,3 +78,21 @@ def path_to_uri(path: str) -> str:
 
     encoded = [urllib.parse.quote(part) for part in normalized]
     return f"file:///{'/'.join(encoded)}"
+
+
+def guess_mime_type(path: str | os.PathLike[str]) -> str:
+    """Guess MIME type from file path using stdlib.
+
+    Args:
+        path: Path to get MIME type for
+
+    Returns:
+        MIME type string, defaults to "application/octet-stream" if unknown
+    """
+    mime_type, _ = mimetypes.guess_type(str(path))
+    return mime_type or "application/octet-stream"
+
+
+if __name__ == "__main__":
+    mime = guess_mime_type("test.jpg")
+    print(mime)

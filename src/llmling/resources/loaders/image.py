@@ -12,6 +12,7 @@ from llmling.core import exceptions
 from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent
 from llmling.resources.base import ResourceLoader, create_loaded_resource
+from llmling.utils.paths import guess_mime_type
 
 
 if TYPE_CHECKING:
@@ -92,7 +93,7 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
                 content=placeholder_text,
                 source_type="image",
                 uri=self.create_uri(name=name),
-                mime_type=self._detect_mime_type(path_obj),
+                mime_type=guess_mime_type(path_obj),
                 name=path_obj.name,
                 description=resource.alt_text,
                 additional_metadata={
@@ -111,16 +112,6 @@ class ImageResourceLoader(ResourceLoader[ImageResource]):
         except Exception as exc:
             msg = f"Failed to load image from {resource.path}"
             raise exceptions.LoaderError(msg) from exc
-
-    def _detect_mime_type(self, path: str | os.PathLike[str]) -> str:
-        """Detect MIME type from file extension."""
-        ext = upath.UPath(path).suffix.lower()
-        return {
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".gif": "image/gif",
-        }.get(ext, "application/octet-stream")
 
     async def _load_content(self, path_obj: str | os.PathLike[str], is_url: bool) -> str:
         """Load content from path.
