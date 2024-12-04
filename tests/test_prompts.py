@@ -19,7 +19,7 @@ def test_config_with_prompts():
         "resources": {},
         "prompts": {
             "analyze": {
-                "type": "static",
+                "type": "text",
                 "name": "analyze",
                 "description": "Analyze code",
                 "messages": [{"role": "user", "content": "Analyze this code: {code}"}],
@@ -46,7 +46,7 @@ def test_config_with_resource_prompts():
         "resources": {},
         "prompts": {
             "review": {
-                "type": "static",
+                "type": "text",
                 "name": "review",
                 "description": "Review code and tests",
                 "messages": [
@@ -84,7 +84,7 @@ def test_invalid_prompt_config():
             "version": "1.0",
             "prompts": {
                 "invalid": {
-                    "type": "static",
+                    "type": "text",
                     "name": "invalid",
                     "messages": [
                         {

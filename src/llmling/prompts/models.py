@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import inspect
+import os  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
 from docstring_parser import parse as parse_docstring
 from pydantic import BaseModel, ConfigDict, Field
+import upath
 
 from llmling.completions import CompletionFunction  # noqa: TC001
 from llmling.core.typedefs import MessageContent, MessageRole
@@ -97,7 +99,7 @@ class StaticPrompt(BasePrompt):
     """Static prompt defined by message list."""
 
     messages: list[PromptMessage]
-    type: Literal["static"] = Field("static", init=False)
+    type: Literal["text"] = Field("text", init=False)
 
     async def format(
         self, arguments: dict[str, Any] | None = None
@@ -149,7 +151,7 @@ class DynamicPrompt(BasePrompt):
     import_path: str
     template: str | None = None
     completions: dict[str, str] | None = None
-    type: Literal["dynamic"] = Field("dynamic", init=False)
+    type: Literal["function"] = Field("function", init=False)
 
     @property
     def messages(self) -> list[PromptMessage]:
@@ -280,5 +282,91 @@ class DynamicPrompt(BasePrompt):
         )
 
 
+class FilePrompt(BasePrompt):
+    """Prompt loaded from a file.
+
+    This type of prompt loads its content from a file, allowing for longer or more
+    complex prompts to be managed in separate files. The file content is loaded
+    and parsed according to the specified format.
+    """
+
+    path: str | os.PathLike[str]
+    fmt: Literal["text", "markdown", "jinja2"] = Field("text", alias="format")
+    type: Literal["file"] = Field("file", init=False)
+    watch: bool = False
+
+    @property
+    def messages(self) -> list[PromptMessage]:
+        """Get messages from file content."""
+        content = upath.UPath(self.path).read_text()
+
+        match self.fmt:
+            case "text":
+                # Simple text format - whole file as user message
+                return [
+                    PromptMessage(
+                        role="user",
+                        content=MessageContent(type="text", content=content),
+                    )
+                ]
+            case "markdown":
+                # TODO: Parse markdown sections into separate messages
+                return [
+                    PromptMessage(
+                        role="user",
+                        content=MessageContent(type="text", content=content),
+                    )
+                ]
+            case "jinja2":
+                # Raw template - will be formatted during format()
+                return [
+                    PromptMessage(
+                        role="user",
+                        content=MessageContent(type="text", content=content),
+                    )
+                ]
+            case _:
+                msg = f"Unsupported format: {self.fmt}"
+                raise ValueError(msg)
+
+    async def format(
+        self, arguments: dict[str, Any] | None = None
+    ) -> list[PromptMessage]:
+        """Format the file content with arguments."""
+        args = arguments or {}
+        self.validate_arguments(args)
+
+        # Add default values for optional arguments
+        for arg in self.arguments:
+            if arg.name not in args and not arg.required:
+                args[arg.name] = arg.default if arg.default is not None else ""
+
+        content = upath.UPath(self.path).read_text()
+
+        if self.fmt == "jinja2":
+            # Use jinja2 for template formatting
+            import jinja2
+
+            env = jinja2.Environment(autoescape=True, enable_async=True)
+            template = env.from_string(content)
+            content = await template.render_async(**args)
+        else:
+            # Use simple string formatting
+            try:
+                content = content.format(**args)
+            except KeyError as exc:
+                msg = f"Missing argument in template: {exc}"
+                raise ValueError(msg) from exc
+
+        return [
+            PromptMessage(
+                role="user",
+                content=MessageContent(type="text", content=content),
+            )
+        ]
+
+
 # Type to use in configuration
-PromptType = Annotated[StaticPrompt | DynamicPrompt, Field(discriminator="type")]
+PromptType = Annotated[
+    StaticPrompt | DynamicPrompt | FilePrompt, Field(discriminator="type")
+]

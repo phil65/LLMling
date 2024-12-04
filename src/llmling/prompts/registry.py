@@ -13,6 +13,7 @@ from llmling.prompts.models import (
     BasePrompt,
     DynamicPrompt,
     ExtendedPromptArgument,
+    FilePrompt,
     StaticPrompt,
 )
 
@@ -40,10 +41,13 @@ class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
                 if "type" not in item:
                     msg = "Missing prompt type in configuration"
                     raise ValueError(msg)
-                if item["type"] == "static":
-                    return StaticPrompt.model_validate(item)
-                if item["type"] == "dynamic":
-                    return DynamicPrompt.model_validate(item)
+                match item["type"]:
+                    case "text":
+                        return StaticPrompt.model_validate(item)
+                    case "function":
+                        return DynamicPrompt.model_validate(item)
+                    case "file":
+                        return FilePrompt.model_validate(item)
                 msg = f"Unknown prompt type: {item['type']}"
                 raise ValueError(msg)
             case _:
