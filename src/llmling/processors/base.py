@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -40,7 +41,15 @@ class ProcessorResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class Processor:
+class BaseProcessor(ABC):
+    """Base class for all processors."""
+
+    @abstractmethod
+    async def process(self, context: ProcessingContext) -> ProcessorResult:
+        """Process content with given context."""
+
+
+class Processor(BaseProcessor):
     """Content processor that executes a callable."""
 
     def __init__(self, config: ProcessorConfig) -> None:
