@@ -36,17 +36,14 @@ license = { file = "LICENSE" }
 dependencies = [
     "pydantic",
     # Only add below (Copier)
-    "litellm>=1.52.9",
     "fsspec[github, http]",
     "universal-pathlib>=0.2.5",
     "yamling>=1.5.0",
     "jinja2>=3.1.4",
     "logfire>=2.3.0",
     "py2openai",
-    "playwright>=1.48.0",
-    "diskcache>=5.6.3",
     "epregistry>=1.2.0",
-    "mcp>=1.0.0",
+    "mcp>=1.1.0",
     "pathspec",
     "watchdog",
     "platformdirs>=4.3.6",
@@ -72,7 +69,7 @@ dev = [
     "devtools",
     # Only add below (Copier)
     "pytest-asyncio>=0.24.0",
-    "llmling-provider-llm",
+    # "llmling-provider-llm",
 ]
 benchmark = ["pyinstrument"]
 lint = [
