@@ -15,7 +15,6 @@ from llmling.config.models import (
 from llmling.core import exceptions
 from llmling.core.typedefs import ProcessingStep
 from llmling.processors.base import ProcessorConfig
-from llmling.processors.registry import ProcessorRegistry
 from llmling.resources import (
     CallableResourceLoader,
     CLIResourceLoader,
@@ -25,30 +24,13 @@ from llmling.resources import (
     TextResourceLoader,
 )
 from llmling.resources.base import LoaderContext, ResourceLoader, create_loaded_resource
-from llmling.resources.loaders.registry import ResourceLoaderRegistry
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-
-@pytest.fixture
-def loader_registry() -> ResourceLoaderRegistry:
-    """Create a populated resource registry."""
-    registry = ResourceLoaderRegistry()
-    registry["text"] = TextResourceLoader
-    registry["path"] = PathResourceLoader
-    registry["cli"] = CLIResourceLoader
-    registry["source"] = SourceResourceLoader
-    registry["callable"] = CallableResourceLoader
-    registry["image"] = ImageResourceLoader
-    return registry
-
-
-@pytest.fixture
-def processor_registry() -> ProcessorRegistry:
-    """Create a processor registry for testing."""
-    return ProcessorRegistry()
+    from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.loaders.registry import ResourceLoaderRegistry
 
 
 @pytest.mark.parametrize(

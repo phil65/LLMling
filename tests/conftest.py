@@ -7,6 +7,15 @@ from llmling.config.models import Config, GlobalSettings, TextResource, ToolConf
 from llmling.config.runtime import RuntimeConfig
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.models import PromptMessage, StaticPrompt
+from llmling.resources.loaders import (
+    CallableResourceLoader,
+    CLIResourceLoader,
+    ImageResourceLoader,
+    PathResourceLoader,
+    ResourceLoaderRegistry,
+    SourceResourceLoader,
+    TextResourceLoader,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +36,19 @@ def config_manager(test_config):
 def processor_registry():
     """Get clean processor registry."""
     return ProcessorRegistry()
+
+
+@pytest.fixture
+def loader_registry() -> ResourceLoaderRegistry:
+    """Create a populated resource registry."""
+    registry = ResourceLoaderRegistry()
+    registry["text"] = TextResourceLoader
+    registry["path"] = PathResourceLoader
+    registry["cli"] = CLIResourceLoader
+    registry["source"] = SourceResourceLoader
+    registry["callable"] = CallableResourceLoader
+    registry["image"] = ImageResourceLoader
+    return registry
 
 
 @pytest.fixture
