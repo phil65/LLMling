@@ -133,7 +133,6 @@ resources:
         - "!**/__pycache__/**"  # Exclude patterns with !
     processors:  # Optional processing steps
       - name: format_python
-        parallel: false  # Process sequentially
       - name: add_header
         required: false  # Optional step
 
@@ -225,14 +224,6 @@ context_processors:
     import_path: myapp.processors.to_upper
     async_execution: false  # Sync function
 
-  add_header:
-    type: template
-    template: |
-      # File: {{ source }}
-      # Generated: {{ now() }}
-
-      {{ content }}
-
 # Then use them in resources
 resources:
   processed_file:
@@ -240,10 +231,6 @@ resources:
     path: "./input.txt"
     processors:
       - name: uppercase
-      - name: add_header
-        required: false
-        kwargs:  # Pass processor arguments
-          timestamp_format: "%Y-%m-%d"
 ```
 
 ## Prompts

@@ -28,7 +28,6 @@ from llmling.resources.loaders import (
     TextResourceLoader,
 )
 from llmling.resources.models import LoadedResource
-from tests.test_processors import REVERSED_TEXT
 
 
 if TYPE_CHECKING:
@@ -38,6 +37,7 @@ if TYPE_CHECKING:
 
 # Constants for test data
 SAMPLE_TEXT = "Hello, World!"
+REVERSED_TEXT = SAMPLE_TEXT[::-1]
 TIMEOUT_SECONDS = 1
 LARGE_TEXT = "A" * 1000
 INVALID_MODULE = "does_not_exist.module"
