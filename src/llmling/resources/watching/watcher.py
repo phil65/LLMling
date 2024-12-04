@@ -6,7 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from llmling.core.log import get_logger
-from llmling.monitors.implementations.watchdog_watcher import WatchdogMonitor
+from llmling.monitors.implementations.watchfiles_watcher import WatchfilesMonitor
 from llmling.resources.watching.utils import load_patterns
 
 
@@ -58,10 +58,10 @@ class ResourceWatcher:
 
         Args:
             registry: Registry to notify of changes
-            monitor: Optional file monitor (uses WatchdogMonitor by default)
+            monitor: Optional file monitor (uses WatchfilesMonitor by default)
         """
         self.registry = registry
-        self.monitor = monitor or WatchdogMonitor()
+        self.monitor = monitor or WatchfilesMonitor()
         self.handlers: dict[str, None] = {}  # For test compatibility
         self._loop: asyncio.AbstractEventLoop | None = None
 
@@ -90,15 +90,7 @@ class ResourceWatcher:
             logger.exception("Error stopping file system watcher")
 
     def add_watch(self, name: str, resource: Resource) -> None:
-        """Add a watch for a resource.
-
-        Args:
-            name: Resource name
-            resource: Resource to watch
-
-        Raises:
-            RuntimeError: If watcher not started
-        """
+        """Add a watch for a resource."""
         if not self._loop:
             msg = "Watcher not started"
             raise RuntimeError(msg)
@@ -107,21 +99,33 @@ class ResourceWatcher:
             if not hasattr(resource, "path"):
                 return
 
-            patterns = load_patterns(patterns=resource.watch.patterns, ignore_file=None)  # type: ignore
+            patterns = load_patterns(
+                patterns=resource.watch.patterns,  # type: ignore
+                ignore_file=None,
+            )
+            logger.debug("Setting up watch for %s with patterns: %s", name, patterns)
 
             def on_change(events: list[FileEvent]) -> None:
                 """Handle file change events."""
+                logger.debug("Received events for %s: %s", name, events)
                 if self._loop and not self._loop.is_closed():
-                    self._loop.call_soon_threadsafe(self.registry.invalidate, name)
+                    logger.debug("Invalidating resource: %s", name)
+                    self._loop.call_soon_threadsafe(
+                        self.registry.invalidate,
+                        name,
+                    )
 
             path = str(resource.path)  # type: ignore
             if is_watchable_path(path):
                 self.monitor.add_watch(path, patterns=patterns, callback=on_change)
-                self.handlers[name] = None  # For test compatibility
+                self.handlers[name] = None
                 logger.debug("Added watch for: %s -> %s", name, path)
             else:
-                msg = "Skipping watch for non-local path: %s -> %s"
-                logger.debug(msg, name, path)
+                logger.debug(
+                    "Skipping watch for non-local path: %s -> %s",
+                    name,
+                    path,
+                )
 
         except Exception:
             logger.exception("Failed to add watch for: %s", name)

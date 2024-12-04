@@ -50,6 +50,7 @@ dependencies = [
     "depkit>=0.3.5",
     "pydantic-ai>=0.0.8",
     "typing-extensions>=4.12.2",
+    "watchfiles>=1.0.0",
 ]
 
 [project.scripts]

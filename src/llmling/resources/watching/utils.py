@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from functools import wraps
-from threading import Lock
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from upath import UPath
 
@@ -13,36 +10,11 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Sequence
     import os
 
 
 logger = get_logger(__name__)
-
-
-def debounce(wait: float) -> Callable[[Callable[..., Any]], Callable[..., None]]:
-    """Create a debounced version of a function."""
-
-    def decorator(fn: Callable[..., Any]) -> Callable[..., None]:
-        last_called = 0.0
-        lock = Lock()
-
-        @wraps(fn)
-        def wrapped(*args: Any, **kwargs: Any) -> None:
-            nonlocal last_called
-
-            with lock:
-                # Get main event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                    # Use call_soon_threadsafe to schedule from watchdog thread
-                    loop.call_soon_threadsafe(fn, *args, **kwargs)
-                except Exception:
-                    logger.exception("Failed to schedule notification")
-
-        return wrapped
-
-    return decorator
 
 
 def load_patterns(

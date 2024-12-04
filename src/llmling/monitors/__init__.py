@@ -9,6 +9,7 @@ from llmling.monitors.files import (
     FileMonitorCallback,
 )
 from llmling.monitors.implementations.watchdog_watcher import WatchdogMonitor
+from llmling.monitors.implementations.watchfiles_watcher import WatchfilesMonitor
 
 __all__ = [
     "FileEvent",
@@ -16,4 +17,5 @@ __all__ = [
     "FileMonitor",
     "FileMonitorCallback",
     "WatchdogMonitor",
+    "WatchfilesMonitor",
 ]
