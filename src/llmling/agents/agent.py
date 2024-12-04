@@ -252,6 +252,33 @@ class LLMlingAgent[TResult]:
             result = await ctx.deps.process_content(content, processor_name, **kwargs)
             return result.content
 
+        @self.tool
+        async def render_template(
+            ctx: RunContext[RuntimeConfig],
+            template: str,
+            **variables: Any,
+        ) -> str:
+            """Render a template string using Jinja2.
+
+            Args:
+                ctx: Runtime context
+                template: Template string to render
+                **variables: Variables to use in template
+
+            Returns:
+                Rendered template string
+
+            Example:
+                "Hello {{ name }}!" with variables {"name": "World"}
+                will return "Hello World!"
+            """
+            result = await ctx.deps.process_content(
+                template,
+                "jinja_template",
+                **variables,
+            )
+            return result.content
+
     async def handle_event(self, event: Event) -> None:
         """Handle runtime events.
 
