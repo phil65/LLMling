@@ -29,6 +29,79 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 logger = get_logger(__name__)
 
 
+class Jinja2Config(BaseModel):
+    """Configuration for Jinja2 environment.
+
+    See: https://jinja.palletsprojects.com/en/3.1.x/api/#jinja2.Environment
+    """
+
+    # Template loading and discovery
+    block_start_string: str = "{%"
+    block_end_string: str = "%}"
+    variable_start_string: str = "{{"
+    variable_end_string: str = "}}"
+    comment_start_string: str = "{#"
+    comment_end_string: str = "#}"
+    line_statement_prefix: str | None = None
+    line_comment_prefix: str | None = None
+    trim_blocks: bool = False
+    lstrip_blocks: bool = False
+    newline_sequence: Literal["\n", "\r\n", "\r"] = "\n"
+    keep_trailing_newline: bool = False
+
+    # Extensions and plugins
+    extensions: list[str] = Field(default_factory=list)
+    undefined: Literal["default", "strict", "debug", "chainable"] = "default"
+    # Custom filters and tests
+    filters: dict[str, str] = Field(default_factory=dict)
+    tests: dict[str, str] = Field(default_factory=dict)
+    globals: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(frozen=True)
+
+    def create_environment_kwargs(self) -> dict[str, Any]:
+        """Convert config to Jinja2 environment kwargs.
+
+        Creates a dictionary of kwargs for jinja2.Environment with proper
+        conversion of special values.
+
+        Returns:
+            Dict of kwargs for jinja2.Environment constructor
+
+        Raises:
+            ValueError: If filter or test imports fail
+        """
+        import jinja2
+
+        from llmling.utils import importing
+
+        # Start with basic string/bool config items
+        kwargs = self.model_dump(exclude={"undefined", "filters", "tests"})
+
+        # Convert undefined to proper class
+        kwargs["undefined"] = {
+            "default": jinja2.Undefined,
+            "strict": jinja2.StrictUndefined,
+            "debug": jinja2.DebugUndefined,
+            "chainable": jinja2.ChainableUndefined,
+        }[self.undefined]
+
+        try:
+            # Import filters and tests (must be callables)
+            kwargs["filters"] = {
+                name: importing.import_callable(path)
+                for name, path in self.filters.items()
+            }
+            kwargs["tests"] = {
+                name: importing.import_callable(path) for name, path in self.tests.items()
+            }
+        except Exception as exc:
+            msg = f"Failed to import Jinja2 filters/tests: {exc}"
+            raise ValueError(msg) from exc
+
+        return kwargs
+
+
 class GlobalSettings(BaseModel):
     """Global settings that apply to all components."""
 
@@ -55,6 +128,8 @@ class GlobalSettings(BaseModel):
 
     log_level: LogLevel = "INFO"
     """Log level to use for the server"""
+
+    jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
 
     model_config = ConfigDict(frozen=True)
 
