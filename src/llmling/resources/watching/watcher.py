@@ -7,30 +7,17 @@ from typing import TYPE_CHECKING
 
 from llmling.core.log import get_logger
 from llmling.monitors.implementations.watchfiles_watcher import WatchfilesMonitor
+from llmling.monitors.utils import is_watchable_path
 from llmling.resources.watching.utils import load_patterns
 
 
 if TYPE_CHECKING:
-    import os
-
     from llmling.config.models import Resource
     from llmling.monitors.files import FileEvent, FileMonitor
     from llmling.resources.registry import ResourceRegistry
 
 
 logger = get_logger(__name__)
-
-
-def is_watchable_path(path: str | os.PathLike[str]) -> bool:
-    """Check if a path can be watched.
-
-    Args:
-        path: Path to check
-
-    Returns:
-        True if path is local and can be watched
-    """
-    return str(path).startswith(("/", "./", "../")) or ":" in str(path)
 
 
 class ResourceWatcher:
