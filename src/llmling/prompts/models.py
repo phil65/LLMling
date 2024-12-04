@@ -161,15 +161,11 @@ class DynamicPrompt(BasePrompt):
         during format() when the callable is executed.
         """
         template = self.template or "{result}"
+        sys_content = MessageContent(type="text", content=f"Content from {self.name}:")
+        user_content = MessageContent(type="text", content=template)
         return [
-            PromptMessage(
-                role="system",
-                content=MessageContent(type="text", content=f"Content from {self.name}:"),
-            ),
-            PromptMessage(
-                role="user",
-                content=MessageContent(type="text", content=template),
-            ),
+            PromptMessage(role="system", content=sys_content),
+            PromptMessage(role="user", content=user_content),
         ]
 
     async def format(
@@ -182,22 +178,13 @@ class DynamicPrompt(BasePrompt):
             result = await calling.execute_callable(self.import_path, **args)
             # Use result directly in template
             template = self.template or "{result}"
-            content = MessageContent(
-                type="text",
-                content=template.format(result=result),  # Format with result
-            )
-
+            msg = template.format(result=result)
+            content = MessageContent(type="text", content=msg)
+            msg = f"Content from {self.name}:"
+            sys_content = MessageContent(type="text", content=msg)
             return [
-                PromptMessage(
-                    role="system",
-                    content=MessageContent(
-                        type="text", content=f"Content from {self.name}:"
-                    ),
-                ),
-                PromptMessage(
-                    role="user",
-                    content=content,  # Use formatted content
-                ),
+                PromptMessage(role="system", content=sys_content),
+                PromptMessage(role="user", content=content),
             ]
         except Exception as exc:
             msg = f"Failed to execute prompt callable: {exc}"
@@ -303,28 +290,16 @@ class FilePrompt(BasePrompt):
         match self.fmt:
             case "text":
                 # Simple text format - whole file as user message
-                return [
-                    PromptMessage(
-                        role="user",
-                        content=MessageContent(type="text", content=content),
-                    )
-                ]
+                msg = MessageContent(type="text", content=content)
+                return [PromptMessage(role="user", content=msg)]
             case "markdown":
                 # TODO: Parse markdown sections into separate messages
-                return [
-                    PromptMessage(
-                        role="user",
-                        content=MessageContent(type="text", content=content),
-                    )
-                ]
+                msg = MessageContent(type="text", content=content)
+                return [PromptMessage(role="user", content=msg)]
             case "jinja2":
                 # Raw template - will be formatted during format()
-                return [
-                    PromptMessage(
-                        role="user",
-                        content=MessageContent(type="text", content=content),
-                    )
-                ]
+                msg = MessageContent(type="text", content=content)
+                return [PromptMessage(role="user", content=msg)]
             case _:
                 msg = f"Unsupported format: {self.fmt}"
                 raise ValueError(msg)
