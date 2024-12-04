@@ -5,9 +5,8 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Literal, Self
 
-import mcp
 from mcp.server import NotificationOptions, Server
 from pydantic import AnyUrl
 
@@ -15,16 +14,22 @@ from llmling.config.manager import ConfigManager
 from llmling.config.runtime import RuntimeConfig
 from llmling.core.log import get_logger
 from llmling.server.handlers import register_handlers
-from llmling.server.log import configure_server_logging, run_logging_processor
 from llmling.server.observers import PromptObserver, ResourceObserver, ToolObserver
+from llmling.server.transports.sse import SSEServer
+from llmling.server.transports.stdio import StdioServer
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Coroutine
     import os
 
+    import mcp
+
+    from llmling.server.transports.base import TransportBase
 
 logger = get_logger(__name__)
+
+TransportType = Literal["stdio", "sse"]
 
 
 class LLMLingServer:
@@ -34,27 +39,49 @@ class LLMLingServer:
         self,
         runtime: RuntimeConfig,
         *,
+        transport: TransportType = "stdio",
         name: str = "llmling-server",
+        transport_options: dict[str, Any] | None = None,
     ) -> None:
         """Initialize server with runtime configuration.
 
         Args:
             runtime: Fully initialized runtime configuration
+            transport: Transport type to use ("stdio" or "sse")
             name: Server name for MCP protocol
+            transport_options: Additional options for transport
         """
         self.name = name
         self.runtime = runtime
         self._subscriptions: defaultdict[str, set[mcp.ServerSession]] = defaultdict(set)
+        self._tasks: set[asyncio.Task[Any]] = set()
+
+        # Create MCP server
         self.server = Server(name)
         self.server.notification_options = NotificationOptions(
             prompts_changed=True,
             resources_changed=True,
             tools_changed=True,
         )
-        self._tasks: set[asyncio.Task[Any]] = set()
+
+        # Create transport
+        self.transport = self._create_transport(transport, transport_options or {})
 
         self._setup_handlers()
         self._setup_observers()
+
+    def _create_transport(
+        self, transport_type: TransportType, options: dict[str, Any]
+    ) -> TransportBase:
+        """Create transport instance."""
+        match transport_type:
+            case "stdio":
+                return StdioServer(self.server)
+            case "sse":
+                return SSEServer(self.server, **options)
+            case _:
+                msg = f"Unknown transport type: {transport_type}"
+                raise ValueError(msg)
 
     @classmethod
     @asynccontextmanager
@@ -62,23 +89,19 @@ class LLMLingServer:
         cls,
         config_path: str | os.PathLike[str],
         *,
+        transport: TransportType = "stdio",
         name: str = "llmling-server",
+        transport_options: dict[str, Any] | None = None,
     ) -> AsyncIterator[LLMLingServer]:
-        """Create and run server from config file with proper context management.
-
-        Args:
-            config_path: Path to configuration file
-            name: Optional server name
-
-        Example:
-            ```python
-            async with LLMLingServer.from_config_file("config.yml") as server:
-                await server.start()
-            ```
-        """
+        """Create and run server from config file with proper context management."""
         manager = ConfigManager.load(config_path)
         async with RuntimeConfig.from_config(manager.config) as runtime:
-            server = cls(runtime, name=name)
+            server = cls(
+                runtime,
+                transport=transport,
+                name=name,
+                transport_options=transport_options,
+            )
             try:
                 yield server
             finally:
@@ -86,7 +109,7 @@ class LLMLingServer:
 
     def _create_task(self, coro: Coroutine[None, None, Any]) -> asyncio.Task[Any]:
         """Create and track an asyncio task."""
-        task: asyncio.Task[Any] = asyncio.create_task(coro)
+        task = asyncio.create_task(coro)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return task
@@ -100,6 +123,7 @@ class LLMLingServer:
         self.resource_observer = ResourceObserver(self)
         self.prompt_observer = PromptObserver(self)
         self.tool_observer = ToolObserver(self)
+
         self.runtime.add_resource_observer(self.resource_observer.events)
         self.runtime.add_prompt_observer(self.prompt_observer.events)
         self.runtime.add_tool_observer(self.tool_observer.events)
@@ -107,26 +131,16 @@ class LLMLingServer:
     async def start(self, *, raise_exceptions: bool = False) -> None:
         """Start the server."""
         try:
-            # Start MCP server
-            handler = configure_server_logging(self.server)
-            options = self.server.create_initialization_options()
-            async with (
-                mcp.stdio_server() as (read_stream, write_stream),
-                asyncio.TaskGroup() as tg,
-            ):
-                tg.create_task(run_logging_processor(handler))
-                await self.server.run(
-                    read_stream,
-                    write_stream,
-                    options,
-                    raise_exceptions=raise_exceptions,
-                )
+            await self.transport.serve(raise_exceptions=raise_exceptions)
         finally:
             await self.shutdown()
 
     async def shutdown(self) -> None:
         """Shutdown the server."""
         try:
+            # Shutdown transport first
+            await self.transport.shutdown()
+
             # Cancel all pending tasks
             if self._tasks:
                 for task in self._tasks:
