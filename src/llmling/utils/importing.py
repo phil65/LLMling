@@ -130,6 +130,31 @@ def import_callable(path: str) -> Callable[..., Any]:
     raise ValueError(msg)
 
 
+# llmling/utils/importing.py
+def import_class(path: str) -> type:
+    """Import a class from a dotted path.
+
+    Args:
+        path: Dot-separated path to the class
+
+    Returns:
+        The imported class
+
+    Raises:
+        ValueError: If path is invalid or doesn't point to a class
+    """
+    try:
+        obj = import_callable(path)
+        if not isinstance(obj, type):
+            msg = f"{path} is not a class"
+            raise TypeError(msg)  # noqa: TRY301
+    except Exception as exc:
+        msg = f"Failed to import class from {path}"
+        raise ValueError(msg) from exc
+    else:
+        return obj
+
+
 def get_pyobject_members(
     obj: type | ModuleType | Any,
     *,
