@@ -1,26 +1,20 @@
-"""File system watching implementation."""
+"""File system watching for resources."""
 
 from __future__ import annotations
 
 import asyncio
-import os
-import pathlib
-import time
 from typing import TYPE_CHECKING
 
-import pathspec
-import upath
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
-from watchdog.observers import Observer
-
 from llmling.core.log import get_logger
-from llmling.resources.watching.utils import debounce
+from llmling.monitors.implementations.watchdog_watcher import WatchdogMonitor
+from llmling.resources.watching.utils import load_patterns
 
 
 if TYPE_CHECKING:
-    from watchdog.observers.api import BaseObserver
+    import os
 
     from llmling.config.models import Resource
+    from llmling.monitors.files import FileEvent, FileMonitor
     from llmling.resources.registry import ResourceRegistry
 
 
@@ -28,7 +22,7 @@ logger = get_logger(__name__)
 
 
 def is_watchable_path(path: str | os.PathLike[str]) -> bool:
-    """Check if a path can be watched with watchdog.
+    """Check if a path can be watched.
 
     Args:
         path: Path to check
@@ -36,107 +30,61 @@ def is_watchable_path(path: str | os.PathLike[str]) -> bool:
     Returns:
         True if path is local and can be watched
     """
-    return upath.UPath(path).protocol in ("file", "")
-
-
-class ResourceEventHandler(FileSystemEventHandler):
-    """Handles file system events for a specific resource."""
-
-    def __init__(
-        self,
-        resource_name: str,
-        registry: ResourceRegistry,
-        patterns: list[str],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        self.resource_name = resource_name
-        self.registry = registry
-        self.loop = loop
-        self.spec = pathspec.PathSpec.from_lines(
-            pathspec.patterns.GitWildMatchPattern,
-            patterns,
-        )
-        self._debounced_notify = debounce(wait=0.1)(self._notify_change)
-        self._last_notification = 0.0  # Track last notification time
-
-    def on_any_event(self, event: FileSystemEvent) -> None:
-        """Handle any file system event."""
-        if event.is_directory:
-            return
-
-        path = (
-            event.src_path.decode()
-            if isinstance(event.src_path, bytes)
-            else event.src_path
-        )
-
-        # Convert to relative path for matching
-        path = os.path.relpath(path, start=pathlib.Path(path).parent)
-
-        if self.spec.match_file(path):
-            # Use loop directly for thread-safety
-            self.loop.call_soon_threadsafe(self._notify_change)
-
-    def _notify_change(self) -> None:
-        """Notify registry of resource change."""
-        try:
-            now = time.time()
-            # Debounce notifications
-            if now - self._last_notification < 0.1:  # noqa: PLR2004
-                return
-
-            self.registry.invalidate(self.resource_name)
-            self._last_notification = now
-
-        except Exception:
-            logger.exception("Failed to notify change for %s", self.resource_name)
+    return str(path).startswith(("/", "./", "../")) or ":" in str(path)
 
 
 class ResourceWatcher:
-    """Manages file system watching for resources."""
+    """Manages file system watching for resources.
 
-    def __init__(self, registry: ResourceRegistry) -> None:
+    Coordinates file monitoring with resource management by:
+    1. Setting up file monitoring for resources that request it
+    2. Converting file changes to resource invalidations
+    3. Managing monitor lifecycle
+
+    The flow is:
+    1. Resources are registered with watch configs
+    2. File changes trigger callbacks
+    3. Callbacks invalidate affected resources
+    4. Registry handles reloading invalidated resources
+    """
+
+    def __init__(
+        self,
+        registry: ResourceRegistry,
+        *,
+        monitor: FileMonitor | None = None,
+    ) -> None:
         """Initialize watcher.
 
         Args:
             registry: Registry to notify of changes
+            monitor: Optional file monitor (uses WatchdogMonitor by default)
         """
         self.registry = registry
-        self.observer: BaseObserver | None = None
-        self.handlers: dict[str, ResourceEventHandler] = {}
-        # Track watch directories to avoid duplicates
-        self._watched_paths: set[str] = set()
-        try:
-            self.loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # Fallback for cases where no loop is running yet
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
+        self.monitor = monitor or WatchdogMonitor()
+        self.handlers: dict[str, None] = {}  # For test compatibility
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     async def start(self) -> None:
-        """Start the file system observer."""
-        if self.observer:
-            return
+        """Start the file system monitor.
 
+        Raises:
+            Exception: If monitor fails to start
+        """
         try:
-            self.observer = Observer()
-            self.observer.start()
+            self._loop = asyncio.get_running_loop()
+            await self.monitor.start()
             logger.info("File system watcher started")
         except Exception:
-            self.observer = None
             logger.exception("Failed to start file system watcher")
+            raise
 
     async def stop(self) -> None:
-        """Stop the file system observer."""
-        if not self.observer:
-            return
-
+        """Stop the file system monitor."""
         try:
-            self.observer.stop()
-            self.observer.join(timeout=2.0)
-            self.observer = None
+            await self.monitor.stop()
             self.handlers.clear()
-            self._watched_paths.clear()
+            self._loop = None
             logger.info("File system watcher stopped")
         except Exception:
             logger.exception("Error stopping file system watcher")
@@ -147,35 +95,34 @@ class ResourceWatcher:
         Args:
             name: Resource name
             resource: Resource to watch
+
+        Raises:
+            RuntimeError: If watcher not started
         """
-        if not self.observer:
-            return
+        if not self._loop:
+            msg = "Watcher not started"
+            raise RuntimeError(msg)
 
         try:
-            # Create handler with loop
-            handler = ResourceEventHandler(
-                name,
-                self.registry,
-                patterns=resource.watch.patterns or ["*"],  # type: ignore
-                loop=self.loop,
-            )
-            self.handlers[name] = handler
+            if not hasattr(resource, "path"):
+                return
 
-            # Schedule directory watching for local paths only
-            if hasattr(resource, "path"):
-                path = upath.UPath(resource.path)  # type: ignore
-                if is_watchable_path(path):
-                    watch_path = str(path.parent)
-                    if watch_path not in self._watched_paths:
-                        self.observer.schedule(handler, watch_path, recursive=True)
-                        self._watched_paths.add(watch_path)
-                        logger.debug("Added watch for: %s -> %s", name, watch_path)
-                else:
-                    logger.debug(
-                        "Skipping watch for non-local path: %s -> %s",
-                        name,
-                        path,
-                    )
+            patterns = load_patterns(patterns=resource.watch.patterns, ignore_file=None)  # type: ignore
+
+            def on_change(events: list[FileEvent]) -> None:
+                """Handle file change events."""
+                if self._loop and not self._loop.is_closed():
+                    self._loop.call_soon_threadsafe(self.registry.invalidate, name)
+
+            path = str(resource.path)  # type: ignore
+            if is_watchable_path(path):
+                self.monitor.add_watch(path, patterns=patterns, callback=on_change)
+                self.handlers[name] = None  # For test compatibility
+                logger.debug("Added watch for: %s -> %s", name, path)
+            else:
+                msg = "Skipping watch for non-local path: %s -> %s"
+                logger.debug(msg, name, path)
+
         except Exception:
             logger.exception("Failed to add watch for: %s", name)
 
@@ -185,9 +132,8 @@ class ResourceWatcher:
         Args:
             name: Resource name to unwatch
         """
-        if _handler := self.handlers.pop(name, None):
-            try:
-                # Observer will be cleaned up on stop
-                logger.debug("Removed watch for: %s", name)
-            except Exception:
-                logger.exception("Error removing watch for: %s", name)
+        try:
+            self.handlers.pop(name, None)
+            logger.debug("Removed watch for: %s", name)
+        except Exception:
+            logger.exception("Error removing watch for: %s", name)
