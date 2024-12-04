@@ -57,10 +57,7 @@ def to_mcp_message(msg: PromptMessage) -> types.PromptMessage:
     role: types.Role = "assistant" if msg.role == "assistant" else "user"
     return types.PromptMessage(
         role=role,
-        content=types.TextContent(
-            type="text",
-            text=msg.get_text_content(),
-        ),
+        content=types.TextContent(type="text", text=msg.get_text_content()),
     )
 
 
@@ -80,11 +77,6 @@ def to_mcp_prompt(prompt: InternalPrompt) -> types.Prompt:
         description=prompt.description,
         arguments=[to_mcp_argument(arg) for arg in prompt.arguments],
     )
-
-
-def _normalize_url(url: str) -> str:
-    """Normalize URL string by removing trailing slash."""
-    return url.rstrip("/")
 
 
 def _is_windows_drive_letter(text: str) -> bool:
