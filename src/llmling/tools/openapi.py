@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 from uuid import UUID
 
 import httpx
@@ -12,6 +12,10 @@ import yaml
 
 from llmling.core.log import get_logger
 from llmling.tools.toolsets import ToolSet
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 logger = get_logger(__name__)
@@ -42,13 +46,6 @@ class OpenAPITools(ToolSet):
         base_url: str = "",
         headers: dict[str, str] | None = None,
     ) -> None:
-        """Initialize OpenAPI tools.
-
-        Args:
-            spec: URL or path to OpenAPI spec
-            base_url: Optional base URL override
-            headers: Optional headers for requests
-        """
         self.spec_url = spec
         self.base_url = base_url
         self.headers = headers or {}
@@ -56,9 +53,16 @@ class OpenAPITools(ToolSet):
             base_url=self.base_url,
             headers=self.headers,
         )
-        self._spec = self._load_spec()
-        self._schemas = self._spec.get("components", {}).get("schemas", {})
-        self._operations = self._parse_operations()
+        self._spec: dict[str, Any] = {}
+        self._schemas: dict[str, Any] = {}
+        self._operations: dict[str, Any] = {}
+
+    def _ensure_loaded(self) -> None:
+        """Ensure spec is loaded."""
+        if self._spec is None:
+            self._spec = self._load_spec()
+            self._schemas = self._spec.get("components", {}).get("schemas", {})
+            self._operations = self._parse_operations()
 
     def _load_spec(self) -> dict[str, Any]:
         """Load OpenAPI specification."""
@@ -320,9 +324,10 @@ class OpenAPITools(ToolSet):
             case t:
                 return str(t)
 
-    def get_tools(self) -> list[Any]:
+    def get_tools(self) -> list[Callable[..., Any]]:
         """Get all API operations as tools."""
+        self._ensure_loaded()
         return [
             self._create_operation_method(op_id, config)
-            for op_id, config in self._operations.items()
+            for op_id, config in self._operations.items()  # type: ignore
         ]
