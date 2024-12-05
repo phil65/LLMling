@@ -28,7 +28,9 @@ tools:           # Python functions
     # tool-specific config...
 
 toolsets:        # Pre-built tool collections
-  - "package_name"
+  my_tools:
+    type: entry_points
+    module: llmling
 ```
 
 ## Global Settings
@@ -126,8 +128,9 @@ The `toolsets` section lets you include pre-built collections of tools:
 
 ```yaml
 toolsets:
-  - "llmling.code"    # Built-in code tools
-  - "myapp.toolset"   # Custom toolset
+  my_tools:
+    type: entry_points
+    module: llmling
 ```
 
 Toolsets are Python entry points that provide collections of related tools.

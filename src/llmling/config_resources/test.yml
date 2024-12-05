@@ -17,7 +17,14 @@ tools:
     description: "Analyze Python code structure"
 
 toolsets:
-  - llmling
+  random:
+    type: openapi
+    spec: "https://random-data-api.com/api-docs/v2/openapi.json"
+    namespace: "random"
+
+  abc:
+    type: entry_points
+    module: llmling
 
 # Resource definitions
 resources:

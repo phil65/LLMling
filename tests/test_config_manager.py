@@ -42,7 +42,7 @@ VALID_CONFIG = {
             "description": "Test tool",
         },
     },
-    "toolsets": ["llmling"],
+    # "toolsets": ["llmling"],
 }
 
 

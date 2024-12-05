@@ -384,7 +384,7 @@ class Config(BaseModel):
     resources: dict[str, Resource] = Field(default_factory=dict)
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
-    toolsets: list[str] = Field(default_factory=list)
+    toolsets: dict[str, ToolsetConfig] = Field(default_factory=dict)
     prompts: dict[str, PromptType] = Field(default_factory=dict)
 
     model_config = ConfigDict(

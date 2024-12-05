@@ -13,12 +13,16 @@ import depkit
 import logfire
 
 from llmling.config.manager import ConfigManager
-from llmling.config.models import PathResource
+from llmling.config.models import (
+    CustomToolsetConfig,
+    EntryPointToolsetConfig,
+    OpenAPIToolsetConfig,
+    PathResource,
+)
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
-from llmling.extensions.loaders import ToolsetLoader
 from llmling.processors.jinjaprocessor import Jinja2Processor
 from llmling.processors.registry import ProcessorRegistry
 from llmling.prompts.registry import PromptRegistry
@@ -26,6 +30,8 @@ from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.loaders.path import PathResourceLoader
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
+from llmling.tools.entry_points import EntryPointTools
+from llmling.tools.openapi import OpenAPITools
 from llmling.tools.registry import ToolRegistry
 
 
@@ -39,6 +45,7 @@ if TYPE_CHECKING:
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt, PromptMessage
     from llmling.resources.models import LoadedResource
+    from llmling.tools.toolsets import ToolSet
 
 
 logger = get_logger(__name__)
@@ -153,24 +160,49 @@ class RuntimeConfig(EventEmitter):
             self._resource_registry[name] = resource
 
         for name, tool_config in self._config.tools.items():
-            tool = LLMCallableTool.from_callable(
+            self._tool_registry[name] = LLMCallableTool.from_callable(
                 tool_config.import_path,
                 name_override=tool_config.name,
                 description_override=tool_config.description,
             )
-            self._tool_registry[name] = tool
 
-        if self._config.toolsets:
-            loader = ToolsetLoader()
-            for name, tool in loader.load_items(self._config.toolsets).items():
-                if name not in self._tool_registry:
-                    self._tool_registry[name] = tool
-                else:
-                    msg = "Tool %s from toolset overlaps with configured tool"
-                    logger.warning(msg, name)
+        self._initialize_toolsets()
 
         for name, prompt_config in self._config.prompts.items():
             self._prompt_registry[name] = prompt_config
+
+    def _initialize_toolsets(self) -> None:
+        """Initialize toolsets from config."""
+        for name, config in self._config.toolsets.items():
+            try:
+                match config:
+                    case OpenAPIToolsetConfig():
+                        toolset: ToolSet = OpenAPITools(
+                            spec=config.spec,
+                            base_url=config.base_url or "",
+                        )
+                    case EntryPointToolsetConfig():
+                        toolset = EntryPointTools(config.module)
+                    case CustomToolsetConfig():
+                        toolset = config.import_path
+                    case _:
+                        msg = f"Unknown toolset type: {type(config)}"
+                        raise ValueError(msg)  # noqa: TRY301
+
+                # Get tool prefix
+                prefix = f"{config.namespace}." if config.namespace else f"{name}."
+
+                # Register all tools
+                for tool in toolset.get_llm_callable_tools():
+                    tool_name = f"{prefix}{tool.name}"
+                    if tool_name in self._tool_registry:
+                        msg = "Tool %s from toolset %s overlaps with existing tool"
+                        logger.warning(msg, tool.name, name)
+                        continue
+                    self._tool_registry[tool_name] = tool
+
+            except Exception:
+                logger.exception("Failed to load toolset: %s", name)
 
     async def _initialize_registries(self) -> None:
         """Initialize all registries."""
