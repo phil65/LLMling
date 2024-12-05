@@ -153,6 +153,262 @@
       "title": "CallableResource",
       "type": "object"
     },
+    "CustomToolsetConfig": {
+      "description": "Configuration for custom toolsets.",
+      "properties": {
+        "namespace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional namespace prefix for tool names",
+          "title": "Namespace"
+        },
+        "type": {
+          "const": "custom",
+          "default": "custom",
+          "title": "Type",
+          "type": "string"
+        },
+        "import_path": {
+          "description": "Import path to toolset class",
+          "title": "Import Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "import_path"
+      ],
+      "title": "CustomToolsetConfig",
+      "type": "object"
+    },
+    "DynamicPrompt": {
+      "description": "Dynamic prompt loaded from callable.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ExtendedPromptArgument"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "metadata": {
+          "title": "Metadata",
+          "type": "object"
+        },
+        "import_path": {
+          "title": "Import Path",
+          "type": "string"
+        },
+        "template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Template"
+        },
+        "completions": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completions"
+        },
+        "type": {
+          "const": "function",
+          "default": "function",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "import_path"
+      ],
+      "title": "DynamicPrompt",
+      "type": "object"
+    },
+    "EntryPointToolsetConfig": {
+      "description": "Configuration for entry point toolsets.",
+      "properties": {
+        "namespace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional namespace prefix for tool names",
+          "title": "Namespace"
+        },
+        "type": {
+          "const": "entry_points",
+          "default": "entry_points",
+          "title": "Type",
+          "type": "string"
+        },
+        "module": {
+          "description": "Python module path",
+          "title": "Module",
+          "type": "string"
+        }
+      },
+      "required": [
+        "module"
+      ],
+      "title": "EntryPointToolsetConfig",
+      "type": "object"
+    },
+    "ExtendedPromptArgument": {
+      "description": "Prompt argument with validation information.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type_hint": {
+          "title": "Type Hint"
+        },
+        "default": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "completion_function": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completion Function"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ExtendedPromptArgument",
+      "type": "object"
+    },
+    "FilePrompt": {
+      "description": "Prompt loaded from a file.\n\nThis type of prompt loads its content from a file, allowing for longer or more\ncomplex prompts to be managed in separate files. The file content is loaded\nand parsed according to the specified format.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ExtendedPromptArgument"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "metadata": {
+          "title": "Metadata",
+          "type": "object"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "path",
+              "type": "string"
+            }
+          ],
+          "title": "Path"
+        },
+        "format": {
+          "default": "text",
+          "enum": [
+            "text",
+            "markdown",
+            "jinja2"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "type": {
+          "const": "file",
+          "default": "file",
+          "title": "Type",
+          "type": "string"
+        },
+        "watch": {
+          "default": false,
+          "title": "Watch",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "path"
+      ],
+      "title": "FilePrompt",
+      "type": "object"
+    },
     "GlobalSettings": {
       "description": "Global settings that apply to all components.",
       "properties": {
@@ -215,6 +471,9 @@
           ],
           "title": "Log Level",
           "type": "string"
+        },
+        "jinja_environment": {
+          "$ref": "#/$defs/Jinja2Config"
         }
       },
       "title": "GlobalSettings",
@@ -285,6 +544,212 @@
         "path"
       ],
       "title": "ImageResource",
+      "type": "object"
+    },
+    "Jinja2Config": {
+      "description": "Configuration for Jinja2 environment.\n\nSee: https://jinja.palletsprojects.com/en/3.1.x/api/#jinja2.Environment",
+      "properties": {
+        "block_start_string": {
+          "default": "{%",
+          "title": "Block Start String",
+          "type": "string"
+        },
+        "block_end_string": {
+          "default": "%}",
+          "title": "Block End String",
+          "type": "string"
+        },
+        "variable_start_string": {
+          "default": "{{",
+          "title": "Variable Start String",
+          "type": "string"
+        },
+        "variable_end_string": {
+          "default": "}}",
+          "title": "Variable End String",
+          "type": "string"
+        },
+        "comment_start_string": {
+          "default": "{#",
+          "title": "Comment Start String",
+          "type": "string"
+        },
+        "comment_end_string": {
+          "default": "#}",
+          "title": "Comment End String",
+          "type": "string"
+        },
+        "line_statement_prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line Statement Prefix"
+        },
+        "line_comment_prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line Comment Prefix"
+        },
+        "trim_blocks": {
+          "default": false,
+          "title": "Trim Blocks",
+          "type": "boolean"
+        },
+        "lstrip_blocks": {
+          "default": false,
+          "title": "Lstrip Blocks",
+          "type": "boolean"
+        },
+        "newline_sequence": {
+          "default": "\n",
+          "enum": [
+            "\n",
+            "\r\n",
+            "\r"
+          ],
+          "title": "Newline Sequence",
+          "type": "string"
+        },
+        "keep_trailing_newline": {
+          "default": false,
+          "title": "Keep Trailing Newline",
+          "type": "boolean"
+        },
+        "extensions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Extensions",
+          "type": "array"
+        },
+        "undefined": {
+          "default": "default",
+          "enum": [
+            "default",
+            "strict",
+            "debug",
+            "chainable"
+          ],
+          "title": "Undefined",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Filters",
+          "type": "object"
+        },
+        "tests": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Tests",
+          "type": "object"
+        },
+        "globals": {
+          "title": "Globals",
+          "type": "object"
+        }
+      },
+      "title": "Jinja2Config",
+      "type": "object"
+    },
+    "MessageContent": {
+      "description": "Content item in a message.",
+      "properties": {
+        "type": {
+          "enum": [
+            "text",
+            "resource",
+            "image_url",
+            "image_base64"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "alt_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alt Text"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "title": "MessageContent",
+      "type": "object"
+    },
+    "OpenAPIToolsetConfig": {
+      "description": "Configuration for OpenAPI toolsets.",
+      "properties": {
+        "namespace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional namespace prefix for tool names",
+          "title": "Namespace"
+        },
+        "type": {
+          "const": "openapi",
+          "default": "openapi",
+          "title": "Type",
+          "type": "string"
+        },
+        "spec": {
+          "description": "URL or path to OpenAPI specification",
+          "title": "Spec",
+          "type": "string"
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Base URL for API requests",
+          "title": "Base Url"
+        }
+      },
+      "required": [
+        "spec"
+      ],
+      "title": "OpenAPIToolsetConfig",
       "type": "object"
     },
     "PathResource": {
@@ -380,17 +845,8 @@
     },
     "ProcessorConfig": {
       "additionalProperties": false,
-      "description": "Configuration for text processors.",
+      "description": "Configuration for content processors.",
       "properties": {
-        "type": {
-          "enum": [
-            "function",
-            "template",
-            "image"
-          ],
-          "title": "Type",
-          "type": "string"
-        },
         "name": {
           "anyOf": [
             {
@@ -416,7 +872,6 @@
           "title": "Description"
         },
         "import_path": {
-          "default": "",
           "title": "Import Path",
           "type": "string"
         },
@@ -424,34 +879,6 @@
           "default": false,
           "title": "Async Execution",
           "type": "boolean"
-        },
-        "template": {
-          "default": "",
-          "title": "Template",
-          "type": "string"
-        },
-        "template_engine": {
-          "const": "jinja2",
-          "default": "jinja2",
-          "title": "Template Engine",
-          "type": "string"
-        },
-        "validate_output": {
-          "default": false,
-          "title": "Validate Output",
-          "type": "boolean"
-        },
-        "validate_schema": {
-          "anyOf": [
-            {
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Validate Schema"
         },
         "timeout": {
           "anyOf": [
@@ -473,101 +900,50 @@
         "metadata": {
           "title": "Metadata",
           "type": "object"
-        },
-        "supported_mime_types": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Supported Mime Types",
-          "type": "array"
-        },
-        "max_input_size": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Max Input Size"
-        },
-        "streaming": {
-          "default": false,
-          "title": "Streaming",
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "type"
-      ],
-      "title": "ProcessorConfig",
-      "type": "object"
-    },
-    "PromptConfig": {
-      "description": "Configuration for prompts from functions.",
-      "properties": {
-        "import_path": {
-          "title": "Import Path",
-          "type": "string"
-        },
-        "name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Name"
-        },
-        "description": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Description"
-        },
-        "template": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Template"
-        },
-        "completions": {
-          "anyOf": [
-            {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Completions"
         }
       },
       "required": [
         "import_path"
       ],
-      "title": "PromptConfig",
+      "title": "ProcessorConfig",
+      "type": "object"
+    },
+    "PromptMessage": {
+      "description": "A message in a prompt template.",
+      "properties": {
+        "role": {
+          "enum": [
+            "system",
+            "user",
+            "assistant",
+            "tool"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/MessageContent"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/MessageContent"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "",
+          "title": "Content"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "PromptMessage",
       "type": "object"
     },
     "SourceResource": {
@@ -633,6 +1009,50 @@
         "import_path"
       ],
       "title": "SourceResource",
+      "type": "object"
+    },
+    "StaticPrompt": {
+      "description": "Static prompt defined by message list.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/$defs/ExtendedPromptArgument"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "metadata": {
+          "title": "Metadata",
+          "type": "object"
+        },
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/PromptMessage"
+          },
+          "title": "Messages",
+          "type": "array"
+        },
+        "type": {
+          "const": "text",
+          "default": "text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "messages"
+      ],
+      "title": "StaticPrompt",
       "type": "object"
     },
     "TextResource": {
@@ -829,15 +1249,51 @@
       "type": "object"
     },
     "toolsets": {
-      "items": {
-        "type": "string"
+      "additionalProperties": {
+        "discriminator": {
+          "mapping": {
+            "custom": "#/$defs/CustomToolsetConfig",
+            "entry_points": "#/$defs/EntryPointToolsetConfig",
+            "openapi": "#/$defs/OpenAPIToolsetConfig"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/OpenAPIToolsetConfig"
+          },
+          {
+            "$ref": "#/$defs/EntryPointToolsetConfig"
+          },
+          {
+            "$ref": "#/$defs/CustomToolsetConfig"
+          }
+        ]
       },
       "title": "Toolsets",
-      "type": "array"
+      "type": "object"
     },
     "prompts": {
       "additionalProperties": {
-        "$ref": "#/$defs/PromptConfig"
+        "discriminator": {
+          "mapping": {
+            "file": "#/$defs/FilePrompt",
+            "function": "#/$defs/DynamicPrompt",
+            "text": "#/$defs/StaticPrompt"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/StaticPrompt"
+          },
+          {
+            "$ref": "#/$defs/DynamicPrompt"
+          },
+          {
+            "$ref": "#/$defs/FilePrompt"
+          }
+        ]
       },
       "title": "Prompts",
       "type": "object"
