@@ -57,18 +57,30 @@ class OpenAPITools(ToolSet):
         self._schemas: dict[str, Any] = {}
         self._operations: dict[str, Any] = {}
 
+    def _store_spec(self, spec_data: dict[str, Any]) -> None:
+        """Helper to store and parse spec data."""
+        self._spec = spec_data
+        self._schemas = self._spec.get("components", {}).get("schemas", {})
+        self._operations = self._parse_operations()
+        logger.debug("\nStoring spec data:")
+        logger.debug("Raw spec: %s", spec_data)
+        logger.debug("Stored spec: %s", self._spec)
+        logger.debug("Parsed operations: %s", self._operations)
+
     def _ensure_loaded(self) -> None:
         """Ensure spec is loaded."""
-        if self._spec is None:
-            self._spec = self._load_spec()
-            self._schemas = self._spec.get("components", {}).get("schemas", {})
-            self._operations = self._parse_operations()
+        if not self._spec:
+            spec_data = self._load_spec()
+            self._store_spec(spec_data)
 
     def _load_spec(self) -> dict[str, Any]:
         """Load OpenAPI specification."""
         try:
             if self.spec_url.startswith(("http://", "https://")):
-                response = httpx.get(self.spec_url)
+                response = httpx.get(
+                    self.spec_url,
+                    headers={"Accept": "application/json"},
+                )
                 response.raise_for_status()
                 content = response.text
             else:
