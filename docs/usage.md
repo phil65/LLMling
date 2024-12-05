@@ -10,7 +10,7 @@ The main interface for using LLMling programmatically is the `RuntimeConfig` cla
 from llmling import Config, RuntimeConfig
 
 # Create from YAML file
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Use runtime...
     pass
 
@@ -20,16 +20,6 @@ async with RuntimeConfig.from_config(config) as runtime:
     # Use runtime...
     pass
 
-# Create from YAML string
-config_yaml = """
-resources:
-  greeting:
-    type: text
-    content: "Hello, {name}!"
-"""
-async with RuntimeConfig.from_yaml(config_yaml) as runtime:
-    # Use runtime...
-    pass
 ```
 
 > **Important**
@@ -38,7 +28,7 @@ async with RuntimeConfig.from_yaml(config_yaml) as runtime:
 ## Resource Operations
 
 ```python
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Load a resource
     resource = await runtime.load_resource("my_resource")
     print(resource.content)
@@ -56,17 +46,14 @@ async with RuntimeConfig.from_file("config.yml") as runtime:
     # Register new resource
     from llmling.config.models import TextResource
 
-    runtime.register_resource(
-        "new_resource",
-        TextResource(content="New content"),
-        replace=True  # Optional, replace if exists
-    )
+    resource = TextResource(content="Hello, World!")
+    runtime.register_resource("new_resource", resource)
 ```
 
 ## Prompt Operations
 
 ```python
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Format a prompt
     messages = await runtime.render_prompt(
         "my_prompt",
@@ -86,14 +73,7 @@ async with RuntimeConfig.from_file("config.yml") as runtime:
 ## Tool Operations
 
 ```python
-async with RuntimeConfig.from_file("config.yml") as runtime:
-    # Execute a tool
-    result = await runtime.execute_tool(
-        "my_tool",
-        arg1="value1",
-        arg2="value2"
-    )
-
+async with RuntimeConfig.open("config.yml") as runtime:
     # List available tools
     tools = runtime.list_tools()
 
@@ -102,6 +82,14 @@ async with RuntimeConfig.from_file("config.yml") as runtime:
 
     # Get all tools
     all_tools = runtime.get_tools()
+
+    # Execute a tool
+    result = await runtime.execute_tool(
+        "my_tool",
+        arg1="value1",
+        arg2="value2"
+    )
+
 ```
 
 ## Event Handling
@@ -117,7 +105,7 @@ class MyEventHandler(EventHandler):
             case "TOOL_ADDED":
                 print(f"New tool: {event.name}")
 
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Add event handler
     runtime.add_event_handler(MyEventHandler())
 ```
@@ -134,7 +122,7 @@ class ResourceObserver(RegistryEvents):
     def on_item_modified(self, key: str, item: Any) -> None:
         print(f"Resource modified: {key}")
 
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Add observers
     runtime.add_resource_observer(ResourceObserver())
     runtime.add_prompt_observer(PromptObserver())
@@ -147,7 +135,7 @@ Here's an example of using LLMling with an agent:
 
 ```python
 from llmling import RuntimeConfig
-from llmling.agents import LLMlingAgent
+from llmling_agent import LLMlingAgent
 from pydantic import BaseModel
 
 # Define structured output
@@ -157,7 +145,7 @@ class Analysis(BaseModel):
     suggestions: list[str]
 
 # Create agent with runtime
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Create agent with structured output
     agent = LLMlingAgent[Analysis](
         runtime,
@@ -180,45 +168,3 @@ async with RuntimeConfig.from_file("config.yml") as runtime:
     for suggestion in result.data.suggestions:
         print(f"- {suggestion}")
 ```
-
-## Best Practices
-
-### Resource Management
-- Always use async context managers
-- Clean up resources properly
-- Handle exceptions appropriately
-- Use type hints consistently
-
-### Error Handling
-```python
-from llmling.core import exceptions
-
-async with RuntimeConfig.from_file("config.yml") as runtime:
-    try:
-        resource = await runtime.load_resource("missing")
-    except exceptions.ResourceError as e:
-        print(f"Resource error: {e}")
-    except exceptions.ConfigError as e:
-        print(f"Configuration error: {e}")
-    except exceptions.LLMLingError as e:
-        print(f"General error: {e}")
-```
-
-### Async Operations
-- Use appropriate async patterns
-- Don't block the event loop
-- Handle cancellation properly
-- Use asyncio.TaskGroup for concurrent operations
-
-### Type Safety
-- Use type hints consistently
-- Enable type checking in development
-- Handle type conversions explicitly
-- Validate external data
-
-## Next Steps
-
-For more examples and detailed API documentation, see:
-- [API Reference](https://llmling.readthedocs.io/en/latest/api/)
-- [Example Gallery](https://llmling.readthedocs.io/en/latest/examples/)
-- [Contributing Guide](https://llmling.readthedocs.io/en/latest/contributing/)

@@ -124,16 +124,72 @@ tools:
 
 ## Toolsets
 
-The `toolsets` section lets you include pre-built collections of tools:
+The `toolsets` section lets you define collections of related tools. There are three types of toolsets:
 
 ```yaml
 toolsets:
-  my_tools:
+  # Entry point toolsets (tools from Python packages)
+  core_tools:
     type: entry_points
     module: llmling
+    namespace: core  # Optional prefix for tool names
+
+  # OpenAPI toolsets (tools from API specs)
+  petstore:
+    type: openapi
+    spec: "https://petstore.swagger.io/v2/swagger.json"
+    base_url: "https://api.example.com"  # Optional API base URL
+    namespace: pet  # Optional prefix for tool names
+
+  # Custom toolsets (your own tool collections)
+  custom:
+    type: custom
+    import_path: "myapp.tools.CustomToolSet"
+    namespace: my  # Optional prefix for tool names
 ```
 
-Toolsets are Python entry points that provide collections of related tools.
+### Entry Point Toolsets
+
+Entry point toolsets load tools from Python packages that provide them through entry points:
+
+```yaml
+toolsets:
+  llmling:
+    type: entry_points
+    module: llmling       # Package name
+    namespace: core       # Optional namespace
+```
+
+### OpenAPI Toolsets
+
+OpenAPI toolsets automatically create tools from OpenAPI/Swagger specifications:
+
+```yaml
+toolsets:
+  api:
+    type: openapi
+    spec: "https://api.example.com/openapi.json"  # URL or local path
+    base_url: "https://api.example.com"           # Optional base URL
+    namespace: api                                # Optional namespace
+```
+
+### Custom Toolsets
+
+Custom toolsets load tool collections from your own Python classes:
+
+```yaml
+toolsets:
+  custom:
+    type: custom
+    import_path: "myapp.tools.DatabaseTools"  # Your toolset class
+    namespace: db                             # Optional namespace
+```
+
+### Namespacing
+
+Each toolset can have an optional `namespace` that prefixes its tool names to avoid conflicts. For example:
+- Without namespace: `get_user`, `create_user`
+- With namespace "db": `db.get_user`, `db.create_user`
 
 ## File Watching
 
