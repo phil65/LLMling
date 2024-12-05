@@ -19,7 +19,7 @@ from llmling.processors.registry import ProcessorRegistry
 from llmling.server import LLMLingServer
 
 
-__version__ = "0.11.2"
+__version__ = "0.11.3"
 
 __all__ = [
     "Config",
