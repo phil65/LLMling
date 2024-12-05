@@ -130,10 +130,10 @@ async def test_server_lifecycle_direct(
         assert isinstance(tools, list)
         assert len(tools) > 0  # Should have our test tools
 
-        resources = runtime_config.list_resources()
+        resources = runtime_config.list_resource_names()
         assert isinstance(resources, list)
 
-        prompts = runtime_config.list_prompts()
+        prompts = runtime_config.list_prompt_names()
         assert isinstance(prompts, list)
 
     finally:

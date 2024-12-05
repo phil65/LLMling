@@ -230,9 +230,9 @@ class LLMlingAgent[TResult]:
             return await ctx.deps.load_resource_by_uri(uri)
 
         @self.tool
-        async def list_resources(ctx: RunContext[RuntimeConfig]) -> Sequence[str]:
+        async def list_resource_names(ctx: RunContext[RuntimeConfig]) -> Sequence[str]:
             """List available resources."""
-            return ctx.deps.list_resources()
+            return ctx.deps.list_resource_names()
 
         @self.tool
         async def process_content(
@@ -419,7 +419,7 @@ class LLMlingAgent[TResult]:
             ```python
             @agent.system_prompt
             async def get_prompt(ctx: RunContext[RuntimeConfig]) -> str:
-                resources = await ctx.deps.list_resources()
+                resources = await ctx.deps.list_resource_names()
                 return f"Available resources: {', '.join(resources)}"
             ```
         """

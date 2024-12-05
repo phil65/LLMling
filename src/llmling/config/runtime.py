@@ -401,13 +401,21 @@ class RuntimeConfig(EventEmitter):
             msg = f"Failed to load resource from URI {uri}"
             raise exceptions.ResourceError(msg) from exc
 
-    def list_resources(self) -> Sequence[str]:
+    def list_resource_names(self) -> Sequence[str]:
         """List all available resource names.
 
         Returns:
             List of registered resource names
         """
         return self._resource_registry.list_items()
+
+    def list_resource_uris(self) -> Sequence[str]:
+        """List all available resource URIs.
+
+        Returns:
+            List of registered resource names
+        """
+        return [res.uri for res in self._resource_registry.values() if res.uri]
 
     def get_resource_uri(self, name: str) -> str:
         """Get URI for a resource.
@@ -457,7 +465,7 @@ class RuntimeConfig(EventEmitter):
         return self._loader_registry.get_loader(resource)
 
     # Tool Management
-    def list_tools(self) -> Sequence[str]:
+    def list_tool_names(self) -> Sequence[str]:
         """List all available tool names.
 
         Returns:
@@ -512,7 +520,7 @@ class RuntimeConfig(EventEmitter):
         return list(self._tool_registry.values())
 
     # Prompt Management
-    def list_prompts(self) -> Sequence[str]:
+    def list_prompt_names(self) -> Sequence[str]:
         """List all available prompt names.
 
         Returns:

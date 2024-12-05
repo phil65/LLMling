@@ -97,7 +97,7 @@ def register_handlers(llm_server: LLMLingServer) -> None:
     async def handle_list_resources() -> list[Resource]:
         """Handle resources/list request."""
         resources = []
-        for name in llm_server.runtime.list_resources():
+        for name in llm_server.runtime.list_resource_names():
             try:
                 uri = llm_server.runtime.get_resource_uri(name)
                 mcp_uri = conversions.to_mcp_uri(uri)

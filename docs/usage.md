@@ -35,7 +35,7 @@ async with RuntimeConfig.open("config.yml") as runtime:
     print(resource.metadata)
 
     # List available resources
-    resources = runtime.list_resources()
+    resources = runtime.list_resource_names()
 
     # Get resource URI
     uri = runtime.get_resource_uri("my_resource")
@@ -61,7 +61,7 @@ async with RuntimeConfig.open("config.yml") as runtime:
     )
 
     # List available prompts
-    prompts = runtime.list_prompts()
+    prompts = runtime.list_prompt_names()
 
     # Get prompt by name
     prompt = runtime.get_prompt("my_prompt")
@@ -75,7 +75,7 @@ async with RuntimeConfig.open("config.yml") as runtime:
 ```python
 async with RuntimeConfig.open("config.yml") as runtime:
     # List available tools
-    tools = runtime.list_tools()
+    tools = runtime.list_tool_names()
 
     # Get tool by name
     tool = runtime.get_tool("my_tool")
