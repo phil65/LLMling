@@ -71,3 +71,16 @@ def inspect(ctx):
     """Start the MCP Inspector to debug our server."""
     # Use the uvx variant since we're using uv
     ctx.run("npx -y @modelcontextprotocol/inspector@latest")
+
+
+@duty(capture=False)
+def generate_schema(ctx, check: bool = False):
+    """Generate JSON schema for config models."""
+    check_arg = " --check" if check else ""
+    ctx.run(f"uv run python scripts/generate_schema.py{check_arg}")
+
+
+@duty(capture=False)
+def check_schema(ctx):
+    """Check if JSON schema is up to date."""
+    generate_schema(ctx, check=True)
