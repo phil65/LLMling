@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 import sys
@@ -29,7 +30,8 @@ LEVEL_MAP: dict[int, LoggingLevel] = {
 
 # Get platform-specific log directory
 LOG_DIR = UPath(platformdirs.user_log_dir("llmling", "llmling"))
-LOG_FILE = LOG_DIR / "llmling.log"
+TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+LOG_FILE = LOG_DIR / f"llmling_{TIMESTAMP}.log"
 
 # Maximum log file size in bytes (10MB)
 MAX_LOG_SIZE = 10 * 1024 * 1024
@@ -54,7 +56,7 @@ def setup_logging(
     """
     logfire.configure()
     logger = logging.getLogger("llmling")
-    logger.setLevel(logging.DEBUG)  # Always set root logger to DEBUG
+    logger.setLevel(logging.DEBUG)
 
     if not format_string:
         format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -72,7 +74,6 @@ def setup_logging(
         # Add file handler if requested (always DEBUG level)
         if log_to_file:
             try:
-                # Create log directory if it doesn't exist
                 LOG_DIR.mkdir(parents=True, exist_ok=True)
                 file_handler = RotatingFileHandler(
                     LOG_FILE,
@@ -81,20 +82,17 @@ def setup_logging(
                     encoding="utf-8",
                 )
                 file_handler.setFormatter(formatter)
-                file_handler.setLevel(logging.DEBUG)  # Always DEBUG for file
+                file_handler.setLevel(logging.DEBUG)
                 handlers.append(file_handler)
             except Exception as exc:  # noqa: BLE001
-                print(
-                    f"Failed to setup file logging at {LOG_FILE}: {exc}",
-                    file=sys.stderr,
-                )
+                msg = f"Failed to create log file: {exc}"
+                print(msg, file=sys.stderr)
 
     for handler in handlers:
         if not handler.formatter:
             handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-    # Log startup info with both handlers' levels
     logger.info("Logging initialized")
     if log_to_file:
         logger.debug(
