@@ -146,12 +146,19 @@ class BaseResource(BaseModel):
     """Base class for all resource types."""
 
     resource_type: str = Field(init=False)
+    """Type identifier for this resource."""
+
     description: str = ""
+    """Human-readable description of the resource."""
+
     uri: str | None = None
-    processors: list[ProcessingStep] = Field(
-        default_factory=list
-    )  # Optional with empty default
+    """Canonical URI for this resource, set during registration."""
+
+    processors: list[ProcessingStep] = Field(default_factory=list)
+    """Processing steps to apply when loading this resource."""
+
     watch: WatchConfig | None = None
+    """Configuration for file system watching, if supported."""
 
     model_config = ConfigDict(frozen=True)
 

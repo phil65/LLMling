@@ -431,6 +431,20 @@ class RuntimeConfig(EventEmitter):
         """
         return self._resource_registry.get_uri(name)
 
+    def get_resource(self, name: str) -> Resource:
+        """Get a resource configuration by name.
+
+        Args:
+            name: Name of the resource to get
+
+        Returns:
+            The resource configuration
+
+        Raises:
+            ResourceError: If resource not found
+        """
+        return self._resource_registry[name]
+
     def register_resource(
         self,
         name: str,

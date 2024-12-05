@@ -52,7 +52,17 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
 
     def register(self, key: str, item: Resource | Any, replace: bool = False) -> None:
         """Register an item."""
-        # Existing registration logic...
+        try:
+            # Create copy with URI if needed
+            if not item.uri:
+                loader = self.loader_registry.get_loader(item)
+                uri = loader.create_uri(name=key)
+                item = item.model_copy(update={"uri": uri})
+        except exceptions.LoaderError as exc:
+            msg = f"No loader registered for resource type '{item.resource_type}'"
+            raise exceptions.ResourceError(msg) from exc
+
+        # Call parent registration
         super().register(key, item, replace)
 
         # Set up watching if needed
