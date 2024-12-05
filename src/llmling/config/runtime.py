@@ -447,6 +447,14 @@ class RuntimeConfig(EventEmitter):
         """
         return self._resource_registry[name]
 
+    def get_resources(self) -> Sequence[Resource]:
+        """Get all registered resources.
+
+        Returns:
+            List of all resources
+        """
+        return list(self._resource_registry.values())
+
     def register_resource(
         self,
         name: str,
