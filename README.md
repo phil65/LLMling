@@ -30,6 +30,9 @@
 
 A framework for declarative LLM application development focused on resource management, prompt templates, and tool execution.
 
+This package provides the backend for two consumers: [A MCP server](https://github.com/phil65/mcp-server-llmling) and [a pydantic-AI based Agent](https://github.com/phil65/llmling-agent)
+
+
 ## Core Concepts
 
 LLMLing provides a YAML-based configuration system for LLM applications.
