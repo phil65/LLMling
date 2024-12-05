@@ -16,7 +16,6 @@ from llmling.core.exceptions import (
     LLMError,
 )
 from llmling.processors.registry import ProcessorRegistry
-from llmling.server import LLMLingServer
 
 
 __version__ = "0.11.10"
@@ -26,7 +25,6 @@ __all__ = [
     "ConfigError",
     "LLMError",
     "LLMLingError",
-    "LLMLingServer",
     "LoadedResource",
     "LoaderError",
     "ProcessorError",
