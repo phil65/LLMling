@@ -124,9 +124,9 @@ class ResourceObserver(RegistryEvents):
 
 async with RuntimeConfig.open("config.yml") as runtime:
     # Add observers
-    runtime.add_resource_observer(ResourceObserver())
-    runtime.add_prompt_observer(PromptObserver())
-    runtime.add_tool_observer(ToolObserver())
+    runtime.add_observer(ResourceObserver(), registry_type="resource")
+    runtime.add_observer(PromptObserver(), registry_type="prompt")
+    runtime.add_observer(ToolObserver(), registry_type="tool")
 ```
 
 ## Example: Agent Integration

@@ -124,9 +124,9 @@ class LLMLingServer:
         self.prompt_observer = PromptObserver(self)
         self.tool_observer = ToolObserver(self)
 
-        self.runtime.add_resource_observer(self.resource_observer.events)
-        self.runtime.add_prompt_observer(self.prompt_observer.events)
-        self.runtime.add_tool_observer(self.tool_observer.events)
+        self.runtime.add_observer(self.resource_observer.events, "resource")
+        self.runtime.add_observer(self.prompt_observer.events, "prompt")
+        self.runtime.add_observer(self.tool_observer.events, "tool")
 
     async def start(self, *, raise_exceptions: bool = False) -> None:
         """Start the server."""
@@ -149,9 +149,9 @@ class LLMLingServer:
                 self._tasks.clear()
 
             # Remove observers
-            self.runtime.remove_resource_observer(self.resource_observer.events)
-            self.runtime.remove_prompt_observer(self.prompt_observer.events)
-            self.runtime.remove_tool_observer(self.tool_observer.events)
+            self.runtime.remove_observer(self.resource_observer.events, "resource")
+            self.runtime.remove_observer(self.prompt_observer.events, "prompt")
+            self.runtime.remove_observer(self.tool_observer.events, "tool")
 
             # Shutdown runtime
             await self.runtime.shutdown()

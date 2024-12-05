@@ -7,7 +7,7 @@ This module provides the RuntimeConfig class which represents the fully initiali
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 import depkit
 import logfire
@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
+RegistryType = Literal["resource", "prompt", "tool"]
 
 
 class RuntimeConfig(EventEmitter):
@@ -607,55 +608,44 @@ class RuntimeConfig(EventEmitter):
         )
 
     # Registry Observation
-    def add_resource_observer(self, observer: RegistryEvents[str, Resource]) -> None:
-        """Add observer for resource changes.
 
-        Args:
-            observer: Observer to add
-        """
-        self._resource_registry.add_observer(observer)
-
-    def add_prompt_observer(self, observer: RegistryEvents[str, BasePrompt]) -> None:
-        """Add observer for prompt changes.
-
-        Args:
-            observer: Observer to add
-        """
-        self._prompt_registry.add_observer(observer)
-
-    def add_tool_observer(self, observer: RegistryEvents[str, LLMCallableTool]) -> None:
-        """Add observer for tool changes.
-
-        Args:
-            observer: Observer to add
-        """
-        self._tool_registry.add_observer(observer)
-
-    def remove_resource_observer(self, observer: RegistryEvents[str, Resource]) -> None:
-        """Remove resource observer.
-
-        Args:
-            observer: Observer to remove
-        """
-        self._resource_registry.remove_observer(observer)
-
-    def remove_prompt_observer(self, observer: RegistryEvents[str, BasePrompt]) -> None:
-        """Remove prompt observer.
-
-        Args:
-            observer: Observer to remove
-        """
-        self._prompt_registry.remove_observer(observer)
-
-    def remove_tool_observer(
-        self, observer: RegistryEvents[str, LLMCallableTool]
+    def add_observer(
+        self,
+        observer: RegistryEvents[str, Any],
+        registry_type: RegistryType,
     ) -> None:
-        """Remove tool observer.
+        """Add an observer for registry changes.
+
+        Args:
+            observer: Observer to add
+            registry_type: Type of registry to observe
+        """
+        match registry_type:
+            case "resource":
+                self._resource_registry.add_observer(observer)
+            case "prompt":
+                self._prompt_registry.add_observer(observer)
+            case "tool":
+                self._tool_registry.add_observer(observer)
+
+    def remove_observer(
+        self,
+        observer: RegistryEvents[str, Any],
+        registry_type: RegistryType,
+    ) -> None:
+        """Remove a registry observer.
 
         Args:
             observer: Observer to remove
+            registry_type: Type of registry to remove from
         """
-        self._tool_registry.remove_observer(observer)
+        match registry_type:
+            case "resource":
+                self._resource_registry.remove_observer(observer)
+            case "prompt":
+                self._prompt_registry.remove_observer(observer)
+            case "tool":
+                self._tool_registry.remove_observer(observer)
 
     @property
     def original_config(self) -> Config:
