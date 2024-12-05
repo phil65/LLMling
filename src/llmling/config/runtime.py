@@ -6,6 +6,7 @@ This module provides the RuntimeConfig class which represents the fully initiali
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, Self
 
 import depkit
@@ -29,7 +30,7 @@ from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncIterator, Sequence
     import os
     import types
 
@@ -192,6 +193,39 @@ class RuntimeConfig(EventEmitter):
         runtime = cls.from_config(config)
         async with runtime as initialized:
             return initialized
+
+    @classmethod
+    @asynccontextmanager
+    async def open(
+        cls,
+        path: str | os.PathLike[str],
+        *,
+        validate: bool = True,
+        strict: bool = False,
+    ) -> AsyncIterator[RuntimeConfig]:
+        """Create and manage a runtime configuration from a file.
+
+        This is the recommended way to create and use a RuntimeConfig as it ensures
+        proper initialization and cleanup.
+
+        Args:
+            path: Path to configuration file
+            validate: Whether to validate config (default: True)
+            strict: Whether to raise on validation warnings (default: False)
+
+        Yields:
+            Fully initialized runtime configuration
+
+        Example:
+            ```python
+            async with RuntimeConfig.open("config.yml") as runtime:
+                resource = await runtime.load_resource("example")
+            ```
+        """
+        manager = ConfigManager.load(path, validate=validate, strict=strict)
+        runtime = cls.from_config(manager.config)
+        async with runtime as r:
+            yield r
 
     @classmethod
     def from_file(cls, path: str | os.PathLike[str]) -> Self:
