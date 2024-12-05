@@ -28,6 +28,7 @@ from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import PromptType  # noqa: TC001
 from llmling.resources.watching import WatchConfig  # noqa: TC001
 from llmling.utils.importing import import_callable
+from llmling.utils.paths import guess_mime_type
 
 
 ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
@@ -146,7 +147,7 @@ class BaseResource(BaseModel):
 
     resource_type: str = Field(init=False)
     description: str = ""
-    uri: str | None = None  # Add this field
+    uri: str | None = None
     processors: list[ProcessingStep] = Field(
         default_factory=list
     )  # Optional with empty default
@@ -166,6 +167,15 @@ class BaseResource(BaseModel):
     def is_templated(self) -> bool:
         """Whether this resource supports URI templates."""
         return False  # Default: resources are static
+
+    @property
+    def mime_type(self) -> str:
+        """Get the MIME type for this resource.
+
+        This should be overridden by subclasses that can determine
+        their MIME type. Default is text/plain.
+        """
+        return "text/plain"
 
 
 class PathResource(BaseResource):
@@ -197,6 +207,11 @@ class PathResource(BaseResource):
         """Path resources are templated if they contain placeholders."""
         return "{" in str(self.path)
 
+    @property
+    def mime_type(self) -> str:
+        """Get MIME type based on file extension."""
+        return guess_mime_type(self.path)
+
 
 class TextResource(BaseResource):
     """Raw text resource."""
@@ -211,6 +226,16 @@ class TextResource(BaseResource):
             msg = "Content cannot be empty"
             raise ValueError(msg)
         return self
+
+    _mime_type: str | None = None  # Optional override
+
+    @property
+    def mime_type(self) -> str:
+        """Get MIME type, trying to detect JSON/YAML."""
+        if self._mime_type:
+            return self._mime_type
+        # Could add content inspection here
+        return "text/plain"
 
 
 class CLIResource(BaseResource):
@@ -300,6 +325,20 @@ class ImageResource(BaseResource):
             msg = "Path cannot be empty for image resource"
             raise ValueError(msg)
         return data
+
+    @property
+    def mime_type(self) -> str:
+        """Get MIME type based on file extension or default to image/jpeg."""
+        try:
+            mime = guess_mime_type(self.path)
+            # If it's an image type, return it
+            if mime.startswith("image/"):
+                return mime
+            # If not an image type or unknown, fall back to jpeg
+        except Exception:  # noqa: BLE001
+            return "image/jpeg"
+        else:
+            return "image/jpeg"
 
 
 Resource = (
