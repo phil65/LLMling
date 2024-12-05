@@ -7,7 +7,7 @@ import os  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
 from docstring_parser import parse as parse_docstring
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ImportString
 import upath
 
 from llmling.completions import CompletionFunction  # noqa: TC001
@@ -27,8 +27,7 @@ class ExtendedPromptArgument(BaseModel):
     required: bool = False
     type_hint: Any = str
     default: Any | None = None
-    completion_function: CompletionFunction = None
-
+    completion_function: ImportString | None = Field(default=None)
     model_config = ConfigDict(frozen=True)
 
 

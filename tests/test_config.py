@@ -10,6 +10,7 @@ from upath import UPath
 import yamling
 
 from llmling import config, config_resources
+from llmling.config.models import Config
 from llmling.processors.base import ProcessorConfig
 
 
@@ -131,6 +132,14 @@ resource_groups: {}
     assert isinstance(cfg, config.Config)
     assert cfg.version == "1.0"
     assert "test-context" in cfg.resources
+
+
+def test_schema_generation():
+    """Test that JSON schema can be generated from config models."""
+    try:
+        _schema = Config.model_json_schema()
+    except Exception as exc:  # noqa: BLE001
+        pytest.fail(f"Failed to generate schema: {exc}")
 
 
 if __name__ == "__main__":
