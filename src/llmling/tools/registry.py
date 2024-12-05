@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import logfire
 
-from llmling.config.models import ToolConfig
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
 from llmling.tools.base import LLMCallableTool
@@ -33,6 +32,8 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
 
     def _validate_item(self, item: Any) -> LLMCallableTool:
         """Validate and transform item into a LLMCallableTool."""
+        from llmling.config.models import ToolConfig
+
         match item:
             # Keep existing behavior for these cases
             case type() if issubclass(item, LLMCallableTool):
