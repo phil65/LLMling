@@ -55,7 +55,7 @@ dependencies = [
 ]
 
 [project.scripts]
-llmling = "llmling.__main__:run"
+llmling = "llmling.__main__:cli"
 
 [project.entry-points.llmling]
 tools = "llmling.testing:get_mcp_tools"
