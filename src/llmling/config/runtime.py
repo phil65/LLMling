@@ -14,11 +14,9 @@ import logfire
 
 from llmling.config.manager import ConfigManager
 from llmling.config.models import (
-    CustomToolsetConfig,
-    EntryPointToolsetConfig,
-    OpenAPIToolsetConfig,
     PathResource,
 )
+from llmling.config.utils import toolset_config_to_toolset
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
@@ -30,10 +28,7 @@ from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.loaders.path import PathResourceLoader
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
-from llmling.tools.entry_points import EntryPointTools
-from llmling.tools.openapi import OpenAPITools
 from llmling.tools.registry import ToolRegistry
-from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -46,7 +41,6 @@ if TYPE_CHECKING:
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt, PromptMessage
     from llmling.resources.models import LoadedResource
-    from llmling.tools.toolsets import ToolSet
 
 
 logger = get_logger(__name__)
@@ -89,10 +83,8 @@ class RuntimeConfig(EventEmitter):
         self._tool_registry = tool_registry
         self._initialized = False
         # Register builtin processors
-        self._processor_registry.register(
-            "jinja_template",
-            Jinja2Processor(config.global_settings.jinja_environment),
-        )
+        proc = Jinja2Processor(config.global_settings.jinja_environment)
+        self._processor_registry.register("jinja_template", proc)
         settings = self._config.global_settings
         self._dep_manager = depkit.DependencyManager(
             prefer_uv=settings.prefer_uv,
@@ -176,21 +168,7 @@ class RuntimeConfig(EventEmitter):
         """Initialize toolsets from config."""
         for name, config in self._config.toolsets.items():
             try:
-                match config:
-                    case OpenAPIToolsetConfig():
-                        toolset: ToolSet = OpenAPITools(
-                            spec=config.spec,
-                            base_url=config.base_url or "",
-                        )
-                    case EntryPointToolsetConfig():
-                        toolset = EntryPointTools(config.module)
-                    case CustomToolsetConfig():
-                        toolset_class = importing.import_class(config.import_path)
-                        toolset = toolset_class()
-                    case _:
-                        msg = f"Unknown toolset type: {type(config)}"
-                        raise ValueError(msg)  # noqa: TRY301
-
+                toolset = toolset_config_to_toolset(config)
                 # Get tool prefix
                 prefix = f"{config.namespace}." if config.namespace else f"{name}."
 
