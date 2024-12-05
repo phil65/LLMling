@@ -33,6 +33,7 @@ from llmling.tools.base import LLMCallableTool
 from llmling.tools.entry_points import EntryPointTools
 from llmling.tools.openapi import OpenAPITools
 from llmling.tools.registry import ToolRegistry
+from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -184,7 +185,8 @@ class RuntimeConfig(EventEmitter):
                     case EntryPointToolsetConfig():
                         toolset = EntryPointTools(config.module)
                     case CustomToolsetConfig():
-                        toolset = config.import_path
+                        toolset_class = importing.import_class(config.import_path)
+                        toolset = toolset_class()
                     case _:
                         msg = f"Unknown toolset type: {type(config)}"
                         raise ValueError(msg)  # noqa: TRY301

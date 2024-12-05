@@ -13,7 +13,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    ImportString,
     field_validator,
     model_validator,
 )
@@ -27,6 +26,8 @@ from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import PromptType  # noqa: TC001
 from llmling.resources.watching import WatchConfig  # noqa: TC001
+from llmling.tools.toolsets import ToolSet
+from llmling.utils import importing
 from llmling.utils.importing import import_callable
 from llmling.utils.paths import guess_mime_type
 
@@ -152,7 +153,7 @@ class BaseResource(BaseModel):
     """Human-readable description of the resource."""
 
     uri: str | None = None
-    """Canonical URI for this resource, set during registration."""
+    """Canonical URI for this resource, set during registration if unset."""
 
     processors: list[ProcessingStep] = Field(default_factory=list)
     """Processing steps to apply when loading this resource."""
@@ -400,17 +401,20 @@ class CustomToolsetConfig(BaseToolsetConfig):
     """Configuration for custom toolsets."""
 
     type: Literal["custom"] = Field("custom", init=False)
-    import_path: ImportString = Field(..., description="Import path to toolset class")
+    import_path: str = Field(..., description="Import path to toolset class")
 
-    @field_validator("import_path")
+    @field_validator("import_path", mode="after")
     @classmethod
-    def validate_toolset_class(cls, v: Any) -> Any:
-        """Validate that imported class is a ToolSet."""
-        from llmling.tools.toolsets import ToolSet
-
-        if not issubclass(v, ToolSet):
-            msg = f"{v} must be a ToolSet class"
-            raise ValueError(msg)  # noqa: TRY004
+    def validate_import_path(cls, v: str) -> str:
+        # v is already confirmed to be a str here
+        try:
+            cls = importing.import_class(v)
+            if not issubclass(cls, ToolSet):
+                msg = f"{v} must be a ToolSet class"
+                raise ValueError(msg)  # noqa: TRY004, TRY301
+        except Exception as exc:
+            msg = f"Invalid toolset class: {v}"
+            raise ValueError(msg) from exc
         return v
 
 
