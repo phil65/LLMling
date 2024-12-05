@@ -27,7 +27,7 @@ class Jinja2Processor(BaseProcessor):
         jinja_filters = jinja_kwargs.pop("filters", {})
         jinja_globals = jinja_kwargs.pop("globals", {})
         jinja_tests = jinja_kwargs.pop("tests", {})
-        self._env = jinja2.Environment(**jinja_kwargs)
+        self._env = jinja2.Environment(**jinja_kwargs, enable_async=True)
         self._env.filters = jinja_filters
         self._env.globals = jinja_globals
         self._env.tests = jinja_tests
