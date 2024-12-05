@@ -5,11 +5,18 @@ from __future__ import annotations
 from collections.abc import Sequence as TypingSequence  # noqa: TC003
 import inspect
 import os  # noqa: TC003
-from typing import Any, Literal, Self
+from typing import Annotated, Any, Literal, Self
 import warnings
 
 import logfire
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ImportString,
+    field_validator,
+    model_validator,
+)
 import upath
 import yamling
 
@@ -318,6 +325,54 @@ class ToolConfig(BaseModel):
     """Optional override for the tool's description"""
 
     model_config = ConfigDict(frozen=True)
+
+
+class BaseToolsetConfig(BaseModel):
+    """Base configuration for toolsets."""
+
+    namespace: str | None = Field(
+        default=None, description="Optional namespace prefix for tool names"
+    )
+
+
+class OpenAPIToolsetConfig(BaseToolsetConfig):
+    """Configuration for OpenAPI toolsets."""
+
+    type: Literal["openapi"] = Field("openapi", init=False)
+    spec: str = Field(..., description="URL or path to OpenAPI specification")
+    base_url: str | None = Field(default=None, description="Base URL for API requests")
+
+
+class EntryPointToolsetConfig(BaseToolsetConfig):
+    """Configuration for entry point toolsets."""
+
+    type: Literal["entry_points"] = Field("entry_points", init=False)
+    module: str = Field(..., description="Python module path")
+
+
+class CustomToolsetConfig(BaseToolsetConfig):
+    """Configuration for custom toolsets."""
+
+    type: Literal["custom"] = Field("custom", init=False)
+    import_path: ImportString = Field(..., description="Import path to toolset class")
+
+    @field_validator("import_path")
+    @classmethod
+    def validate_toolset_class(cls, v: Any) -> Any:
+        """Validate that imported class is a ToolSet."""
+        from llmling.tools.toolsets import ToolSet
+
+        if not issubclass(v, ToolSet):
+            msg = f"{v} must be a ToolSet class"
+            raise ValueError(msg)  # noqa: TRY004
+        return v
+
+
+# Use discriminated union for toolset types
+ToolsetConfig = Annotated[
+    OpenAPIToolsetConfig | EntryPointToolsetConfig | CustomToolsetConfig,
+    Field(discriminator="type"),
+]
 
 
 class Config(BaseModel):
