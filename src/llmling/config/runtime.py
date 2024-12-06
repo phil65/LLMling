@@ -531,6 +531,42 @@ class RuntimeConfig(EventEmitter):
         """
         return self._prompt_registry.list_items()
 
+    def register_prompt(
+        self,
+        name: str,
+        prompt: BasePrompt | dict[str, Any],
+        *,
+        replace: bool = False,
+    ) -> None:
+        """Register a new prompt.
+
+        Args:
+            name: Name for the prompt
+            prompt: Prompt or prompt config to register
+            replace: Whether to replace existing prompt
+
+        Raises:
+            LLMLingError: If name exists and replace=False
+        """
+        if isinstance(prompt, dict):
+            if "type" not in prompt:
+                msg = "Missing prompt type in configuration"
+                raise exceptions.ConfigError(msg)
+            from llmling.prompts.models import DynamicPrompt, FilePrompt, StaticPrompt
+
+            match prompt["type"]:
+                case "text":
+                    prompt_obj: BasePrompt = StaticPrompt.model_validate(prompt)
+                case "function":
+                    prompt_obj = DynamicPrompt.model_validate(prompt)
+                case "file":
+                    prompt_obj = FilePrompt.model_validate(prompt)
+                case _:
+                    msg = f"Unknown prompt type: {prompt['type']}"
+                    raise exceptions.ConfigError(msg)
+
+        self._prompt_registry.register(name, prompt_obj, replace=replace)
+
     async def render_prompt(
         self,
         name: str,
