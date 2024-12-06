@@ -25,7 +25,6 @@ from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import PromptType  # noqa: TC001
-from llmling.resources.watching import WatchConfig  # noqa: TC001
 from llmling.tools.toolsets import ToolSet
 from llmling.utils import importing
 from llmling.utils.importing import import_callable
@@ -359,6 +358,21 @@ Resource = (
 )
 
 
+class WatchConfig(BaseModel):
+    """Watch configuration for resources."""
+
+    enabled: bool = False
+    """Whether the watch is enabled"""
+
+    patterns: list[str] | None = None
+    """List of pathspec patterns (.gitignore style)"""
+
+    ignore_file: str | None = None
+    """Path to .gitignore-style file"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
 class ToolConfig(BaseModel):
     """Configuration for a tool."""
 
@@ -440,6 +454,7 @@ class Config(BaseModel):
     model_config = ConfigDict(
         frozen=True,
         arbitrary_types_allowed=True,
+        extra="forbid",
     )
 
     @model_validator(mode="before")
