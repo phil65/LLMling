@@ -410,6 +410,7 @@
       "type": "object"
     },
     "GlobalSettings": {
+      "additionalProperties": false,
       "description": "Global settings that apply to all components.",
       "properties": {
         "timeout": {
@@ -1111,6 +1112,7 @@
       "type": "object"
     },
     "ToolConfig": {
+      "additionalProperties": false,
       "description": "Configuration for a tool.",
       "properties": {
         "import_path": {
@@ -1149,6 +1151,7 @@
       "type": "object"
     },
     "WatchConfig": {
+      "additionalProperties": false,
       "description": "Watch configuration for resources.",
       "properties": {
         "enabled": {
@@ -1188,6 +1191,7 @@
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "description": "Root configuration model.",
   "properties": {
     "version": {
