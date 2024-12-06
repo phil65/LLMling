@@ -102,6 +102,16 @@ class RuntimeConfig(EventEmitter):
     def __enter__(self) -> Self:
         """Synchronous context manager entry."""
         self._dep_manager.__enter__()
+        # Initialize registries if not already done
+        import asyncio
+
+        if not self._initialized:
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self._initialize_registries())
+                self._initialized = True
+            finally:
+                loop.close()
         return self
 
     def __exit__(
