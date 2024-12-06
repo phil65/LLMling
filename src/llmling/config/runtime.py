@@ -7,6 +7,7 @@ This module provides the RuntimeConfig class which represents the fully initiali
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 import depkit
@@ -23,19 +24,22 @@ from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
 from llmling.processors.jinjaprocessor import Jinja2Processor
 from llmling.processors.registry import ProcessorRegistry
+from llmling.prompts.models import DynamicPrompt
 from llmling.prompts.registry import PromptRegistry
+from llmling.prompts.utils import extract_function_info
 from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.loaders.path import PathResourceLoader
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
 from llmling.tools.registry import ToolRegistry
+from llmling.utils import importing
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
-    import os
     import types
 
+    from llmling.completions.types import CompletionFunction
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
     from llmling.processors.base import ProcessorResult
@@ -163,6 +167,25 @@ class RuntimeConfig(EventEmitter):
         self._initialize_toolsets()
 
         for name, prompt_config in self._config.prompts.items():
+            if isinstance(prompt_config, DynamicPrompt):
+                # Convert completion function import paths to actual functions
+                if completions := prompt_config.completions:
+                    completion_funcs: dict[str, CompletionFunction] = {}
+                    for arg_name, import_path in completions.items():
+                        try:
+                            func = importing.import_callable(import_path)
+                            completion_funcs[arg_name] = func
+                        except ValueError:
+                            msg = "Failed to import completion function for %s: %s"
+                            logger.warning(msg, arg_name, import_path)
+                    prompt_config.completions = completion_funcs  # type: ignore
+                args, desc = extract_function_info(
+                    prompt_config.import_path, prompt_config.completions
+                )
+                prompt_config.arguments = args
+                if not prompt_config.description:
+                    prompt_config.description = desc
+
             self._prompt_registry[name] = prompt_config
 
     def _initialize_toolsets(self) -> None:
@@ -211,18 +234,18 @@ class RuntimeConfig(EventEmitter):
     @asynccontextmanager
     async def open(
         cls,
-        path: str | os.PathLike[str],
+        source: str | os.PathLike[str] | Config,
         *,
         validate: bool = True,
         strict: bool = False,
     ) -> AsyncIterator[RuntimeConfig]:
-        """Create and manage a runtime configuration from a file.
+        """Create and manage a runtime configuration.
 
         This is the recommended way to create and use a RuntimeConfig as it ensures
         proper initialization and cleanup.
 
         Args:
-            path: Path to configuration file
+            source: Path to configuration file or Config object
             validate: Whether to validate config (default: True)
             strict: Whether to raise on validation warnings (default: False)
 
@@ -231,12 +254,29 @@ class RuntimeConfig(EventEmitter):
 
         Example:
             ```python
+            # From file:
             async with RuntimeConfig.open("config.yml") as runtime:
                 resource = await runtime.load_resource("example")
             ```
         """
-        manager = ConfigManager.load(path, validate=validate, strict=strict)
-        runtime = cls.from_config(manager.config)
+        match source:
+            case str() | os.PathLike():
+                manager = ConfigManager.load(source, validate=validate, strict=strict)
+                config = manager.config
+            case Config():
+                config = source
+                if validate:
+                    manager = ConfigManager(config)
+                    if warnings := manager.validate():
+                        if strict:
+                            msg = "Config validation failed:\n" + "\n".join(warnings)
+                            raise exceptions.ConfigError(msg)
+                        logger.warning("Config warnings:\n%s", "\n".join(warnings))
+            case _:
+                msg = f"Invalid source type: {type(source)}"
+                raise TypeError(msg)
+
+        runtime = cls.from_config(config)
         async with runtime as r:
             yield r
 

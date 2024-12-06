@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, get_type_hints
 from docstring_parser import parse as parse_docstring
 
 from llmling.core.log import get_logger
+from llmling.prompts.models import ExtendedPromptArgument
 from llmling.utils import importing
 
 
@@ -15,7 +16,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
     from llmling.completions.types import CompletionFunction
-    from llmling.prompts.models import ExtendedPromptArgument
 
 
 logger = get_logger(__name__)
@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 def extract_function_info(
     fn_or_path: str | Callable[..., Any],
-    completions: Mapping[str, CompletionFunction] | None = None,
+    completions: Mapping[str, CompletionFunction | str] | None = None,
 ) -> tuple[list[ExtendedPromptArgument], str]:
     """Extract parameter info and description from a function.
 
@@ -58,6 +58,7 @@ def extract_function_info(
     Args:
         fn_or_path: Function or import path to analyze
         completions: Optional mapping of parameter names to completion functions
+                    or their import paths
 
     Returns:
         Tuple of (list of argument definitions, function description)
@@ -93,11 +94,19 @@ def extract_function_info(
         # Extract arguments
         completions = completions or {}
         args = []
-        from llmling.prompts.models import ExtendedPromptArgument
-
         for name, param in sig.parameters.items():
             if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 continue
+
+            # Convert completion function to import path if present
+            completion_path = None
+            if name in completions:
+                comp = completions[name]
+                if isinstance(comp, str):
+                    completion_path = comp
+                else:
+                    completion_path = f"{comp.__module__}.{comp.__qualname__}"
+
             args.append(
                 ExtendedPromptArgument(
                     name=name,
@@ -105,9 +114,10 @@ def extract_function_info(
                     required=param.default == param.empty,
                     type_hint=hints.get(name, Any),
                     default=None if param.default is param.empty else param.default,
-                    completion_function=completions.get(param.name),
+                    completion_function=completion_path,
                 )
             )
+
     except Exception as exc:
         msg = f"Failed to analyze function: {exc}"
         raise ValueError(msg) from exc

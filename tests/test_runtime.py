@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from llmling.config.models import TextResource
+from llmling.config.models import Config
+from llmling.config.runtime import RuntimeConfig
 from llmling.core import exceptions
 from llmling.prompts.models import ExtendedPromptArgument, PromptMessage, StaticPrompt
-from llmling.resources.loaders.text import TextResourceLoader
 
 
 @pytest.mark.asyncio
@@ -44,23 +44,37 @@ async def test_render_prompt_validation_error(runtime_config):
 
 
 @pytest.mark.asyncio
-async def test_resource_uri_after_registration(runtime_config):
-    """Test that resources get URIs when registered."""
-    runtime_config._resource_registry.loader_registry["text"] = TextResourceLoader
+async def test_dynamic_prompt_arguments():
+    """Test that DynamicPrompt properly extracts function arguments."""
+    config = Config.model_validate({
+        "prompts": {
+            "test_prompt": {
+                "type": "function",
+                "import_path": "llmling.testing.processors.multiply",
+                "description": "Test prompt",
+            }
+        }
+    })
 
-    # Create a resource without URI
-    resource = TextResource(content="test content")
-    assert resource.uri is None
+    async with RuntimeConfig.from_config(config) as runtime:
+        prompt = runtime.get_prompt("test_prompt")
 
-    # Register it
-    runtime_config.register_resource("test", resource)
+        # Verify argument extraction
+        assert len(prompt.arguments) == 2  # noqa: PLR2004
+        assert prompt.arguments[0].name == "text"
+        assert prompt.arguments[0].required is True
+        assert prompt.arguments[1].name == "times"
+        assert prompt.arguments[1].required is False
+        assert prompt.arguments[1].default == 2  # noqa: PLR2004
 
-    # Get it back from registry and check URI
-    registered = runtime_config._resource_registry["test"]
-    assert registered.uri == "text://test"  # Should have canonical URI
+        # Verify formatting with both messages
+        messages = await prompt.format({"text": "hello", "times": 3})
+        assert len(messages) == 2  # noqa: PLR2004
 
-    # Check that original resource wasn't modified
-    assert resource.uri is None
+        # Check system message
+        assert messages[0].role == "system"
+        assert messages[0].get_text_content() == "Content from test_prompt:"
 
-    # Check that URI is preserved when getting through public interface
-    assert runtime_config.get_resource("test").uri == "text://test"
+        # Check user message with actual function result
+        assert messages[1].role == "user"
+        assert messages[1].get_text_content() == "hellohellohello"

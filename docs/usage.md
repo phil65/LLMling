@@ -14,12 +14,6 @@ async with RuntimeConfig.open("config.yml") as runtime:
     # Use runtime...
     pass
 
-# Create from Config object
-config = Config.from_file("config.yml")
-async with RuntimeConfig.from_config(config) as runtime:
-    # Use runtime...
-    pass
-
 ```
 
 > **Important**
