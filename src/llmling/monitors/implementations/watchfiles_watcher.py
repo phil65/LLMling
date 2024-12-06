@@ -82,10 +82,8 @@ class WatchfilesMonitor:
         self._watches[path_str] = (watch_patterns, callback)
 
         # Create watch task
-        task = asyncio.create_task(
-            self._watch_path(path_str),
-            name=f"watch-{path_str}",
-        )
+        coro = self._watch_path(path_str)
+        task = asyncio.create_task(coro, name=f"watch-{path_str}")
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         logger.debug("Added watch for: %s", path_str)

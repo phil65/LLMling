@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Protocol
 
@@ -20,6 +21,7 @@ class FileEventType(Enum):
     MOVED = "moved"
 
 
+@dataclass(frozen=True, slots=True)
 class FileEvent:
     """Normalized file system event.
 
@@ -27,33 +29,14 @@ class FileEvent:
     independent of the underlying file watching implementation.
     """
 
-    __slots__ = ("event_type", "is_directory", "path")
+    event_type: FileEventType
+    """Type of event (added/modified/deleted/moved)."""
 
-    def __init__(
-        self,
-        event_type: FileEventType,
-        path: str | os.PathLike[str],
-        is_directory: bool = False,
-    ) -> None:
-        """Initialize event.
+    path: str
+    """Path that triggered the event."""
 
-        Args:
-            event_type: Type of file system event
-            path: Path that triggered the event
-            is_directory: Whether the event was triggered by a directory
-        """
-        # Convert path to string once at creation
-        self.event_type = event_type
-        self.path = str(path)
-        self.is_directory = is_directory
-
-    def __repr__(self) -> str:
-        """Show event details."""
-        return (
-            f"{self.__class__.__name__}("
-            f"type={self.event_type.name}, path={self.path!r}, "
-            f"is_directory={self.is_directory})"
-        )
+    is_directory: bool = False
+    """Whether the event was triggered by a directory."""
 
 
 FileMonitorCallback = Callable[[list[FileEvent]], None]
