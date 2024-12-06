@@ -191,8 +191,16 @@
       "description": "Dynamic prompt loaded from callable.",
       "properties": {
         "name": {
-          "title": "Name",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
         },
         "description": {
           "title": "Description",
@@ -248,7 +256,6 @@
         }
       },
       "required": [
-        "name",
         "description",
         "import_path"
       ],
@@ -349,8 +356,16 @@
       "description": "Prompt loaded from a file.\n\nThis type of prompt loads its content from a file, allowing for longer or more\ncomplex prompts to be managed in separate files. The file content is loaded\nand parsed according to the specified format.",
       "properties": {
         "name": {
-          "title": "Name",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
         },
         "description": {
           "title": "Description",
@@ -402,7 +417,6 @@
         }
       },
       "required": [
-        "name",
         "description",
         "path"
       ],
@@ -1016,8 +1030,16 @@
       "description": "Static prompt defined by message list.",
       "properties": {
         "name": {
-          "title": "Name",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
         },
         "description": {
           "title": "Description",
@@ -1049,7 +1071,6 @@
         }
       },
       "required": [
-        "name",
         "description",
         "messages"
       ],

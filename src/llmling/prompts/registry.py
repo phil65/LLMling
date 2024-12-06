@@ -32,6 +32,12 @@ class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
     def _error_class(self) -> type[exceptions.LLMLingError]:
         return exceptions.LLMLingError
 
+    def register(self, key: str, item: BasePrompt, replace: bool = False) -> None:
+        """Register prompt with its key as name."""
+        # Create copy with name set
+        item = item.model_copy(update={"name": key})
+        super().register(key, item, replace)
+
     def _validate_item(self, item: Any) -> BasePrompt:
         """Validate and convert items to BasePrompt instances."""
         match item:
@@ -63,6 +69,7 @@ class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
     ) -> None:
         """Register a function as a prompt."""
         prompt = DynamicPrompt.from_callable(fn, name_override=name)
+        assert prompt.name
         self.register(prompt.name, prompt, replace=replace)
 
     async def get_completions(

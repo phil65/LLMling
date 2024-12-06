@@ -61,10 +61,17 @@ class PromptMessage(BaseModel):
 class BasePrompt(BaseModel):
     """Base class for all prompts."""
 
-    name: str
+    name: str | None = Field(None, exclude=True)
+    """Technical identifier (automatically set from config key during registration)."""
+
     description: str
+    """Human-readable description of what this prompt does."""
+
     arguments: list[ExtendedPromptArgument] = Field(default_factory=list)
+    """List of arguments that this prompt accepts."""
+
     metadata: dict[str, Any] = Field(default_factory=dict)
+    """Additional metadata for storing custom prompt information."""
     # messages: list[PromptMessage]
 
     model_config = ConfigDict(frozen=True)

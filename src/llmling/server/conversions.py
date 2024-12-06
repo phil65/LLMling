@@ -72,6 +72,9 @@ def to_mcp_argument(prompt_arg: ExtendedPromptArgument) -> types.PromptArgument:
 
 def to_mcp_prompt(prompt: InternalPrompt) -> types.Prompt:
     """Convert to MCP Prompt."""
+    if prompt.name is None:
+        msg = "Prompt name not set. This should be set during registration."
+        raise ValueError(msg)
     return types.Prompt(
         name=prompt.name,
         description=prompt.description,

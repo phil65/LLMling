@@ -457,22 +457,22 @@ class Config(BaseModel):
         extra="forbid",
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def populate_prompt_names(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Populate prompt names from dictionary keys before validation."""
-        if isinstance(data, dict) and "prompts" in data:
-            prompts = data["prompts"]
-            if isinstance(prompts, dict):
-                # Add name to each prompt's data
-                data["prompts"] = {
-                    key: {
-                        "name": key,
-                        **(val if isinstance(val, dict) else val.model_dump()),
-                    }
-                    for key, val in prompts.items()
-                }
-        return data
+    # @model_validator(mode="before")
+    # @classmethod
+    # def populate_prompt_names(cls, data: dict[str, Any]) -> dict[str, Any]:
+    #     """Populate prompt names from dictionary keys before validation."""
+    #     if isinstance(data, dict) and "prompts" in data:
+    #         prompts = data["prompts"]
+    #         if isinstance(prompts, dict):
+    #             # Add name to each prompt's data
+    #             data["prompts"] = {
+    #                 key: {
+    #                     "name": key,
+    #                     **(val if isinstance(val, dict) else val.model_dump()),
+    #                 }
+    #                 for key, val in prompts.items()
+    #             }
+    #     return data
 
     @model_validator(mode="after")
     def validate_references(self) -> Config:
