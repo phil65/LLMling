@@ -40,7 +40,7 @@ class ExtendedPromptArgument(BaseModel):
     completion_function: ImportString | None = Field(default=None)
     """Optional function to provide argument completions."""
 
-    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
 
 class PromptMessage(BaseModel):
@@ -86,7 +86,7 @@ class BasePrompt(BaseModel):
     """Additional metadata for storing custom prompt information."""
     # messages: list[PromptMessage]
 
-    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     def validate_arguments(self, provided: dict[str, Any]) -> None:
         """Validate that required arguments are provided."""
