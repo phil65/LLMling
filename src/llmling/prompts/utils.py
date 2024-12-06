@@ -1,20 +1,20 @@
 """Utilities for working with prompt functions."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
+from collections.abc import Iterator, Sequence
 import inspect
-from typing import TYPE_CHECKING, Any, get_type_hints
-
+import sys
+from typing import TYPE_CHECKING, Any, get_type_hints, ForwardRef  # noqa: F401
 from docstring_parser import parse as parse_docstring
 
 from llmling.core.log import get_logger
 from llmling.prompts.models import ExtendedPromptArgument
 from llmling.utils import importing
+from collections.abc import Callable, Mapping
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
-
     from llmling.completions.types import CompletionFunction
 
 
@@ -76,8 +76,22 @@ def extract_function_info(
 
         # Get function metadata
         sig = inspect.signature(fn)
-        hints = get_type_hints(fn, include_extras=True)
+        module = sys.modules[fn.__module__]
 
+        # Create a globals dict with common types
+        globalns = {
+            **module.__dict__,
+            "Sequence": Sequence,
+            "Iterator": Iterator,
+            "Mapping": Mapping,
+            "List": list,
+            "Dict": dict,
+            "Set": set,
+            "Tuple": tuple,
+            "Any": Any,
+        }
+
+        hints = get_type_hints(fn, include_extras=True, globalns=globalns)
         # Parse docstring
         desc = f"Prompt from {fn.__name__}"
         arg_docs = {}
