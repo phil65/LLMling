@@ -121,9 +121,8 @@ class StaticPrompt(BasePrompt):
                         type="text", content=msg.content.format(**args)
                     )
                 case MessageContent() if msg.content.type == "text":
-                    content = MessageContent(
-                        type="text", content=msg.content.content.format(**args)
-                    )
+                    msg_content = msg.content.content.format(**args)
+                    content = MessageContent(type="text", content=msg_content)
                 case list():
                     content = [
                         MessageContent(
@@ -331,13 +330,8 @@ class FilePrompt(BasePrompt):
             except KeyError as exc:
                 msg = f"Missing argument in template: {exc}"
                 raise ValueError(msg) from exc
-
-        return [
-            PromptMessage(
-                role="user",
-                content=MessageContent(type="text", content=content),
-            )
-        ]
+        msg_content = MessageContent(type="text", content=content)
+        return [PromptMessage(role="user", content=msg_content)]
 
 
 # Type to use in configuration
