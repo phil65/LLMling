@@ -6,6 +6,7 @@
         "resource_type": {
           "const": "cli",
           "default": "cli",
+          "description": "Discriminator field identifying this as a CLI-based resource.",
           "title": "Resource Type",
           "type": "string"
         },
@@ -60,10 +61,12 @@
               "type": "array"
             }
           ],
+          "description": "Command to execute (string or sequence of arguments).",
           "title": "Command"
         },
         "shell": {
           "default": false,
+          "description": "Whether to run the command through a shell.",
           "title": "Shell",
           "type": "boolean"
         },
@@ -77,6 +80,7 @@
             }
           ],
           "default": null,
+          "description": "Working directory for command execution.",
           "title": "Cwd"
         },
         "timeout": {
@@ -89,6 +93,7 @@
             }
           ],
           "default": null,
+          "description": "Maximum time in seconds to wait for command completion.",
           "title": "Timeout"
         }
       },
@@ -104,6 +109,7 @@
         "resource_type": {
           "const": "callable",
           "default": "callable",
+          "description": "Discriminator field identifying this as a callable-based resource.",
           "title": "Resource Type",
           "type": "string"
         },
@@ -147,10 +153,12 @@
           "description": "Configuration for file system watching, if supported."
         },
         "import_path": {
+          "description": "Dotted import path to the callable to execute.",
           "title": "Import Path",
           "type": "string"
         },
         "keyword_args": {
+          "description": "Keyword arguments to pass to the callable.",
           "title": "Keyword Args",
           "type": "object"
         }
@@ -544,6 +552,7 @@
         "resource_type": {
           "const": "image",
           "default": "image",
+          "description": "Discriminator field identifying this as an image resource.",
           "title": "Resource Type",
           "type": "string"
         },
@@ -583,9 +592,11 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Configuration for watching the image file for changes."
         },
         "path": {
+          "description": "Path or URL to the image file.",
           "title": "Path",
           "type": "string"
         },
@@ -599,6 +610,7 @@
             }
           ],
           "default": null,
+          "description": "Alternative text description of the image.",
           "title": "Alt Text"
         }
       },
@@ -613,31 +625,37 @@
       "properties": {
         "block_start_string": {
           "default": "{%",
+          "description": "String denoting the beginning of a block (default: '{%').",
           "title": "Block Start String",
           "type": "string"
         },
         "block_end_string": {
           "default": "%}",
+          "description": "String denoting the end of a block (default: '%}').",
           "title": "Block End String",
           "type": "string"
         },
         "variable_start_string": {
           "default": "{{",
+          "description": "String denoting the beginning of a variable (default: '{{').",
           "title": "Variable Start String",
           "type": "string"
         },
         "variable_end_string": {
           "default": "}}",
+          "description": "String denoting the end of a variable (default: '}}').",
           "title": "Variable End String",
           "type": "string"
         },
         "comment_start_string": {
           "default": "{#",
+          "description": "String denoting the beginning of a comment (default: '{#').",
           "title": "Comment Start String",
           "type": "string"
         },
         "comment_end_string": {
           "default": "#}",
+          "description": "String denoting the end of a comment (default: '#}').",
           "title": "Comment End String",
           "type": "string"
         },
@@ -651,6 +669,7 @@
             }
           ],
           "default": null,
+          "description": "Prefix that begins a line-based statement (e.g., '#' for line statements).",
           "title": "Line Statement Prefix"
         },
         "line_comment_prefix": {
@@ -663,20 +682,24 @@
             }
           ],
           "default": null,
+          "description": "Prefix that begins a line-based comment.",
           "title": "Line Comment Prefix"
         },
         "trim_blocks": {
           "default": false,
+          "description": "Remove first newline after a block (affects whitespace control).",
           "title": "Trim Blocks",
           "type": "boolean"
         },
         "lstrip_blocks": {
           "default": false,
+          "description": "Remove leading spaces and tabs from the start of a line to a block.",
           "title": "Lstrip Blocks",
           "type": "boolean"
         },
         "newline_sequence": {
           "default": "\n",
+          "description": "Sequence that starts a newline (default: '\n').",
           "enum": [
             "\n",
             "\r\n",
@@ -687,10 +710,12 @@
         },
         "keep_trailing_newline": {
           "default": false,
+          "description": "Preserve the trailing newline when rendering templates.",
           "title": "Keep Trailing Newline",
           "type": "boolean"
         },
         "extensions": {
+          "description": "List of Jinja2 extensions to load (e.g., 'jinja2.ext.do').",
           "items": {
             "type": "string"
           },
@@ -699,6 +724,7 @@
         },
         "undefined": {
           "default": "default",
+          "description": "Behavior when accessing undefined variables (default, strict, debug, chainable).",
           "enum": [
             "default",
             "strict",
@@ -712,6 +738,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Custom filters as mapping of names to import paths.",
           "title": "Filters",
           "type": "object"
         },
@@ -719,10 +746,12 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Custom tests as mapping of names to import paths.",
           "title": "Tests",
           "type": "object"
         },
         "globals": {
+          "description": "Global variables available to all templates.",
           "title": "Globals",
           "type": "object"
         }
@@ -822,6 +851,7 @@
         "resource_type": {
           "const": "path",
           "default": "path",
+          "description": "Discriminator field identifying this as a path-based resource.",
           "title": "Resource Type",
           "type": "string"
         },
@@ -861,7 +891,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Configuration for watching the file for changes."
         },
         "path": {
           "anyOf": [
@@ -873,6 +904,7 @@
               "type": "string"
             }
           ],
+          "description": "Path to the file or URL to load.",
           "title": "Path"
         }
       },
@@ -1019,6 +1051,7 @@
         "resource_type": {
           "const": "source",
           "default": "source",
+          "description": "Discriminator field identifying this as a source code resource.",
           "title": "Resource Type",
           "type": "string"
         },
@@ -1062,16 +1095,19 @@
           "description": "Configuration for file system watching, if supported."
         },
         "import_path": {
+          "description": "Dotted import path to the Python module or object.",
           "title": "Import Path",
           "type": "string"
         },
         "recursive": {
           "default": false,
+          "description": "Whether to include submodules recursively.",
           "title": "Recursive",
           "type": "boolean"
         },
         "include_tests": {
           "default": false,
+          "description": "Whether to include test files and directories.",
           "title": "Include Tests",
           "type": "boolean"
         }
@@ -1146,6 +1182,7 @@
         "resource_type": {
           "const": "text",
           "default": "text",
+          "description": "Discriminator field identifying this as a text-based resource.",
           "title": "Resource Type",
           "type": "string"
         },
@@ -1189,6 +1226,7 @@
           "description": "Configuration for file system watching, if supported."
         },
         "content": {
+          "description": "The actual text content of the resource.",
           "title": "Content",
           "type": "string"
         }

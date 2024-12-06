@@ -43,27 +43,56 @@ class Jinja2Config(BaseModel):
     See: https://jinja.palletsprojects.com/en/3.1.x/api/#jinja2.Environment
     """
 
-    # Template loading and discovery
     block_start_string: str = "{%"
-    block_end_string: str = "%}"
-    variable_start_string: str = "{{"
-    variable_end_string: str = "}}"
-    comment_start_string: str = "{#"
-    comment_end_string: str = "#}"
-    line_statement_prefix: str | None = None
-    line_comment_prefix: str | None = None
-    trim_blocks: bool = False
-    lstrip_blocks: bool = False
-    newline_sequence: Literal["\n", "\r\n", "\r"] = "\n"
-    keep_trailing_newline: bool = False
+    """String denoting the beginning of a block (default: '{%')."""
 
-    # Extensions and plugins
+    block_end_string: str = "%}"
+    """String denoting the end of a block (default: '%}')."""
+
+    variable_start_string: str = "{{"
+    """String denoting the beginning of a variable (default: '{{')."""
+
+    variable_end_string: str = "}}"
+    """String denoting the end of a variable (default: '}}')."""
+
+    comment_start_string: str = "{#"
+    """String denoting the beginning of a comment (default: '{#')."""
+
+    comment_end_string: str = "#}"
+    """String denoting the end of a comment (default: '#}')."""
+
+    line_statement_prefix: str | None = None
+    """Prefix that begins a line-based statement (e.g., '#' for line statements)."""
+
+    line_comment_prefix: str | None = None
+    """Prefix that begins a line-based comment."""
+
+    trim_blocks: bool = False
+    """Remove first newline after a block (affects whitespace control)."""
+
+    lstrip_blocks: bool = False
+    """Remove leading spaces and tabs from the start of a line to a block."""
+
+    newline_sequence: Literal["\n", "\r\n", "\r"] = "\n"
+    """Sequence that starts a newline (default: '\n')."""
+
+    keep_trailing_newline: bool = False
+    """Preserve the trailing newline when rendering templates."""
+
     extensions: list[str] = Field(default_factory=list)
+    """List of Jinja2 extensions to load (e.g., 'jinja2.ext.do')."""
+
     undefined: Literal["default", "strict", "debug", "chainable"] = "default"
-    # Custom filters and tests
+    """Behavior when accessing undefined variables (default, strict, debug, chainable)."""
+
     filters: dict[str, str] = Field(default_factory=dict)
+    """Custom filters as mapping of names to import paths."""
+
     tests: dict[str, str] = Field(default_factory=dict)
+    """Custom tests as mapping of names to import paths."""
+
     globals: dict[str, Any] = Field(default_factory=dict)
+    """Global variables available to all templates."""
 
     model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
@@ -189,8 +218,13 @@ class PathResource(BaseResource):
     """Resource loaded from a file or URL."""
 
     resource_type: Literal["path"] = Field(default="path", init=False)
+    """Discriminator field identifying this as a path-based resource."""
+
     path: str | os.PathLike[str]
+    """Path to the file or URL to load."""
+
     watch: WatchConfig | None = None
+    """Configuration for watching the file for changes."""
 
     @property
     def supports_watching(self) -> bool:
@@ -224,7 +258,12 @@ class TextResource(BaseResource):
     """Raw text resource."""
 
     resource_type: Literal["text"] = Field(default="text", init=False)
+    """Discriminator field identifying this as a text-based resource."""
+
     content: str
+    """The actual text content of the resource."""
+
+    _mime_type: str | None = None  # Optional override
 
     @model_validator(mode="after")
     def validate_content(self) -> TextResource:
@@ -233,8 +272,6 @@ class TextResource(BaseResource):
             msg = "Content cannot be empty"
             raise ValueError(msg)
         return self
-
-    _mime_type: str | None = None  # Optional override
 
     @property
     def mime_type(self) -> str:
@@ -249,10 +286,19 @@ class CLIResource(BaseResource):
     """Resource from CLI command execution."""
 
     resource_type: Literal["cli"] = Field(default="cli", init=False)
+    """Discriminator field identifying this as a CLI-based resource."""
+
     command: str | TypingSequence[str]
+    """Command to execute (string or sequence of arguments)."""
+
     shell: bool = False
+    """Whether to run the command through a shell."""
+
     cwd: str | None = None
+    """Working directory for command execution."""
+
     timeout: float | None = None
+    """Maximum time in seconds to wait for command completion."""
 
     @model_validator(mode="after")
     def validate_command(self) -> CLIResource:
@@ -274,9 +320,16 @@ class SourceResource(BaseResource):
     """Resource from Python source code."""
 
     resource_type: Literal["source"] = Field(default="source", init=False)
+    """Discriminator field identifying this as a source code resource."""
+
     import_path: str
+    """Dotted import path to the Python module or object."""
+
     recursive: bool = False
+    """Whether to include submodules recursively."""
+
     include_tests: bool = False
+    """Whether to include test files and directories."""
 
     @model_validator(mode="after")
     def validate_import_path(self) -> SourceResource:
@@ -291,8 +344,13 @@ class CallableResource(BaseResource):
     """Resource from executing a Python callable."""
 
     resource_type: Literal["callable"] = Field(default="callable", init=False)
+    """Discriminator field identifying this as a callable-based resource."""
+
     import_path: str
+    """Dotted import path to the callable to execute."""
+
     keyword_args: dict[str, Any] = Field(default_factory=dict)
+    """Keyword arguments to pass to the callable."""
 
     @model_validator(mode="after")
     def validate_import_path(self) -> CallableResource:
@@ -313,9 +371,16 @@ class ImageResource(BaseResource):
     """Resource for image input."""
 
     resource_type: Literal["image"] = Field(default="image", init=False)
-    path: str  # Local path or URL
+    """Discriminator field identifying this as an image resource."""
+
+    path: str
+    """Path or URL to the image file."""
+
     alt_text: str | None = None
+    """Alternative text description of the image."""
+
     watch: WatchConfig | None = None
+    """Configuration for watching the image file for changes."""
 
     @property
     def supports_watching(self) -> bool:
