@@ -6,8 +6,7 @@ This module provides the RuntimeConfig class which represents the fully initiali
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-import os
+from contextlib import asynccontextmanager, contextmanager
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 import depkit
@@ -17,7 +16,7 @@ from llmling.config.manager import ConfigManager
 from llmling.config.models import (
     PathResource,
 )
-from llmling.config.utils import toolset_config_to_toolset
+from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
@@ -36,7 +35,8 @@ from llmling.utils import importing
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Sequence
+    from collections.abc import AsyncIterator, Iterator, Sequence
+    import os
     import types
 
     from llmling.completions.types import CompletionFunction
@@ -239,46 +239,98 @@ class RuntimeConfig(EventEmitter):
         validate: bool = True,
         strict: bool = False,
     ) -> AsyncIterator[RuntimeConfig]:
-        """Create and manage a runtime configuration.
+        """Create and manage a runtime configuration asynchronously.
 
-        This is the recommended way to create and use a RuntimeConfig as it ensures
-        proper initialization and cleanup.
+        This is the primary way to create and use a RuntimeConfig. It ensures proper
+        initialization and cleanup of all resources and provides an async context
+        manager interface.
 
         Args:
-            source: Path to configuration file or Config object
-            validate: Whether to validate config (default: True)
-            strict: Whether to raise on validation warnings (default: False)
+            source: Either a path to a configuration file or a Config object.
+                   File paths can be strings or PathLike objects.
+            validate: Whether to validate the configuration. When True, performs
+                     additional checks beyond basic schema validation.
+            strict: Whether to raise exceptions on validation warnings. Only
+                   applicable when validate=True.
 
         Yields:
-            Fully initialized runtime configuration
+            Fully initialized RuntimeConfig instance
+
+        Raises:
+            ConfigError: If configuration is invalid or validation fails in strict mode
+            TypeError: If source is neither a path nor a Config object
+            OSError: If configuration file cannot be accessed
 
         Example:
             ```python
-            # From file:
+            # Using a config file:
             async with RuntimeConfig.open("config.yml") as runtime:
                 resource = await runtime.load_resource("example")
-            ```
-        """
-        match source:
-            case str() | os.PathLike():
-                manager = ConfigManager.load(source, validate=validate, strict=strict)
-                config = manager.config
-            case Config():
-                config = source
-                if validate:
-                    manager = ConfigManager(config)
-                    if warnings := manager.validate():
-                        if strict:
-                            msg = "Config validation failed:\n" + "\n".join(warnings)
-                            raise exceptions.ConfigError(msg)
-                        logger.warning("Config warnings:\n%s", "\n".join(warnings))
-            case _:
-                msg = f"Invalid source type: {type(source)}"
-                raise TypeError(msg)
 
-        runtime = cls.from_config(config)
+            # Using an existing Config object:
+            config = Config(...)
+            async with RuntimeConfig.open(config) as runtime:
+                resource = await runtime.load_resource("example")
+            ```
+
+        Note:
+            The context manager ensures that all resources are properly initialized
+            before use and cleaned up afterwards, even if an error occurs.
+        """
+        runtime = prepare_runtime(cls, source, validate=validate, strict=strict)
         async with runtime as r:
             yield r
+
+    @classmethod
+    @contextmanager
+    def open_sync(
+        cls,
+        source: str | os.PathLike[str] | Config,
+        *,
+        validate: bool = True,
+        strict: bool = False,
+    ) -> Iterator[RuntimeConfig]:
+        """Create and manage a runtime configuration synchronously.
+
+        This is the synchronous version of open(). It provides the same functionality
+        but uses a standard synchronous context manager interface. Use this if you
+        don't need async functionality.
+
+        Args:
+            source: Either a path to a configuration file or a Config object.
+                   File paths can be strings or PathLike objects.
+            validate: Whether to validate the configuration. When True, performs
+                     additional checks beyond basic schema validation.
+            strict: Whether to raise exceptions on validation warnings. Only
+                   applicable when validate=True.
+
+        Yields:
+            Fully initialized RuntimeConfig instance
+
+        Raises:
+            ConfigError: If configuration is invalid or validation fails in strict mode
+            TypeError: If source is neither a path nor a Config object
+            OSError: If configuration file cannot be accessed
+
+        Example:
+            ```python
+            # Using a config file:
+            with RuntimeConfig.open_sync("config.yml") as runtime:
+                resource = runtime.load_resource_sync("example")
+
+            # Using an existing Config object:
+            config = Config(...)
+            with RuntimeConfig.open_sync(config) as runtime:
+                resource = runtime.load_resource_sync("example")
+            ```
+
+        Note:
+            The context manager ensures that all resources are properly initialized
+            before use and cleaned up afterwards, even if an error occurs.
+        """
+        runtime = prepare_runtime(cls, source, validate=validate, strict=strict)
+        with runtime:
+            yield runtime
 
     @classmethod
     def from_file(cls, path: str | os.PathLike[str]) -> Self:
@@ -784,9 +836,5 @@ class RuntimeConfig(EventEmitter):
 
 
 if __name__ == "__main__":
-    from llmling import Config
-
-    cfg = Config.from_file("E:/mcp_zed.yml")  # type: ignore
-    runtime = RuntimeConfig.from_config(cfg)
-    with runtime as ctx:
+    with RuntimeConfig.open_sync("E:/mcp_zed.yml"):
         pass
