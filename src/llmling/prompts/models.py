@@ -23,12 +23,24 @@ class ExtendedPromptArgument(BaseModel):
     """Prompt argument with validation information."""
 
     name: str
+    """Name of the argument as used in the prompt."""
+
     description: str | None = None
+    """Human-readable description of the argument."""
+
     required: bool = False
+    """Whether this argument must be provided when formatting the prompt."""
+
     type_hint: Any = str
+    """Type annotation for the argument, defaults to str."""
+
     default: Any | None = None
+    """Default value if argument is optional."""
+
     completion_function: ImportString | None = Field(default=None)
-    model_config = ConfigDict(frozen=True)
+    """Optional function to provide argument completions."""
+
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
 
 class PromptMessage(BaseModel):
@@ -74,7 +86,7 @@ class BasePrompt(BaseModel):
     """Additional metadata for storing custom prompt information."""
     # messages: list[PromptMessage]
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     def validate_arguments(self, provided: dict[str, Any]) -> None:
         """Validate that required arguments are provided."""
@@ -105,7 +117,12 @@ class StaticPrompt(BasePrompt):
     """Static prompt defined by message list."""
 
     messages: list[PromptMessage]
+    """List of messages that make up this prompt."""
+
     type: Literal["text"] = Field("text", init=False)
+    """Discriminator field identifying this as a static text prompt."""
+
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     async def format(
         self, arguments: dict[str, Any] | None = None
@@ -154,9 +171,18 @@ class DynamicPrompt(BasePrompt):
     """Dynamic prompt loaded from callable."""
 
     import_path: str
+    """Dotted import path to the callable that generates the prompt."""
+
     template: str | None = None
+    """Optional template string for formatting the callable's output."""
+
     completions: dict[str, str] | None = None
+    """Optional mapping of argument names to completion functions."""
+
     type: Literal["function"] = Field("function", init=False)
+    """Discriminator field identifying this as a function-based prompt."""
+
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     @property
     def messages(self) -> list[PromptMessage]:
@@ -283,9 +309,18 @@ class FilePrompt(BasePrompt):
     """
 
     path: str | os.PathLike[str]
+    """Path to the file containing the prompt content."""
+
     fmt: Literal["text", "markdown", "jinja2"] = Field("text", alias="format")
+    """Format of the file content (text, markdown, or jinja2 template)."""
+
     type: Literal["file"] = Field("file", init=False)
+    """Discriminator field identifying this as a file-based prompt."""
+
     watch: bool = False
+    """Whether to watch the file for changes and reload automatically."""
+
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     @property
     def messages(self) -> list[PromptMessage]:

@@ -11,6 +11,7 @@
         },
         "description": {
           "default": "",
+          "description": "Human-readable description of the resource.",
           "title": "Description",
           "type": "string"
         },
@@ -24,9 +25,11 @@
             }
           ],
           "default": null,
+          "description": "Canonical URI for this resource, set during registration if unset.",
           "title": "Uri"
         },
         "processors": {
+          "description": "Processing steps to apply when loading this resource.",
           "items": {
             "$ref": "#/$defs/ProcessingStep"
           },
@@ -42,7 +45,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Configuration for file system watching, if supported."
         },
         "command": {
           "anyOf": [
@@ -105,6 +109,7 @@
         },
         "description": {
           "default": "",
+          "description": "Human-readable description of the resource.",
           "title": "Description",
           "type": "string"
         },
@@ -118,9 +123,11 @@
             }
           ],
           "default": null,
+          "description": "Canonical URI for this resource, set during registration if unset.",
           "title": "Uri"
         },
         "processors": {
+          "description": "Processing steps to apply when loading this resource.",
           "items": {
             "$ref": "#/$defs/ProcessingStep"
           },
@@ -136,7 +143,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Configuration for file system watching, if supported."
         },
         "import_path": {
           "title": "Import Path",
@@ -154,6 +162,7 @@
       "type": "object"
     },
     "CustomToolsetConfig": {
+      "additionalProperties": false,
       "description": "Configuration for custom toolsets.",
       "properties": {
         "namespace": {
@@ -172,11 +181,12 @@
         "type": {
           "const": "custom",
           "default": "custom",
+          "description": "Discriminator field identifying this as a custom toolset.",
           "title": "Type",
           "type": "string"
         },
         "import_path": {
-          "description": "Import path to toolset class",
+          "description": "Dotted import path to the custom toolset implementation class.",
           "title": "Import Path",
           "type": "string"
         }
@@ -201,13 +211,16 @@
             }
           ],
           "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
           "title": "Name"
         },
         "description": {
+          "description": "Human-readable description of what this prompt does.",
           "title": "Description",
           "type": "string"
         },
         "arguments": {
+          "description": "List of arguments that this prompt accepts.",
           "items": {
             "$ref": "#/$defs/ExtendedPromptArgument"
           },
@@ -215,10 +228,12 @@
           "type": "array"
         },
         "metadata": {
+          "description": "Additional metadata for storing custom prompt information.",
           "title": "Metadata",
           "type": "object"
         },
         "import_path": {
+          "description": "Dotted import path to the callable that generates the prompt.",
           "title": "Import Path",
           "type": "string"
         },
@@ -232,6 +247,7 @@
             }
           ],
           "default": null,
+          "description": "Optional template string for formatting the callable's output.",
           "title": "Template"
         },
         "completions": {
@@ -247,11 +263,13 @@
             }
           ],
           "default": null,
+          "description": "Optional mapping of argument names to completion functions.",
           "title": "Completions"
         },
         "type": {
           "const": "function",
           "default": "function",
+          "description": "Discriminator field identifying this as a function-based prompt.",
           "title": "Type",
           "type": "string"
         }
@@ -264,6 +282,7 @@
       "type": "object"
     },
     "EntryPointToolsetConfig": {
+      "additionalProperties": false,
       "description": "Configuration for entry point toolsets.",
       "properties": {
         "namespace": {
@@ -282,6 +301,7 @@
         "type": {
           "const": "entry_points",
           "default": "entry_points",
+          "description": "Discriminator field identifying this as an entry point toolset.",
           "title": "Type",
           "type": "string"
         },
@@ -301,6 +321,7 @@
       "description": "Prompt argument with validation information.",
       "properties": {
         "name": {
+          "description": "Name of the argument as used in the prompt.",
           "title": "Name",
           "type": "string"
         },
@@ -314,14 +335,17 @@
             }
           ],
           "default": null,
+          "description": "Human-readable description of the argument.",
           "title": "Description"
         },
         "required": {
           "default": false,
+          "description": "Whether this argument must be provided when formatting the prompt.",
           "title": "Required",
           "type": "boolean"
         },
         "type_hint": {
+          "description": "Type annotation for the argument, defaults to str.",
           "title": "Type Hint"
         },
         "default": {
@@ -332,6 +356,7 @@
             }
           ],
           "default": null,
+          "description": "Default value if argument is optional.",
           "title": "Default"
         },
         "completion_function": {
@@ -344,6 +369,7 @@
             }
           ],
           "default": null,
+          "description": "Optional function to provide argument completions.",
           "title": "Completion Function"
         }
       },
@@ -367,13 +393,16 @@
             }
           ],
           "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
           "title": "Name"
         },
         "description": {
+          "description": "Human-readable description of what this prompt does.",
           "title": "Description",
           "type": "string"
         },
         "arguments": {
+          "description": "List of arguments that this prompt accepts.",
           "items": {
             "$ref": "#/$defs/ExtendedPromptArgument"
           },
@@ -381,6 +410,7 @@
           "type": "array"
         },
         "metadata": {
+          "description": "Additional metadata for storing custom prompt information.",
           "title": "Metadata",
           "type": "object"
         },
@@ -394,10 +424,12 @@
               "type": "string"
             }
           ],
+          "description": "Path to the file containing the prompt content.",
           "title": "Path"
         },
         "format": {
           "default": "text",
+          "description": "Format of the file content (text, markdown, or jinja2 template).",
           "enum": [
             "text",
             "markdown",
@@ -409,11 +441,13 @@
         "type": {
           "const": "file",
           "default": "file",
+          "description": "Discriminator field identifying this as a file-based prompt.",
           "title": "Type",
           "type": "string"
         },
         "watch": {
           "default": false,
+          "description": "Whether to watch the file for changes and reload automatically.",
           "title": "Watch",
           "type": "boolean"
         }
@@ -431,15 +465,18 @@
       "properties": {
         "timeout": {
           "default": 30,
+          "description": "Maximum time in seconds to wait for operations",
           "title": "Timeout",
           "type": "integer"
         },
         "max_retries": {
           "default": 3,
+          "description": "Maximum number of retries for failed operations",
           "title": "Max Retries",
           "type": "integer"
         },
         "requirements": {
+          "description": "List of package requirments for the functions used in this file.",
           "items": {
             "type": "string"
           },
@@ -456,9 +493,11 @@
             }
           ],
           "default": null,
+          "description": "Alternative PyPI index URL for package installation",
           "title": "Pip Index Url"
         },
         "extra_paths": {
+          "description": "Additional import paths",
           "items": {
             "type": "string"
           },
@@ -466,6 +505,7 @@
           "type": "array"
         },
         "scripts": {
+          "description": "PEP723 scripts (can be imported and will be scanned for dependencies)",
           "items": {
             "type": "string"
           },
@@ -474,11 +514,13 @@
         },
         "prefer_uv": {
           "default": false,
+          "description": "Explicitely use uv for package installation / management ",
           "title": "Prefer Uv",
           "type": "boolean"
         },
         "log_level": {
           "default": "INFO",
+          "description": "Log level to use for the server",
           "enum": [
             "DEBUG",
             "INFO",
@@ -507,6 +549,7 @@
         },
         "description": {
           "default": "",
+          "description": "Human-readable description of the resource.",
           "title": "Description",
           "type": "string"
         },
@@ -520,9 +563,11 @@
             }
           ],
           "default": null,
+          "description": "Canonical URI for this resource, set during registration if unset.",
           "title": "Uri"
         },
         "processors": {
+          "description": "Processing steps to apply when loading this resource.",
           "items": {
             "$ref": "#/$defs/ProcessingStep"
           },
@@ -723,6 +768,7 @@
       "type": "object"
     },
     "OpenAPIToolsetConfig": {
+      "additionalProperties": false,
       "description": "Configuration for OpenAPI toolsets.",
       "properties": {
         "namespace": {
@@ -741,11 +787,12 @@
         "type": {
           "const": "openapi",
           "default": "openapi",
+          "description": "Discriminator field identifying this as an OpenAPI toolset.",
           "title": "Type",
           "type": "string"
         },
         "spec": {
-          "description": "URL or path to OpenAPI specification",
+          "description": "URL or path to the OpenAPI specification document.",
           "title": "Spec",
           "type": "string"
         },
@@ -759,7 +806,7 @@
             }
           ],
           "default": null,
-          "description": "Base URL for API requests",
+          "description": "Optional base URL for API requests, overrides the one in spec.",
           "title": "Base Url"
         }
       },
@@ -780,6 +827,7 @@
         },
         "description": {
           "default": "",
+          "description": "Human-readable description of the resource.",
           "title": "Description",
           "type": "string"
         },
@@ -793,9 +841,11 @@
             }
           ],
           "default": null,
+          "description": "Canonical URI for this resource, set during registration if unset.",
           "title": "Uri"
         },
         "processors": {
+          "description": "Processing steps to apply when loading this resource.",
           "items": {
             "$ref": "#/$defs/ProcessingStep"
           },
@@ -974,6 +1024,7 @@
         },
         "description": {
           "default": "",
+          "description": "Human-readable description of the resource.",
           "title": "Description",
           "type": "string"
         },
@@ -987,9 +1038,11 @@
             }
           ],
           "default": null,
+          "description": "Canonical URI for this resource, set during registration if unset.",
           "title": "Uri"
         },
         "processors": {
+          "description": "Processing steps to apply when loading this resource.",
           "items": {
             "$ref": "#/$defs/ProcessingStep"
           },
@@ -1005,7 +1058,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Configuration for file system watching, if supported."
         },
         "import_path": {
           "title": "Import Path",
@@ -1042,13 +1096,16 @@
             }
           ],
           "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
           "title": "Name"
         },
         "description": {
+          "description": "Human-readable description of what this prompt does.",
           "title": "Description",
           "type": "string"
         },
         "arguments": {
+          "description": "List of arguments that this prompt accepts.",
           "items": {
             "$ref": "#/$defs/ExtendedPromptArgument"
           },
@@ -1056,10 +1113,12 @@
           "type": "array"
         },
         "metadata": {
+          "description": "Additional metadata for storing custom prompt information.",
           "title": "Metadata",
           "type": "object"
         },
         "messages": {
+          "description": "List of messages that make up this prompt.",
           "items": {
             "$ref": "#/$defs/PromptMessage"
           },
@@ -1069,6 +1128,7 @@
         "type": {
           "const": "text",
           "default": "text",
+          "description": "Discriminator field identifying this as a static text prompt.",
           "title": "Type",
           "type": "string"
         }
@@ -1091,6 +1151,7 @@
         },
         "description": {
           "default": "",
+          "description": "Human-readable description of the resource.",
           "title": "Description",
           "type": "string"
         },
@@ -1104,9 +1165,11 @@
             }
           ],
           "default": null,
+          "description": "Canonical URI for this resource, set during registration if unset.",
           "title": "Uri"
         },
         "processors": {
+          "description": "Processing steps to apply when loading this resource.",
           "items": {
             "$ref": "#/$defs/ProcessingStep"
           },
@@ -1122,7 +1185,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Configuration for file system watching, if supported."
         },
         "content": {
           "title": "Content",
@@ -1140,6 +1204,7 @@
       "description": "Configuration for a tool.",
       "properties": {
         "import_path": {
+          "description": "Import path to the tool implementation (e.g. 'mymodule.tools.MyTool')",
           "title": "Import Path",
           "type": "string"
         },
@@ -1153,6 +1218,7 @@
             }
           ],
           "default": null,
+          "description": "Optional override for the tool's display name",
           "title": "Name"
         },
         "description": {
@@ -1165,6 +1231,7 @@
             }
           ],
           "default": null,
+          "description": "Optional override for the tool's description",
           "title": "Description"
         }
       },
@@ -1180,6 +1247,7 @@
       "properties": {
         "enabled": {
           "default": false,
+          "description": "Whether the watch is enabled",
           "title": "Enabled",
           "type": "boolean"
         },
@@ -1196,6 +1264,7 @@
             }
           ],
           "default": null,
+          "description": "List of pathspec patterns (.gitignore style)",
           "title": "Patterns"
         },
         "ignore_file": {
@@ -1208,6 +1277,7 @@
             }
           ],
           "default": null,
+          "description": "Path to .gitignore-style file",
           "title": "Ignore File"
         }
       },
@@ -1220,6 +1290,7 @@
   "properties": {
     "version": {
       "default": "1.0",
+      "description": "Version string for this configuration format.",
       "title": "Version",
       "type": "string"
     },
@@ -1230,6 +1301,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/ProcessorConfig"
       },
+      "description": "Content processors available for resource transformation.",
       "title": "Context Processors",
       "type": "object"
     },
@@ -1256,6 +1328,7 @@
           }
         ]
       },
+      "description": "Resource definitions keyed by name.",
       "title": "Resources",
       "type": "object"
     },
@@ -1266,6 +1339,7 @@
         },
         "type": "array"
       },
+      "description": "Groups of resources for logical organization.",
       "title": "Resource Groups",
       "type": "object"
     },
@@ -1273,6 +1347,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/ToolConfig"
       },
+      "description": "Tool definitions keyed by name.",
       "title": "Tools",
       "type": "object"
     },
@@ -1298,6 +1373,7 @@
           }
         ]
       },
+      "description": "Toolset configurations for extensible tool collections.",
       "title": "Toolsets",
       "type": "object"
     },
@@ -1323,6 +1399,7 @@
           }
         ]
       },
+      "description": "Prompt definitions keyed by name.",
       "title": "Prompts",
       "type": "object"
     }

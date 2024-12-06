@@ -65,7 +65,7 @@ class Jinja2Config(BaseModel):
     tests: dict[str, str] = Field(default_factory=dict)
     globals: dict[str, Any] = Field(default_factory=dict)
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     def create_environment_kwargs(self) -> dict[str, Any]:
         """Convert config to Jinja2 environment kwargs.
@@ -139,7 +139,7 @@ class GlobalSettings(BaseModel):
 
     jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
 
 class BaseResource(BaseModel):
@@ -160,7 +160,7 @@ class BaseResource(BaseModel):
     watch: WatchConfig | None = None
     """Configuration for file system watching, if supported."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     @property
     def supports_watching(self) -> bool:
@@ -317,8 +317,6 @@ class ImageResource(BaseResource):
     alt_text: str | None = None
     watch: WatchConfig | None = None
 
-    model_config = ConfigDict(frozen=True)
-
     @property
     def supports_watching(self) -> bool:
         """Whether this resource instance supports watching."""
@@ -370,7 +368,7 @@ class WatchConfig(BaseModel):
     ignore_file: str | None = None
     """Path to .gitignore-style file"""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
 
 class ToolConfig(BaseModel):
@@ -385,37 +383,49 @@ class ToolConfig(BaseModel):
     description: str | None = None
     """Optional override for the tool's description"""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
 
 class BaseToolsetConfig(BaseModel):
     """Base configuration for toolsets."""
 
-    namespace: str | None = Field(
-        default=None, description="Optional namespace prefix for tool names"
-    )
+    namespace: str | None = Field(default=None)
+    """Optional namespace prefix for tool names"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
 
 class OpenAPIToolsetConfig(BaseToolsetConfig):
     """Configuration for OpenAPI toolsets."""
 
     type: Literal["openapi"] = Field("openapi", init=False)
-    spec: str = Field(..., description="URL or path to OpenAPI specification")
-    base_url: str | None = Field(default=None, description="Base URL for API requests")
+    """Discriminator field identifying this as an OpenAPI toolset."""
+
+    spec: str = Field(...)
+    """URL or path to the OpenAPI specification document."""
+
+    base_url: str | None = Field(default=None)
+    """Optional base URL for API requests, overrides the one in spec."""
 
 
 class EntryPointToolsetConfig(BaseToolsetConfig):
     """Configuration for entry point toolsets."""
 
     type: Literal["entry_points"] = Field("entry_points", init=False)
+    """Discriminator field identifying this as an entry point toolset."""
+
     module: str = Field(..., description="Python module path")
+    """Python module path to load tools from via entry points."""
 
 
 class CustomToolsetConfig(BaseToolsetConfig):
     """Configuration for custom toolsets."""
 
     type: Literal["custom"] = Field("custom", init=False)
-    import_path: str = Field(..., description="Import path to toolset class")
+    """Discriminator field identifying this as a custom toolset."""
+
+    import_path: str = Field(...)
+    """Dotted import path to the custom toolset implementation class."""
 
     @field_validator("import_path", mode="after")
     @classmethod
@@ -443,18 +453,34 @@ class Config(BaseModel):
     """Root configuration model."""
 
     version: str = "1.0"
+    """Version string for this configuration format."""
+
     global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
+    """Global settings that apply to all components."""
+
     context_processors: dict[str, ProcessorConfig] = Field(default_factory=dict)
+    """Content processors available for resource transformation."""
+
     resources: dict[str, Resource] = Field(default_factory=dict)
+    """Resource definitions keyed by name."""
+
     resource_groups: dict[str, list[str]] = Field(default_factory=dict)
+    """Groups of resources for logical organization."""
+
     tools: dict[str, ToolConfig] = Field(default_factory=dict)
+    """Tool definitions keyed by name."""
+
     toolsets: dict[str, ToolsetConfig] = Field(default_factory=dict)
+    """Toolset configurations for extensible tool collections."""
+
     prompts: dict[str, PromptType] = Field(default_factory=dict)
+    """Prompt definitions keyed by name."""
 
     model_config = ConfigDict(
         frozen=True,
         arbitrary_types_allowed=True,
         extra="forbid",
+        use_attribute_docstrings=True,
     )
 
     # @model_validator(mode="before")
