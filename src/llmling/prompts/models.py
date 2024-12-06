@@ -74,7 +74,7 @@ class BasePrompt(BaseModel):
     """Additional metadata for storing custom prompt information."""
     # messages: list[PromptMessage]
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     def validate_arguments(self, provided: dict[str, Any]) -> None:
         """Validate that required arguments are provided."""
