@@ -140,7 +140,7 @@ class GlobalSettings(BaseModel):
 
     jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 class BaseResource(BaseModel):
@@ -371,7 +371,7 @@ class ToolConfig(BaseModel):
     description: str | None = None
     """Optional override for the tool's description"""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 class BaseToolsetConfig(BaseModel):
