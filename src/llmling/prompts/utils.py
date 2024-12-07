@@ -7,6 +7,7 @@ import inspect
 import sys
 from typing import TYPE_CHECKING, Any, get_type_hints, ForwardRef  # noqa: F401
 from docstring_parser import parse as parse_docstring
+from types import UnionType
 
 from llmling.core.log import get_logger
 from llmling.prompts.models import ExtendedPromptArgument
@@ -137,3 +138,53 @@ def extract_function_info(
         raise ValueError(msg) from exc
     else:
         return args, desc
+
+
+def get_type_completions(arg: ExtendedPromptArgument, current_value: str) -> list[str]:
+    """Get completions based on argument type."""
+    from typing import Literal, Union, get_args, get_origin
+
+    type_hint = arg.type_hint
+    if not type_hint:
+        return []
+
+    # Handle Literal types directly
+    if get_origin(type_hint) is Literal:
+        return [str(val) for val in get_args(type_hint)]
+
+    # Handle Union/Optional types
+    if get_origin(type_hint) in (Union, UnionType):
+        args = get_args(type_hint)
+        # If one of the args is None, process the other type
+        if len(args) == 2 and type(None) in args:  # noqa: PLR2004
+            other_type = next(arg for arg in args if arg is not type(None))
+            # Process the non-None type directly
+            return get_type_completions(
+                ExtendedPromptArgument(
+                    name=arg.name, type_hint=other_type, description=arg.description
+                ),
+                current_value,
+            )
+
+    # Handle bool
+    if type_hint is bool:
+        return ["true", "false"]
+
+    return []
+
+
+def get_description_completions(
+    arg: ExtendedPromptArgument,
+    current_value: str,
+) -> list[str]:
+    """Get completions from argument description."""
+    if not arg.description or "one of:" not in arg.description:
+        return []
+
+    try:
+        options_part = arg.description.split("one of:", 1)[1]
+        # Clean up options properly
+        options = [opt.strip().rstrip(")") for opt in options_part.split(",")]
+        return [opt for opt in options if opt]  # Remove empty strings
+    except IndexError:
+        return []

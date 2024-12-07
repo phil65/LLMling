@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from types import UnionType
 from typing import TYPE_CHECKING, Any
 
 from llmling.completions.protocols import CompletionProvider
@@ -12,10 +11,10 @@ from llmling.core.log import get_logger
 from llmling.prompts.models import (
     BasePrompt,
     DynamicPrompt,
-    ExtendedPromptArgument,
     FilePrompt,
     StaticPrompt,
 )
+from llmling.prompts.utils import get_description_completions, get_type_completions
 
 
 logger = get_logger(__name__)
@@ -85,10 +84,7 @@ class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
                 return []
 
             prompt = self[prompt_name]
-            arg = next(
-                (a for a in prompt.arguments if a.name == argument_name),
-                None,
-            )
+            arg = next((a for a in prompt.arguments if a.name == argument_name), None)
             if not arg:
                 return []
 
@@ -103,11 +99,11 @@ class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
                     logger.exception("Custom completion failed")
 
             # 2. Add type-based completions
-            if type_completions := self._get_type_completions(arg, current_value):
+            if type_completions := get_type_completions(arg, current_value):
                 completions.extend(str(val) for val in type_completions)
 
             # 3. Add description-based suggestions
-            if desc_completions := self._get_description_completions(arg, current_value):
+            if desc_completions := get_description_completions(arg, current_value):
                 completions.extend(str(val) for val in desc_completions)
 
             # 4. Add default if no current value
@@ -127,57 +123,4 @@ class PromptRegistry(BaseRegistry[str, BasePrompt], CompletionProvider):
 
         except Exception:
             logger.exception("Completion failed")
-            return []
-
-    def _get_type_completions(
-        self,
-        arg: ExtendedPromptArgument,
-        current_value: str,
-    ) -> list[str]:
-        """Get completions based on argument type."""
-        from typing import Literal, Union, get_args, get_origin
-
-        type_hint = arg.type_hint
-        if not type_hint:
-            return []
-
-        # Handle Literal types directly
-        if get_origin(type_hint) is Literal:
-            return [str(val) for val in get_args(type_hint)]
-
-        # Handle Union/Optional types
-        if get_origin(type_hint) in (Union, UnionType):
-            args = get_args(type_hint)
-            # If one of the args is None, process the other type
-            if len(args) == 2 and type(None) in args:  # noqa: PLR2004
-                other_type = next(arg for arg in args if arg is not type(None))
-                # Process the non-None type directly
-                return self._get_type_completions(
-                    ExtendedPromptArgument(
-                        name=arg.name, type_hint=other_type, description=arg.description
-                    ),
-                    current_value,
-                )
-
-        # Handle bool
-        if type_hint is bool:
-            return ["true", "false"]
-
-        return []
-
-    def _get_description_completions(
-        self,
-        arg: ExtendedPromptArgument,
-        current_value: str,
-    ) -> list[str]:
-        """Get completions from argument description."""
-        if not arg.description or "one of:" not in arg.description:
-            return []
-
-        try:
-            options_part = arg.description.split("one of:", 1)[1]
-            # Clean up options properly
-            options = [opt.strip().rstrip(")") for opt in options_part.split(",")]
-            return [opt for opt in options if opt]  # Remove empty strings
-        except IndexError:
             return []

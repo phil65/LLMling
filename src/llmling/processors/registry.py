@@ -88,11 +88,7 @@ class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
                     raise exceptions.ProcessorError(msg) from exc
 
                 # Optional step failed, continue with current context
-                logger.warning(
-                    "Optional step %s failed: %s",
-                    step.name,
-                    exc,
-                )
+                logger.warning("Optional step %s failed: %s", step.name, exc)
                 result = ProcessorResult(
                     content=current_context.current_content,
                     original_content=current_context.original_content,
