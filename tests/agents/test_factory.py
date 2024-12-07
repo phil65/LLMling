@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from pydantic_ai import models
 import pytest
 
-from llmling import config_resources
 from llmling.agents import LLMlingAgent
 from llmling.agents.factory import (
     _create_response_model,
@@ -17,17 +16,11 @@ from llmling.agents.factory import (
     create_agents_from_config,
 )
 from llmling.agents.models import AgentDefinition, ResponseDefinition, ResponseField
-from llmling.config.runtime import RuntimeConfig
 from llmling.core import exceptions
 
 
-@pytest.fixture
-def runtime() -> RuntimeConfig:
-    """Fixture providing a RuntimeConfig."""
-    from llmling.config.models import Config
-
-    config = Config.from_file(config_resources.TEST_CONFIG)  # Use a test config
-    return RuntimeConfig.from_config(config)
+if typing.TYPE_CHECKING:
+    from llmling.config.runtime import RuntimeConfig
 
 
 def test_parse_type_annotation():
@@ -45,19 +38,13 @@ def test_create_response_model():
     definition = ResponseDefinition(
         description="Test response",
         fields={
-            "message": ResponseField(
-                type="str",
-                description="A test message",
-            ),
+            "message": ResponseField(type="str", description="A test message"),
             "count": ResponseField(
                 type="int",
                 constraints={"ge": 0, "le": 100},
                 description="A count value",
             ),
-            "items": ResponseField(
-                type="list[str]",
-                description="List of items",
-            ),
+            "items": ResponseField(type="list[str]", description="List of items"),
         },
     )
 
@@ -89,11 +76,7 @@ def test_create_response_model():
     assert items_field.description == "List of items"
 
     # Test validation works
-    instance = model(
-        message="test",
-        count=50,
-        items=["a", "b"],
-    )
+    instance = model(message="test", count=50, items=["a", "b"])
     assert instance.message == "test"  # type: ignore
     assert instance.count == 50  # type: ignore  # noqa: PLR2004
     assert instance.items == ["a", "b"]  # type: ignore
