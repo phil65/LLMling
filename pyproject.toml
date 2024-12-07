@@ -61,6 +61,7 @@ tools = "llmling.testing:get_mcp_tools"
 [project.optional-dependencies]
 server = ["mcp-server-llmling"]
 agent = ["llmling-agent"]
+all = ["llmling-agent", "mcp-server-llmling"]
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]

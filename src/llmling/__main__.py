@@ -16,27 +16,30 @@ HELP = """
 Check out https://github.com/phil65/llmling !
 """
 
+MISSING_SERVER = """
+Server commands require the mcp-server-llmling package.
+Install with: pip install mcp-server-llmling
+"""
+
 cli = t.Typer(name="LLMling", help=HELP, no_args_is_help=True)
 cli.add_typer(config_cli, name="config")
 cli.add_typer(resources_cli, name="resource")
 cli.add_typer(tools_cli, name="tool")
 cli.add_typer(prompts_cli, name="prompt")
-# try:
-#     from mcp_server_llmling.cli import cli as server_cli
-#     cli.add_typer(server_cli, name="server")
-# except ImportError:
-#     server_cli = t.Typer(help="MCP server commands (not installed)")
+try:
+    from mcp_server_llmling.__main__ import cli as server_cli
 
-#     @server_cli.callback()
-#     def server_not_installed():
-#         """MCP server functionality (not installed)."""
-#         msg = (
-#             "Server commands require the mcp-server-llmling package.\n"
-#             "Install with: pip install mcp-server-llmling"
-#         )
-#         raise t.Exit(msg)
+    cli.add_typer(server_cli, name="server", help="MCP server commands")
+except ImportError:
+    server_cli = t.Typer(help="MCP server commands (not installed)")
 
-#     cli.add_typer(server_cli, name="server")
+    @server_cli.callback()
+    def server_not_installed():
+        """MCP server functionality (not installed)."""
+        print(MISSING_SERVER)
+        raise t.Exit
+
+    cli.add_typer(server_cli, name="server")
 
 
 if __name__ == "__main__":
