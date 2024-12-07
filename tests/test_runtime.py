@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from llmling.config.models import Config
 from llmling.config.runtime import RuntimeConfig
 from llmling.core import exceptions
 from llmling.prompts.models import ExtendedPromptArgument, PromptMessage, StaticPrompt
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.mark.asyncio
@@ -78,3 +84,49 @@ async def test_dynamic_prompt_arguments():
         # Check user message with actual function result
         assert messages[1].role == "user"
         assert messages[1].get_text_content() == "hellohellohello"
+
+
+@pytest.mark.asyncio
+async def test_prompt_registration_methods(runtime_config: RuntimeConfig, tmp_path: Path):
+    """Test all prompt registration methods."""
+    # Register a static prompt
+    runtime_config.register_static_prompt(
+        name="greet",
+        content="Hello {name}!",
+        description="Simple greeting",
+    )
+
+    # Register a dynamic prompt using a function path
+    runtime_config.register_dynamic_prompt(
+        name="multiply",
+        fn="llmling.testing.processors.multiply",
+        description="Multiply text",
+    )
+
+    # Create prompt file in pytest-managed temporary directory
+    prompt_file = tmp_path / "test_prompt.txt"
+    prompt_file.write_text("Process this: {input}")
+
+    # Register a file-based prompt
+    runtime_config.register_file_prompt(
+        name="process",
+        path=prompt_file,
+        description="Process input",
+        output_format="text",
+    )
+
+    # Verify all prompts were registered
+    prompts = runtime_config.get_prompts()
+    assert len(prompts) == 3  # noqa: PLR2004
+
+    # Test static prompt
+    messages = await runtime_config.render_prompt("greet", {"name": "World"})
+    assert messages[0].get_text_content() == "Hello World!"
+
+    # Test dynamic prompt
+    messages = await runtime_config.render_prompt("multiply", {"text": "abc", "times": 2})
+    assert messages[1].get_text_content() == "abcabc"
+
+    # Test file prompt
+    messages = await runtime_config.render_prompt("process", {"input": "test data"})
+    assert messages[0].get_text_content() == "Process this: test data"

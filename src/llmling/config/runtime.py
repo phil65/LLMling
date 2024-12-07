@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, Self
 
 import depkit
 import logfire
+from upath import UPath
 
 from llmling.config.manager import ConfigManager
 from llmling.config.models import (
@@ -23,7 +24,7 @@ from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
 from llmling.processors.jinjaprocessor import Jinja2Processor
 from llmling.processors.registry import ProcessorRegistry
-from llmling.prompts.models import DynamicPrompt
+from llmling.prompts.models import DynamicPrompt, FilePrompt, PromptMessage, StaticPrompt
 from llmling.prompts.registry import PromptRegistry
 from llmling.prompts.utils import extract_function_info
 from llmling.resources import ResourceLoaderRegistry
@@ -35,7 +36,7 @@ from llmling.utils import importing
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator, Sequence
+    from collections.abc import AsyncIterator, Callable, Iterator, Sequence
     import os
     import types
 
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
     from llmling.config.models import Config, Resource
     from llmling.core.events import RegistryEvents
     from llmling.processors.base import ProcessorResult
-    from llmling.prompts.models import BasePrompt, PromptMessage
+    from llmling.prompts.models import BasePrompt
     from llmling.resources.models import LoadedResource
 
 
@@ -633,22 +634,174 @@ class RuntimeConfig(EventEmitter):
         """
         return self._prompt_registry.list_items()
 
-    def register_prompt(
+    def register_dynamic_prompt(
         self,
         name: str,
-        prompt: BasePrompt | dict[str, Any],
+        fn: str | Callable[..., Any],
+        *,
+        description: str | None = None,
+        template: str | None = None,
+        replace: bool = False,
+    ) -> None:
+        """Register a function-based prompt.
+
+        Args:
+            name: Name to register under
+            fn: Function or import path (e.g., "module.submodule.function")
+            description: Optional description (extracted from docstring if not provided)
+            template: Optional template for formatting output
+            replace: Whether to replace existing prompt
+
+        Example:
+            >>> def get_info(url: str) -> str:
+            ...     '''Fetch info from URL.'''
+            ...     return "info"
+            ...
+            >>> runtime.register_dynamic_prompt("fetch", get_info)
+            >>> # or
+            >>> runtime.register_dynamic_prompt(
+            ...     "github",
+            ...     "my_module.get_github_info",
+            ...     description="Fetch GitHub repository information"
+            ... )
+        """
+        try:
+            prompt = DynamicPrompt.from_callable(
+                fn,
+                name_override=name,
+                description_override=description,
+                template_override=template,
+            )
+            self._prompt_registry.register(name, prompt, replace=replace)
+
+        except Exception as exc:
+            msg = f"Failed to register dynamic prompt {name!r}: {exc}"
+            raise exceptions.LLMLingError(msg) from exc
+
+    def register_static_prompt(
+        self,
+        name: str,
+        content: str,
+        description: str | None = None,
         *,
         replace: bool = False,
     ) -> None:
-        """Register a new prompt.
+        r"""Register a static prompt with text content.
+
+        A static prompt is a simple text template that can be used as-is or with
+        Python's string formatting (using {placeholder} syntax).
 
         Args:
-            name: Name for the prompt
-            prompt: Prompt or prompt config to register
+            name: Name to register under
+            content: Prompt text content
+            description: Optional description of what the prompt does
             replace: Whether to replace existing prompt
 
+        Example:
+            >>> runtime.register_static_prompt(
+            ...     "summarize",
+            ...     "Please summarize the following text in 3 bullet points:\\n{text}",
+            ...     description="Create a bullet-point summary",
+            ... )
+            >>> runtime.register_static_prompt(
+            ...     "greet",
+            ...     "Hello {name}! Welcome to {company}.",
+            ...     description="Simple greeting template",
+            ... )
+
         Raises:
-            LLMLingError: If name exists and replace=False
+            LLMLingError: If registration fails
+        """
+        try:
+            # Create standard user message from content
+            messages = [PromptMessage(role="user", content=content)]
+
+            # Use content's first line as description if none provided
+            if not description:
+                first_line = content.split("\n", 1)[0]
+                description = (
+                    first_line[:100] + "..." if len(first_line) > 100 else first_line  # noqa: PLR2004
+                )
+
+            prompt = StaticPrompt(
+                name=name,
+                description=description,
+                messages=messages,
+            )
+            self._prompt_registry.register(name, prompt, replace=replace)
+
+        except Exception as exc:
+            msg = f"Failed to register static prompt {name!r}: {exc}"
+            raise exceptions.LLMLingError(msg) from exc
+
+    def register_file_prompt(
+        self,
+        name: str,
+        path: str | os.PathLike[str],
+        *,
+        description: str,
+        output_format: Literal["text", "markdown", "jinja2"] = "text",
+        watch: bool = False,
+        replace: bool = False,
+    ) -> None:
+        """Register a file-based prompt.
+
+        Args:
+            name: Name to register under
+            path: Path to the prompt file
+            description: Human-readable description
+            output_format: Format of the file content
+            watch: Whether to watch file for changes
+            replace: Whether to replace existing prompt
+
+        Example:
+            >>> runtime.register_file_prompt(
+            ...     "analyze",
+            ...     "prompts/analysis.md",
+            ...     description="Code analysis prompt",
+            ...     format="markdown"
+            ... )
+        """
+        try:
+            if not UPath(path).exists():
+                msg = f"Prompt file not found: {path}"
+                raise FileNotFoundError(msg)  # noqa: TRY301
+
+            prompt = FilePrompt(
+                name=name,
+                path=path,
+                description=description,
+                format=output_format,
+                watch=watch,
+            )
+            self._prompt_registry.register(name, prompt, replace=replace)
+
+        except Exception as exc:
+            msg = f"Failed to register file prompt {name!r}: {exc}"
+            raise exceptions.LLMLingError(msg) from exc
+
+    def register_prompt(
+        self,
+        name: str,
+        prompt: BasePrompt,
+        *,
+        replace: bool = False,
+    ) -> None:
+        """Register a pre-configured prompt.
+
+        Note:
+            The specialized registration methods should be preferred:
+            - register_dynamic_prompt() for function-based prompts
+            - register_static_prompt() for message-based prompts
+            - register_file_prompt() for file-based prompts
+
+        This method is provided for advanced use cases where you need
+        to register an already configured prompt instance.
+
+        Args:
+            name: Name to register under
+            prompt: Configured prompt instance
+            replace: Whether to replace existing prompt
         """
         if isinstance(prompt, dict):
             if "type" not in prompt:
