@@ -1,0 +1,36 @@
+version: "1.0"
+
+global_settings:
+  log_level: "INFO"
+
+resources:
+  hello:
+    type: "text"
+    content: "Hello from LLMling! This is a simple text resource."
+    description: "A simple greeting text"
+
+tools:
+  open_url:
+    import_path: "webbrowser.open"
+    description: "Open a URL in the default web browser"
+
+prompts:
+  # Simple text prompt
+  greet:
+    type: "text"
+    description: "A simple greeting prompt"
+    messages:
+      - role: "system"
+        content: "You are a friendly assistant."
+      - role: "user"
+        content: "Say hello to {name} in a friendly way!"
+    arguments:
+      - name: "name"
+        description: "Name to greet"
+        required: true
+
+  # Function prompt using a stdlib function
+  get_user:
+    type: "function"
+    import_path: "getpass.getuser"
+    description: "Get current system username"
