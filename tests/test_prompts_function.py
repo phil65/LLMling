@@ -7,7 +7,7 @@ from typing import Literal
 
 import pytest
 
-from llmling.prompts.models import DynamicPrompt, ExtendedPromptArgument
+from llmling.prompts.models import DynamicPrompt, PromptParameter
 
 
 def example_function(
@@ -69,7 +69,7 @@ def test_create_prompt_arguments():
     args = {arg.name: arg for arg in prompt.arguments}
 
     # Check text argument
-    assert isinstance(args["text"], ExtendedPromptArgument)
+    assert isinstance(args["text"], PromptParameter)
     assert args["text"].required is True
     assert args["text"].type_hint is str
     assert args["text"].description

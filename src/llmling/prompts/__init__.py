@@ -1,7 +1,7 @@
 from llmling.prompts.models import (
     BasePrompt,
     DynamicPrompt,
-    ExtendedPromptArgument,
+    PromptParameter,
     PromptMessage,
     PromptType,
     StaticPrompt,
@@ -11,8 +11,8 @@ from llmling.prompts.registry import PromptRegistry
 __all__ = [
     "BasePrompt",
     "DynamicPrompt",
-    "ExtendedPromptArgument",
     "PromptMessage",
+    "PromptParameter",
     "PromptRegistry",
     "PromptType",
     "StaticPrompt",

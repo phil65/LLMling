@@ -11,11 +11,7 @@ from mcp import types
 
 
 if TYPE_CHECKING:
-    from llmling.prompts.models import (
-        BasePrompt as InternalPrompt,
-        ExtendedPromptArgument,
-        PromptMessage,
-    )
+    from llmling.prompts.models import BasePrompt, PromptMessage, PromptParameter
     from llmling.resources.models import LoadedResource
     from llmling.tools.base import LLMCallableTool
 
@@ -61,7 +57,7 @@ def to_mcp_message(msg: PromptMessage) -> types.PromptMessage:
     )
 
 
-def to_mcp_argument(prompt_arg: ExtendedPromptArgument) -> types.PromptArgument:
+def to_mcp_argument(prompt_arg: PromptParameter) -> types.PromptArgument:
     """Convert to MCP PromptArgument."""
     return types.PromptArgument(
         name=prompt_arg.name,
@@ -70,7 +66,7 @@ def to_mcp_argument(prompt_arg: ExtendedPromptArgument) -> types.PromptArgument:
     )
 
 
-def to_mcp_prompt(prompt: InternalPrompt) -> types.Prompt:
+def to_mcp_prompt(prompt: BasePrompt) -> types.Prompt:
     """Convert to MCP Prompt."""
     if prompt.name is None:
         msg = "Prompt name not set. This should be set during registration."

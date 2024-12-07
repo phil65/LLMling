@@ -97,9 +97,7 @@
           "title": "Timeout"
         }
       },
-      "required": [
-        "command"
-      ],
+      "required": ["command"],
       "title": "CLIResource",
       "type": "object"
     },
@@ -163,9 +161,7 @@
           "type": "object"
         }
       },
-      "required": [
-        "import_path"
-      ],
+      "required": ["import_path"],
       "title": "CallableResource",
       "type": "object"
     },
@@ -199,9 +195,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "import_path"
-      ],
+      "required": ["import_path"],
       "title": "CustomToolsetConfig",
       "type": "object"
     },
@@ -230,7 +224,7 @@
         "arguments": {
           "description": "List of arguments that this prompt accepts.",
           "items": {
-            "$ref": "#/$defs/ExtendedPromptArgument"
+            "$ref": "#/$defs/PromptParameter"
           },
           "title": "Arguments",
           "type": "array"
@@ -282,10 +276,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "description",
-        "import_path"
-      ],
+      "required": ["description", "import_path"],
       "title": "DynamicPrompt",
       "type": "object"
     },
@@ -319,13 +310,11 @@
           "type": "string"
         }
       },
-      "required": [
-        "module"
-      ],
+      "required": ["module"],
       "title": "EntryPointToolsetConfig",
       "type": "object"
     },
-    "ExtendedPromptArgument": {
+    "PromptParameter": {
       "description": "Prompt argument with validation information.",
       "properties": {
         "name": {
@@ -381,10 +370,8 @@
           "title": "Completion Function"
         }
       },
-      "required": [
-        "name"
-      ],
-      "title": "ExtendedPromptArgument",
+      "required": ["name"],
+      "title": "PromptParameter",
       "type": "object"
     },
     "FilePrompt": {
@@ -412,7 +399,7 @@
         "arguments": {
           "description": "List of arguments that this prompt accepts.",
           "items": {
-            "$ref": "#/$defs/ExtendedPromptArgument"
+            "$ref": "#/$defs/PromptParameter"
           },
           "title": "Arguments",
           "type": "array"
@@ -438,11 +425,7 @@
         "format": {
           "default": "text",
           "description": "Format of the file content (text, markdown, or jinja2 template).",
-          "enum": [
-            "text",
-            "markdown",
-            "jinja2"
-          ],
+          "enum": ["text", "markdown", "jinja2"],
           "title": "Format",
           "type": "string"
         },
@@ -460,10 +443,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "description",
-        "path"
-      ],
+      "required": ["description", "path"],
       "title": "FilePrompt",
       "type": "object"
     },
@@ -529,13 +509,7 @@
         "log_level": {
           "default": "INFO",
           "description": "Log level to use for the server",
-          "enum": [
-            "DEBUG",
-            "INFO",
-            "WARNING",
-            "ERROR",
-            "CRITICAL"
-          ],
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
           "title": "Log Level",
           "type": "string"
         },
@@ -614,9 +588,7 @@
           "title": "Alt Text"
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "title": "ImageResource",
       "type": "object"
     },
@@ -700,11 +672,7 @@
         "newline_sequence": {
           "default": "\n",
           "description": "Sequence that starts a newline (default: '\n').",
-          "enum": [
-            "\n",
-            "\r\n",
-            "\r"
-          ],
+          "enum": ["\n", "\r\n", "\r"],
           "title": "Newline Sequence",
           "type": "string"
         },
@@ -725,12 +693,7 @@
         "undefined": {
           "default": "default",
           "description": "Behavior when accessing undefined variables (default, strict, debug, chainable).",
-          "enum": [
-            "default",
-            "strict",
-            "debug",
-            "chainable"
-          ],
+          "enum": ["default", "strict", "debug", "chainable"],
           "title": "Undefined",
           "type": "string"
         },
@@ -763,12 +726,7 @@
       "description": "Content item in a message.",
       "properties": {
         "type": {
-          "enum": [
-            "text",
-            "resource",
-            "image_url",
-            "image_base64"
-          ],
+          "enum": ["text", "resource", "image_url", "image_base64"],
           "title": "Type",
           "type": "string"
         },
@@ -789,10 +747,7 @@
           "title": "Alt Text"
         }
       },
-      "required": [
-        "type",
-        "content"
-      ],
+      "required": ["type", "content"],
       "title": "MessageContent",
       "type": "object"
     },
@@ -839,9 +794,7 @@
           "title": "Base Url"
         }
       },
-      "required": [
-        "spec"
-      ],
+      "required": ["spec"],
       "title": "OpenAPIToolsetConfig",
       "type": "object"
     },
@@ -908,9 +861,7 @@
           "title": "Path"
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "title": "PathResource",
       "type": "object"
     },
@@ -936,9 +887,7 @@
           "type": "object"
         }
       },
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "title": "ProcessingStep",
       "type": "object"
     },
@@ -1001,9 +950,7 @@
           "type": "object"
         }
       },
-      "required": [
-        "import_path"
-      ],
+      "required": ["import_path"],
       "title": "ProcessorConfig",
       "type": "object"
     },
@@ -1011,12 +958,7 @@
       "description": "A message in a prompt template.",
       "properties": {
         "role": {
-          "enum": [
-            "system",
-            "user",
-            "assistant",
-            "tool"
-          ],
+          "enum": ["system", "user", "assistant", "tool"],
           "title": "Role",
           "type": "string"
         },
@@ -1039,9 +981,7 @@
           "title": "Content"
         }
       },
-      "required": [
-        "role"
-      ],
+      "required": ["role"],
       "title": "PromptMessage",
       "type": "object"
     },
@@ -1112,9 +1052,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "import_path"
-      ],
+      "required": ["import_path"],
       "title": "SourceResource",
       "type": "object"
     },
@@ -1143,7 +1081,7 @@
         "arguments": {
           "description": "List of arguments that this prompt accepts.",
           "items": {
-            "$ref": "#/$defs/ExtendedPromptArgument"
+            "$ref": "#/$defs/PromptParameter"
           },
           "title": "Arguments",
           "type": "array"
@@ -1169,10 +1107,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "description",
-        "messages"
-      ],
+      "required": ["description", "messages"],
       "title": "StaticPrompt",
       "type": "object"
     },
@@ -1231,9 +1166,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "content"
-      ],
+      "required": ["content"],
       "title": "TextResource",
       "type": "object"
     },
@@ -1273,9 +1206,7 @@
           "title": "Description"
         }
       },
-      "required": [
-        "import_path"
-      ],
+      "required": ["import_path"],
       "title": "ToolConfig",
       "type": "object"
     },

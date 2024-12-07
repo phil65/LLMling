@@ -5,9 +5,9 @@ import pytest
 
 from llmling.config.models import Config
 from llmling.prompts.models import (
-    ExtendedPromptArgument,
     MessageContent,
     PromptMessage,
+    PromptParameter,
     StaticPrompt,
 )
 
@@ -100,7 +100,7 @@ def test_invalid_prompt_config():
 @pytest.fixture
 def sample_prompt() -> StaticPrompt:
     """Create a sample prompt for testing."""
-    arg = ExtendedPromptArgument(
+    arg = PromptParameter(
         name="name",
         type="text",
         description="Name to greet",
@@ -125,8 +125,8 @@ async def test_prompt_format():
             PromptMessage(role="user", content="Age: {age}"),
         ],
         arguments=[
-            ExtendedPromptArgument(name="name", required=True),
-            ExtendedPromptArgument(name="age", required=False),
+            PromptParameter(name="name", required=True),
+            PromptParameter(name="age", required=False),
         ],
     )
 
@@ -149,7 +149,7 @@ async def test_prompt_validation():
         name="test",
         description="Test prompt",
         messages=[PromptMessage(role="user", content="Test {required_arg}")],
-        arguments=[ExtendedPromptArgument(name="required_arg", required=True)],
+        arguments=[PromptParameter(name="required_arg", required=True)],
     )
 
     # Should raise when missing required argument

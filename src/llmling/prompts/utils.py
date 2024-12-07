@@ -16,7 +16,7 @@ from llmling.prompts.models import (
     StaticPrompt,
 )
 from llmling.core.log import get_logger
-from llmling.prompts.models import ExtendedPromptArgument
+from llmling.prompts.models import PromptParameter
 from llmling.utils import importing
 from collections.abc import Callable, Mapping
 
@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 def extract_function_info(
     fn_or_path: str | Callable[..., Any],
     completions: Mapping[str, CompletionFunction | str] | None = None,
-) -> tuple[list[ExtendedPromptArgument], str]:
+) -> tuple[list[PromptParameter], str]:
     """Extract parameter info and description from a function.
 
     Example:
@@ -45,13 +45,13 @@ def extract_function_info(
         >>> args, desc = extract_function_info(search_docs)
         >>> args
         [
-            ExtendedPromptArgument(
+            PromptParameter(
                 name="query",
                 description="Search string",
                 required=True,
                 type_hint=str,
             ),
-            ExtendedPromptArgument(
+            PromptParameter(
                 name="max_results",
                 description="Maximum number of results",
                 required=False,
@@ -129,7 +129,7 @@ def extract_function_info(
                     completion_path = f"{comp.__module__}.{comp.__qualname__}"
 
             args.append(
-                ExtendedPromptArgument(
+                PromptParameter(
                     name=name,
                     description=arg_docs.get(name),
                     required=param.default == param.empty,
@@ -146,7 +146,7 @@ def extract_function_info(
         return args, desc
 
 
-def get_type_completions(arg: ExtendedPromptArgument, current_value: str) -> list[str]:
+def get_type_completions(arg: PromptParameter, current_value: str) -> list[str]:
     """Get completions based on argument type."""
     from typing import Literal, Union, get_args, get_origin
 
@@ -166,7 +166,7 @@ def get_type_completions(arg: ExtendedPromptArgument, current_value: str) -> lis
             other_type = next(arg for arg in args if arg is not type(None))
             # Process the non-None type directly
             return get_type_completions(
-                ExtendedPromptArgument(
+                PromptParameter(
                     name=arg.name, type_hint=other_type, description=arg.description
                 ),
                 current_value,
@@ -180,7 +180,7 @@ def get_type_completions(arg: ExtendedPromptArgument, current_value: str) -> lis
 
 
 def get_description_completions(
-    arg: ExtendedPromptArgument,
+    arg: PromptParameter,
     current_value: str,
 ) -> list[str]:
     """Get completions from argument description."""
@@ -218,7 +218,7 @@ def to_prompt(item: Any) -> BasePrompt:
             raise exceptions.LLMLingError(msg)
 
 
-def get_completion_for_arg(arg: ExtendedPromptArgument, current_value: str) -> list[str]:
+def get_completion_for_arg(arg: PromptParameter, current_value: str) -> list[str]:
     completions: list[str] = []
 
     # 1. Try custom completion function

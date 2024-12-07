@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 
-class ExtendedPromptArgument(BaseModel):
+class PromptParameter(BaseModel):
     """Prompt argument with validation information."""
 
     name: str
@@ -79,7 +79,7 @@ class BasePrompt(BaseModel):
     description: str
     """Human-readable description of what this prompt does."""
 
-    arguments: list[ExtendedPromptArgument] = Field(default_factory=list)
+    arguments: list[PromptParameter] = Field(default_factory=list)
     """List of arguments that this prompt accepts."""
 
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -279,7 +279,7 @@ class DynamicPrompt(BasePrompt):
 
             type_hint = hints.get(param_name, Any)
             required = param.default == param.empty
-            arg = ExtendedPromptArgument(
+            arg = PromptParameter(
                 name=param_name,
                 description=arg_docs.get(param_name),
                 required=required,
