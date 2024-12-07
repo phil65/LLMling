@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from llmling import config_resources
 from llmling.config.manager import ConfigManager
 from llmling.config.models import Config, GlobalSettings, TextResource, ToolConfig
 from llmling.config.runtime import RuntimeConfig
@@ -84,3 +85,12 @@ def test_config() -> Config:
 def runtime_config(test_config: Config) -> RuntimeConfig:
     """Create test runtime configuration."""
     return RuntimeConfig.from_config(test_config)
+
+
+@pytest.fixture
+def runtime() -> RuntimeConfig:
+    """Fixture providing a RuntimeConfig."""
+    from llmling.config.models import Config
+
+    config = Config.from_file(config_resources.TEST_CONFIG)
+    return RuntimeConfig.from_config(config)
