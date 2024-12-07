@@ -21,6 +21,22 @@ cli.add_typer(config_cli, name="config")
 cli.add_typer(resources_cli, name="resource")
 cli.add_typer(tools_cli, name="tool")
 cli.add_typer(prompts_cli, name="prompt")
+# try:
+#     from mcp_server_llmling.cli import cli as server_cli
+#     cli.add_typer(server_cli, name="server")
+# except ImportError:
+#     server_cli = t.Typer(help="MCP server commands (not installed)")
+
+#     @server_cli.callback()
+#     def server_not_installed():
+#         """MCP server functionality (not installed)."""
+#         msg = (
+#             "Server commands require the mcp-server-llmling package.\n"
+#             "Install with: pip install mcp-server-llmling"
+#         )
+#         raise t.Exit(msg)
+
+#     cli.add_typer(server_cli, name="server")
 
 
 if __name__ == "__main__":

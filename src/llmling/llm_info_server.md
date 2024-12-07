@@ -1,6 +1,6 @@
 # Understanding LLMling Usage in MCP Server
 
-This guide helps you understand how our LLMling library is used to implement a MCP (Model Control Protocol) server in the package "mcp_server_llmling". It serves as a real-world example of LLMling integration.
+This guide helps you understand how our LLMling library is used to implement a MCP (Model Context Protocol) server in the package "mcp_server_llmling". It serves as a real-world example of LLMling integration.
 
 ## Core Integration: RuntimeConfig Usage
 
