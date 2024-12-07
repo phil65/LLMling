@@ -97,23 +97,6 @@ def test_invalid_prompt_config():
         })
 
 
-@pytest.fixture
-def sample_prompt() -> StaticPrompt:
-    """Create a sample prompt for testing."""
-    arg = PromptParameter(
-        name="name",
-        type="text",
-        description="Name to greet",
-        required=True,
-    )
-    return StaticPrompt(
-        name="test",
-        description="Test prompt",
-        messages=[PromptMessage(role="user", content="Hello {name}")],
-        arguments=[arg],
-    )
-
-
 @pytest.mark.asyncio
 async def test_prompt_format():
     """Test prompt message formatting."""
