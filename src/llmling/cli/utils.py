@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 import json
 import logging
 from typing import Any
 
 from py2openai import OpenAIFunctionTool  # noqa: TC002
 from pydantic import BaseModel
+from rich.console import Console
 import typer as t  # noqa: TC002
 import yamling
 
 from llmling.core.log import setup_logging
 
 
-# from rich.console import Console
-# console = Console()
+console = Console()
 
 
 def verbose_callback(ctx: t.Context, _param: t.CallbackParam, value: bool) -> bool:
@@ -34,8 +33,12 @@ class ToolDisplay(BaseModel):
     import_path: str | None = None
 
 
-def to_model(obj: Any) -> BaseModel | Sequence[BaseModel]:
-    """Convert objects to BaseModel representations if needed."""
+def prepare_for_output(obj: Any) -> BaseModel | dict[str, Any] | list[Any]:
+    """Prepare object for output formatting.
+
+    Converts LLMCallableTools to display models, keeps dicts as-is,
+    and handles sequences.
+    """
     from llmling.tools.base import LLMCallableTool
 
     match obj:
@@ -48,40 +51,38 @@ def to_model(obj: Any) -> BaseModel | Sequence[BaseModel]:
                 import_path=obj.import_path,
             )
         case list() | tuple():
-            return [to_model(item) for item in obj]
+            return [prepare_for_output(item) for item in obj]
         case BaseModel():
             return obj
+        case dict():
+            return obj
         case _:
-            msg = f"Cannot convert type {type(obj)} to model"
+            msg = f"Cannot format type {type(obj)}"
             raise TypeError(msg)
 
 
-def format_models(result: Any, output_format: str = "text") -> None:
-    """Format and print models.
+def format_output(result: Any, output_format: str = "text") -> None:
+    """Format and print data in the requested format.
 
     Args:
-        result: BaseModel, Sequence[BaseModel], or LLMCallableTool(s)
-               Will be converted to BaseModel representation if needed.
+        result: Object to format (BaseModel, dict, or sequence)
         output_format: One of: text, json, yaml
-
-    Raises:
-        TypeError: If result cannot be converted to a BaseModel
-        ValueError: If output_format is invalid
     """
-    model = to_model(result)  # converts to BaseModel | Sequence[BaseModel]
+    data = prepare_for_output(result)
+
     match output_format:
         case "json":
-            if isinstance(model, Sequence):
-                print(json.dumps([m.model_dump() for m in model], indent=2))
+            if isinstance(data, BaseModel):
+                print(data.model_dump_json(indent=2))
             else:
-                print(model.model_dump_json(indent=2))
+                print(json.dumps(data, indent=2))
         case "yaml":
-            if isinstance(model, Sequence):
-                print(yamling.dump_yaml([m.model_dump() for m in model]))
+            if isinstance(data, BaseModel):
+                print(yamling.dump_yaml(data.model_dump()))
             else:
-                print(yamling.dump_yaml(model.model_dump()))
+                print(yamling.dump_yaml(data))
         case "text":
-            print(model)
+            console.print(data)
         case _:
             msg = f"Unknown format: {output_format}"
             raise ValueError(msg)

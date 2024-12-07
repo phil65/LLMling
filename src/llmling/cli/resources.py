@@ -13,7 +13,7 @@ from llmling.cli.constants import (
     VERBOSE_CMDS,
     VERBOSE_HELP,
 )
-from llmling.cli.utils import format_models, verbose_callback
+from llmling.cli.utils import format_output, verbose_callback
 from llmling.config.runtime import RuntimeConfig
 
 
@@ -30,7 +30,7 @@ def list_resources(
 ):
     """List all configured resources."""
     with RuntimeConfig.open_sync(config_path) as runtime:
-        format_models(runtime.get_resources(), output_format)
+        format_output(runtime.get_resources(), output_format)
 
 
 @resources_cli.command("show")
@@ -44,7 +44,7 @@ def show_resource(
 ):
     """Show details of a specific resource."""
     with RuntimeConfig.open_sync(config_path) as runtime:
-        format_models(runtime.get_resource(name), output_format)
+        format_output(runtime.get_resource(name), output_format)
 
 
 @resources_cli.command("load")

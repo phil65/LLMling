@@ -14,7 +14,7 @@ from llmling.cli.constants import (
     VERBOSE_CMDS,
     VERBOSE_HELP,
 )
-from llmling.cli.utils import format_models, verbose_callback
+from llmling.cli.utils import format_output, verbose_callback
 from llmling.config.runtime import RuntimeConfig
 
 
@@ -31,7 +31,7 @@ def list_tools(
 ):
     """List available tools."""
     with RuntimeConfig.open_sync(config_path) as runtime:
-        format_models(runtime.get_tools(), output_format)
+        format_output(runtime.get_tools(), output_format)
 
 
 @tools_cli.command("show")
@@ -45,7 +45,7 @@ def show_tool(
 ):
     """Show tool documentation and schema."""
     with RuntimeConfig.open_sync(config_path) as runtime:
-        format_models(runtime.get_tool(name), output_format)
+        format_output(runtime.get_tool(name), output_format)
 
 
 @tools_cli.command("call")

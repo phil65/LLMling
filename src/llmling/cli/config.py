@@ -1,7 +1,7 @@
 import typer as t
 
 from llmling.cli.constants import CONFIG_HELP, FORMAT_CMDS, FORMAT_HELP
-from llmling.cli.utils import format_models
+from llmling.cli.utils import format_output
 from llmling.config.models import Config
 from llmling.config.runtime import RuntimeConfig
 
@@ -51,7 +51,7 @@ def show_config(
     if not resolve:
         # Just show the raw config file
         config = Config.from_file(config_path)
-        format_models(config, output_format)
+        format_output(config, output_format)
         return
 
     with RuntimeConfig.open_sync(config_path) as runtime:
@@ -78,4 +78,4 @@ def show_config(
                 if prompt.name  # ensure we have a name
             },
         }
-        format_models(resolved, output_format)
+        format_output(resolved, output_format)

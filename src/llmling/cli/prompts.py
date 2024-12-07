@@ -11,7 +11,7 @@ from llmling.cli.constants import (
     VERBOSE_CMDS,
     VERBOSE_HELP,
 )
-from llmling.cli.utils import format_models, verbose_callback
+from llmling.cli.utils import format_output, verbose_callback
 from llmling.config.runtime import RuntimeConfig
 
 
@@ -28,7 +28,7 @@ def list_prompts(
 ):
     """List available prompts."""
     with RuntimeConfig.open_sync(config_path) as runtime:
-        format_models(runtime.get_prompts(), output_format)
+        format_output(runtime.get_prompts(), output_format)
 
 
 @prompts_cli.command("show")
@@ -42,4 +42,4 @@ def show_prompt(
 ):
     """Show prompt details."""
     with RuntimeConfig.open_sync(config_path) as runtime:
-        format_models(runtime.get_prompt(name), output_format)
+        format_output(runtime.get_prompt(name), output_format)
