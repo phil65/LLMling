@@ -14,7 +14,8 @@ from llmling.cli.constants import (
     VERBOSE_CMDS,
     VERBOSE_HELP,
 )
-from llmling.cli.utils import format_models, get_runtime, verbose_callback
+from llmling.cli.utils import format_models, verbose_callback
+from llmling.config.runtime import RuntimeConfig
 
 
 tools_cli = t.Typer(help="Tool management commands.", no_args_is_help=True)
@@ -29,8 +30,8 @@ def list_tools(
     ),
 ):
     """List available tools."""
-    runtime = get_runtime(config_path)
-    format_models(runtime.get_tools(), output_format)
+    with RuntimeConfig.open_sync(config_path) as runtime:
+        format_models(runtime.get_tools(), output_format)
 
 
 @tools_cli.command("show")
@@ -43,8 +44,8 @@ def show_tool(
     ),
 ):
     """Show tool documentation and schema."""
-    runtime = get_runtime(config_path)
-    format_models(runtime.get_tool(name), output_format)
+    with RuntimeConfig.open_sync(config_path) as runtime:
+        format_models(runtime.get_tool(name), output_format)
 
 
 @tools_cli.command("call")
@@ -57,11 +58,8 @@ def call_tool(
     ),
 ):
     """Execute a tool with given arguments."""
-    runtime = get_runtime(config_path)
-    kwargs = dict(arg.split("=", 1) for arg in (args or []))
-
-    async def _call():
-        async with runtime as r:
-            return await r.execute_tool(name, **kwargs)
-
-    print(asyncio.run(_call()))
+    with RuntimeConfig.open_sync(config_path) as runtime:
+        kwargs = dict(arg.split("=", 1) for arg in (args or []))
+        with RuntimeConfig.open_sync(config_path) as runtime:
+            result = asyncio.run(runtime.execute_tool(name, **kwargs))
+            print(result)

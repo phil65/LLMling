@@ -3,19 +3,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from py2openai import OpenAIFunctionTool  # noqa: TC002
 from pydantic import BaseModel
+import typer as t  # noqa: TC002
 import yamling
 
-from llmling.config.manager import ConfigManager
-from llmling.config.runtime import RuntimeConfig
 from llmling.core.log import setup_logging
-
-
-if TYPE_CHECKING:
-    import typer as t
 
 
 # from rich.console import Console
@@ -90,13 +85,3 @@ def format_models(result: Any, output_format: str = "text") -> None:
         case _:
             msg = f"Unknown format: {output_format}"
             raise ValueError(msg)
-
-
-def get_runtime(config_path: str | None = None) -> RuntimeConfig:
-    """Create runtime from config."""
-    if not config_path:
-        from llmling import config_resources
-
-        config_path = config_resources.TEST_CONFIG
-    manager = ConfigManager.load(config_path)
-    return RuntimeConfig.from_config(manager.config)
