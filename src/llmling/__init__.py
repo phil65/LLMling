@@ -18,7 +18,7 @@ from llmling.core.exceptions import (
 from llmling.processors.registry import ProcessorRegistry
 
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 
 __all__ = [
     "Config",
