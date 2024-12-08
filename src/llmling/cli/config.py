@@ -2,8 +2,6 @@ import typer as t
 
 from llmling.cli.constants import CONFIG_HELP, FORMAT_CMDS, FORMAT_HELP
 from llmling.cli.utils import format_output
-from llmling.config.models import Config
-from llmling.config.runtime import RuntimeConfig
 
 
 config_cli = t.Typer(help="Config file management commands.", no_args_is_help=True)
@@ -48,6 +46,9 @@ def show_config(
     With --resolve (default), shows the fully resolved configuration
     including expanded toolsets and loaded resources.
     """
+    from llmling.config.models import Config
+    from llmling.config.runtime import RuntimeConfig
+
     if not resolve:
         # Just show the raw config file
         config = Config.from_file(config_path)

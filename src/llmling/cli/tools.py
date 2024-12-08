@@ -15,7 +15,6 @@ from llmling.cli.constants import (
     VERBOSE_HELP,
 )
 from llmling.cli.utils import format_output, verbose_callback
-from llmling.config.runtime import RuntimeConfig
 
 
 tools_cli = t.Typer(help="Tool management commands.", no_args_is_help=True)
@@ -30,6 +29,8 @@ def list_tools(
     ),
 ):
     """List available tools."""
+    from llmling.config.runtime import RuntimeConfig
+
     with RuntimeConfig.open_sync(config_path) as runtime:
         format_output(runtime.get_tools(), output_format)
 
@@ -44,6 +45,8 @@ def show_tool(
     ),
 ):
     """Show tool documentation and schema."""
+    from llmling.config.runtime import RuntimeConfig
+
     with RuntimeConfig.open_sync(config_path) as runtime:
         format_output(runtime.get_tool(name), output_format)
 
@@ -58,6 +61,8 @@ def call_tool(
     ),
 ):
     """Execute a tool with given arguments."""
+    from llmling.config.runtime import RuntimeConfig
+
     with RuntimeConfig.open_sync(config_path) as runtime:
         kwargs = dict(arg.split("=", 1) for arg in (args or []))
         with RuntimeConfig.open_sync(config_path) as runtime:

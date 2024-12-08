@@ -14,7 +14,6 @@ from llmling.cli.constants import (
     VERBOSE_HELP,
 )
 from llmling.cli.utils import format_output, verbose_callback
-from llmling.config.runtime import RuntimeConfig
 
 
 resources_cli = t.Typer(help="Resource management commands.", no_args_is_help=True)
@@ -29,6 +28,8 @@ def list_resources(
     ),
 ):
     """List all configured resources."""
+    from llmling.config.runtime import RuntimeConfig
+
     with RuntimeConfig.open_sync(config_path) as runtime:
         format_output(runtime.get_resources(), output_format)
 
@@ -43,6 +44,8 @@ def show_resource(
     ),
 ):
     """Show details of a specific resource."""
+    from llmling.config.runtime import RuntimeConfig
+
     with RuntimeConfig.open_sync(config_path) as runtime:
         format_output(runtime.get_resource(name), output_format)
 
@@ -56,6 +59,8 @@ def load_resource(
     ),
 ):
     """Load and display resource content."""
+    from llmling.config.runtime import RuntimeConfig
+
     with RuntimeConfig.open_sync(config_path) as runtime:
 
         async def _load():
