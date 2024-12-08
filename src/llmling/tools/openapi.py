@@ -49,10 +49,7 @@ class OpenAPITools(ToolSet):
         self.spec_url = spec
         self.base_url = base_url
         self.headers = headers or {}
-        self._client = httpx.AsyncClient(
-            base_url=self.base_url,
-            headers=self.headers,
-        )
+        self._client = httpx.AsyncClient(base_url=self.base_url, headers=self.headers)
         self._spec: dict[str, Any] = {}
         self._schemas: dict[str, Any] = {}
         self._operations: dict[str, Any] = {}
