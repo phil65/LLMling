@@ -37,7 +37,39 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 logger = get_logger(__name__)
 
 
-class Jinja2Config(BaseModel):
+class ConfigModel(BaseModel):
+    """Base class for all LLMling configuration models.
+
+    Provides:
+    - Common Pydantic settings
+    - YAML serialization
+    - Basic merge functionality
+    """
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        use_attribute_docstrings=True,
+    )
+
+    def merge(self, other: Self) -> Self:
+        """Merge with another instance by overlaying its non-None values."""
+        from llmling.config.utils import merge_models
+
+        return merge_models(self, other)
+
+    def to_yaml(self) -> str:
+        """Serialize to YAML string."""
+        return yamling.dump_yaml(self.model_dump(exclude_none=True))
+
+    @classmethod
+    def from_yaml(cls, content: str) -> Self:
+        """Create from YAML string."""
+        data = yamling.load_yaml(content)
+        return cls.model_validate(data)
+
+
+class Jinja2Config(ConfigModel):
     """Configuration for Jinja2 environment.
 
     See: https://jinja.palletsprojects.com/en/3.1.x/api/#jinja2.Environment
@@ -94,8 +126,6 @@ class Jinja2Config(BaseModel):
     globals: dict[str, Any] = Field(default_factory=dict)
     """Global variables available to all templates."""
 
-    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
-
     def create_environment_kwargs(self) -> dict[str, Any]:
         """Convert config to Jinja2 environment kwargs.
 
@@ -139,7 +169,7 @@ class Jinja2Config(BaseModel):
         return kwargs
 
 
-class GlobalSettings(BaseModel):
+class GlobalSettings(ConfigModel):
     """Global settings that apply to all components."""
 
     timeout: int = 30
@@ -167,8 +197,6 @@ class GlobalSettings(BaseModel):
     """Log level to use for the server"""
 
     jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
-
-    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
 
 class BaseResource(BaseModel):
@@ -421,7 +449,7 @@ Resource = (
 )
 
 
-class WatchConfig(BaseModel):
+class WatchConfig(ConfigModel):
     """Watch configuration for resources."""
 
     enabled: bool = False
@@ -433,10 +461,8 @@ class WatchConfig(BaseModel):
     ignore_file: str | None = None
     """Path to .gitignore-style file"""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
-
-class ToolConfig(BaseModel):
+class ToolConfig(ConfigModel):
     """Configuration for a tool."""
 
     import_path: str
@@ -448,16 +474,12 @@ class ToolConfig(BaseModel):
     description: str | None = None
     """Optional override for the tool's description"""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
-
-class BaseToolsetConfig(BaseModel):
+class BaseToolsetConfig(ConfigModel):
     """Base configuration for toolsets."""
 
     namespace: str | None = Field(default=None)
     """Optional namespace prefix for tool names"""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
 
 class OpenAPIToolsetConfig(BaseToolsetConfig):
@@ -514,7 +536,7 @@ ToolsetConfig = Annotated[
 ]
 
 
-class Config(BaseModel):
+class Config(ConfigModel):
     """Root configuration model."""
 
     version: str = "1.0"
