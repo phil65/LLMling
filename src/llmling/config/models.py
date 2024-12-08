@@ -198,6 +198,13 @@ class GlobalSettings(ConfigModel):
     """Log level to use for the server"""
 
     jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
+    """Jinja2 environment configuration"""
+
+    enable_resource_tools: bool = True
+    """Whether to register tools for resource loading/listing"""
+
+    enable_tool_management: bool = True
+    """Whether to register tools for dynamic tool registration and package management"""
 
 
 class BaseResource(BaseModel):

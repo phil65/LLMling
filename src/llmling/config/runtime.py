@@ -379,7 +379,7 @@ class RuntimeConfig(EventEmitter):
         prompt_registry = PromptRegistry()
         tool_registry = ToolRegistry()
 
-        return cls(
+        runtime = cls(
             config=config,
             loader_registry=loader_registry,
             processor_registry=processor_registry,
@@ -387,6 +387,13 @@ class RuntimeConfig(EventEmitter):
             prompt_registry=prompt_registry,
             tool_registry=tool_registry,
         )
+        if config.global_settings.enable_resource_tools:
+            runtime._register_resource_tools()
+
+        if config.global_settings.enable_tool_management:
+            runtime._register_tool_management_tools()
+
+        return runtime
 
     async def startup(self) -> None:
         """Start all runtime components."""
@@ -401,6 +408,34 @@ class RuntimeConfig(EventEmitter):
         await self._resource_registry.shutdown()
         await self._tool_registry.shutdown()
         await self._processor_registry.shutdown()
+
+    def _register_resource_tools(self) -> None:
+        """Register resource tools if enabled."""
+        # Resource management
+        tool = LLMCallableTool.from_callable(self.get_resources)
+        self._tool_registry.register("get_resources", tool)
+
+        # Resource loading
+        tool = LLMCallableTool.from_callable(self.load_resource)
+        self._tool_registry.register("load_resource", tool)
+
+    def _register_tool_management_tools(self) -> None:
+        """Register tools for dynamic tool management and dependencies."""
+        # Tool registration tools
+        tool = LLMCallableTool.from_callable(self.register_tool)
+        self._tool_registry.register("register_tool", tool)
+
+        # Code-based tool registration
+        tool = LLMCallableTool.from_callable(self.register_code_tool)
+        self._tool_registry.register("register_code_tool", tool)
+
+        # Package management
+        tool = LLMCallableTool.from_callable(self.install_package)
+        self._tool_registry.register("install_package", tool)
+
+        # Tool discovery
+        tool = LLMCallableTool.from_callable(self.get_tools)
+        self._tool_registry.register("list_tools", tool)
 
     # Resource Management
     async def load_resource(self, name: str) -> LoadedResource:
@@ -637,6 +672,35 @@ class RuntimeConfig(EventEmitter):
             List of all tools
         """
         return list(self._tool_registry.values())
+
+    async def install_package(
+        self,
+        package: str,
+    ) -> str:
+        """Install a Python package using the dependency manager.
+
+        This allows installing packages needed for tool functionality.
+        Package specifications follow PIP format (e.g. "requests>=2.28.0").
+
+        Args:
+            package: Package specification to install (e.g. "requests", "pillow>=10.0.0")
+
+        Returns:
+            Message confirming the installation
+
+        Raises:
+            ToolError: If installation fails or package spec is invalid
+
+        Examples:
+            >>> await install_package("requests")
+            >>> await install_package("pillow>=10.0.0")
+        """
+        try:
+            await self._dep_manager.install_dependency(package)
+            return f"Successfully installed package: {package}"  # noqa: TRY300
+        except Exception as exc:
+            msg = f"Failed to install package: {exc}"
+            raise ToolError(msg) from exc
 
     async def register_tool(
         self,
