@@ -254,7 +254,7 @@ class DynamicPrompt(BasePrompt):
         # Get function metadata
         name = name_override or fn.__name__
         sig = inspect.signature(fn)
-        hints = get_type_hints(fn, include_extras=True)
+        hints = get_type_hints(fn, include_extras=True, localns=locals())
 
         # Parse docstring
         docstring = inspect.getdoc(fn)
