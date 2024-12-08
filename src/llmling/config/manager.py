@@ -73,7 +73,7 @@ class ConfigManager:
 
             content = self.config.model_dump(exclude_none=True)
             string = yamling.dump_yaml(content)
-            UPath(path).write_text(string)
+            _ = UPath(path).write_text(string)
             logger.info("Configuration saved to %s", path)
 
         except Exception as exc:
@@ -140,7 +140,7 @@ class ConfigManager:
 
     def _validate_prompts(self) -> list[str]:
         """Validate prompt configuration."""
-        warnings = []
+        warnings: list[str] = []
         for name, prompt in self.config.prompts.items():
             match prompt:
                 case StaticPrompt():
@@ -153,7 +153,7 @@ class ConfigManager:
                         # Try to import the module
                         try:
                             module_name = prompt.import_path.split(".")[0]
-                            importlib.import_module(module_name)
+                            _ = importlib.import_module(module_name)
                         except ImportError:
                             path = prompt.import_path
                             msg = f"Cannot import module for prompt {name}: {path}"
