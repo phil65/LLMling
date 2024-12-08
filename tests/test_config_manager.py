@@ -113,11 +113,8 @@ def test_validate_invalid_tool(valid_config: Config) -> None:
     manager = ConfigManager(valid_config)
 
     # Add invalid tool (missing import_path)
-    manager.config.tools["invalid"] = ToolConfig(
-        import_path="",
-        name="invalid",
-        description="Invalid tool",
-    )
+    cfg = ToolConfig(import_path="", name="invalid", description="Invalid tool")
+    manager.config.tools["invalid"] = cfg
 
     warnings = manager.validate()
     assert warnings

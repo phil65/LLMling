@@ -9,6 +9,7 @@ import pytest
 from llmling.tools.openapi import OpenAPITools
 
 
+BASE_URL = "https://api.example.com"
 PETSTORE_SPEC = {
     "openapi": "3.0.0",
     "info": {"title": "Pet Store API", "version": "1.0.0"},
@@ -47,10 +48,20 @@ PETSTORE_SPEC = {
             }
         }
     },
-    "servers": [
-        {"url": "https://api.example.com", "description": "Pet store API server"}
-    ],
+    "servers": [{"url": BASE_URL, "description": "Pet store API server"}],
 }
+
+
+# Create mock httpx response
+class MockResponse:
+    status_code = 200
+
+    @property
+    def text(self):
+        return json.dumps(PETSTORE_SPEC)
+
+    def raise_for_status(self):
+        pass
 
 
 @pytest.fixture
@@ -65,47 +76,31 @@ def mock_openapi_spec(tmp_path):
 
     # Create local spec file
     local_spec = tmp_path / "openapi.json"
-    with local_spec.open("w") as f:
-        json.dump(PETSTORE_SPEC, f)
-
+    local_spec.write_text(json.dumps(PETSTORE_SPEC))
     print(f"\nCreated local spec at: {local_spec}")
     return {
         "local_path": str(local_spec),
-        "remote_url": "https://api.example.com/openapi.json",
+        "remote_url": f"{BASE_URL}/openapi.json",
     }
 
 
 @pytest.mark.asyncio
-async def test_openapi_toolset_local(mock_openapi_spec, caplog):
+async def test_openapi_toolset_local(mock_openapi_spec):
     """Test OpenAPI toolset with local file."""
-    caplog.set_level("DEBUG")
-
     local_path = mock_openapi_spec["local_path"]
-    toolset = OpenAPITools(
-        spec=local_path,
-        base_url="https://api.example.com",
-    )
+    toolset = OpenAPITools(spec=local_path, base_url=BASE_URL)
 
     # Load and validate spec
     spec = toolset._load_spec()
-    print(f"\nLoaded spec: {spec}")
     validate(spec)
-    print("Spec validation passed")
-
     # Store spec explicitly
     toolset._spec = spec
     toolset._operations = toolset._parse_operations()
-    print(f"\nOperations: {toolset._operations}")
 
     # Get tools
     tools = toolset.get_llm_callable_tools()
-    print(f"\nGenerated tools: {tools}")
 
     assert len(tools) == 1, f"Expected 1 tool, got {len(tools)}: {tools}"
-    tool = tools[0]
-    print("\nTool details:")
-    print(f"Name: {tool.name}")
-    print(f"Schema: {tool.get_schema()}")
 
 
 @pytest.mark.asyncio
@@ -115,17 +110,6 @@ async def test_openapi_toolset_remote(mock_openapi_spec, caplog, monkeypatch):
 
     url = mock_openapi_spec["remote_url"]
 
-    # Create mock httpx response
-    class MockResponse:
-        status_code = 200
-
-        @property
-        def text(self):
-            return json.dumps(PETSTORE_SPEC)
-
-        def raise_for_status(self):
-            pass
-
     # Mock httpx.get
     def mock_get(*args, **kwargs):
         return MockResponse()
@@ -133,10 +117,7 @@ async def test_openapi_toolset_remote(mock_openapi_spec, caplog, monkeypatch):
     # Patch httpx.get
     monkeypatch.setattr("httpx.get", mock_get)
 
-    toolset = OpenAPITools(
-        spec=url,
-        base_url="https://api.example.com",
-    )
+    toolset = OpenAPITools(spec=url, base_url=BASE_URL)
 
     # Load spec
     spec = toolset._load_spec()

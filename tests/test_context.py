@@ -201,13 +201,11 @@ async def test_source_loader_basic() -> None:
 @pytest.mark.asyncio
 async def test_source_loader_invalid_module() -> None:
     """Test loading from non-existent module."""
-    context = SourceResource(
-        import_path=INVALID_MODULE, description="Test invalid module"
-    )
+    ctx = SourceResource(import_path=INVALID_MODULE, description="Test invalid module")
     loader = SourceResourceLoader()
 
     with pytest.raises(exceptions.LoaderError):
-        await anext(loader.load(context, ProcessorRegistry()))
+        await anext(loader.load(ctx, ProcessorRegistry()))
 
 
 # Callable Loader Tests
@@ -248,14 +246,10 @@ async def test_all_loaders_with_processors(
     tmp_file: Path,
 ) -> None:
     """Test all loaders with processor chain."""
-    processor_registry.register(
-        "upper",
-        ProcessorConfig(import_path="llmling.testing.processors.uppercase_text"),
-    )
-    processor_registry.register(
-        "reverse",
-        ProcessorConfig(import_path="llmling.testing.processors.reverse_text"),
-    )
+    cfg = ProcessorConfig(import_path="llmling.testing.processors.uppercase_text")
+    processor_registry.register("upper", cfg)
+    cfg = ProcessorConfig(import_path="llmling.testing.processors.reverse_text")
+    processor_registry.register("reverse", cfg)
 
     processors = [ProcessingStep(name="upper"), ProcessingStep(name="reverse")]
 
