@@ -31,6 +31,7 @@ from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.loaders.path import PathResourceLoader
 from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
+from llmling.tools.exceptions import ToolError
 from llmling.tools.registry import ToolRegistry
 from llmling.utils import importing
 
@@ -636,6 +637,96 @@ class RuntimeConfig(EventEmitter):
             List of all tools
         """
         return list(self._tool_registry.values())
+
+    async def register_tool(
+        self,
+        name: str,
+        function: str | Callable[..., Any],
+        description: str | None = None,
+    ) -> str:
+        """Register a new tool from a function or import path.
+
+        This tool can register a callable either from:
+        - A direct callable object (function/method)
+        - An import path as string (e.g. "webbrowser.open")
+
+        Args:
+            name: Name for the new tool
+            function: Function to register (callable or import path)
+            description: Optional description override (uses function docstring if None)
+
+        Returns:
+            Message confirming the tool registration
+
+        Raises:
+            ToolError: If registration fails (e.g. invalid import path, invalid function)
+
+        Examples:
+            >>> await register_tool("open_url", "webbrowser.open")
+            >>> await register_tool("my_tool", my_function)
+        """
+        try:
+            tool = LLMCallableTool.from_callable(
+                function, name_override=name, description_override=description
+            )
+            self._tool_registry.register(name, tool)
+            source = function if isinstance(function, str) else function.__name__
+        except Exception as exc:
+            msg = f"Failed to register tool: {exc}"
+            raise ToolError(msg) from exc
+        else:
+            return f"Successfully registered tool: {name} from {source}"
+
+    async def register_code_tool(
+        self,
+        name: str,
+        code: str,
+        description: str | None = None,
+    ) -> str:
+        """Register a new tool from Python code.
+
+        The provided code should define a function that will be converted into a tool.
+        The function's docstring will be used as the tool's description if no description
+        is provided.
+
+        Args:
+            name: Name for the new tool
+            code: Python code defining the tool function
+            description: Optional description override (uses function docstring if None)
+
+        Returns:
+            Message confirming the tool registration
+
+        Raises:
+            ToolError: If registration fails (e.g. invalid code, no callable found)
+
+        Examples:
+            >>> await register_code_tool(
+            ...     name="word_count",
+            ...     code='''
+            ...     async def count_words(text: str) -> dict[str, int]:
+            ...         words = text.split()
+            ...         return {"total": len(words)}
+            ...     '''
+            ... )
+        """
+        try:
+            namespace: dict[str, Any] = {}
+            exec(code, namespace)
+            func = next((v for v in namespace.values() if callable(v)), None)
+            if not func:
+                msg = "No callable found in provided code"
+                raise ValueError(msg)  # noqa: TRY301
+
+            tool = LLMCallableTool.from_callable(
+                func, name_override=name, description_override=description
+            )
+            self._tool_registry.register(name, tool)
+            return f"Successfully registered tool: {name}"  # noqa: TRY300
+
+        except Exception as exc:
+            msg = f"Failed to register tool: {exc}"
+            raise ToolError(msg) from exc
 
     # Prompt Management
     def list_prompt_names(self) -> Sequence[str]:
