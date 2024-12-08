@@ -51,6 +51,7 @@ dependencies = [
     "watchfiles>=1.0.0",
     "openapi-spec-validator>=0.7.1",
     "httpx>=0.28.1",
+    "typer",
 ]
 
 [project.scripts]
