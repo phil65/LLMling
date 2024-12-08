@@ -97,7 +97,9 @@
           "title": "Timeout"
         }
       },
-      "required": ["command"],
+      "required": [
+        "command"
+      ],
       "title": "CLIResource",
       "type": "object"
     },
@@ -161,7 +163,9 @@
           "type": "object"
         }
       },
-      "required": ["import_path"],
+      "required": [
+        "import_path"
+      ],
       "title": "CallableResource",
       "type": "object"
     },
@@ -195,7 +199,9 @@
           "type": "string"
         }
       },
-      "required": ["import_path"],
+      "required": [
+        "import_path"
+      ],
       "title": "CustomToolsetConfig",
       "type": "object"
     },
@@ -276,7 +282,10 @@
           "type": "string"
         }
       },
-      "required": ["description", "import_path"],
+      "required": [
+        "description",
+        "import_path"
+      ],
       "title": "DynamicPrompt",
       "type": "object"
     },
@@ -310,68 +319,10 @@
           "type": "string"
         }
       },
-      "required": ["module"],
+      "required": [
+        "module"
+      ],
       "title": "EntryPointToolsetConfig",
-      "type": "object"
-    },
-    "PromptParameter": {
-      "description": "Prompt argument with validation information.",
-      "properties": {
-        "name": {
-          "description": "Name of the argument as used in the prompt.",
-          "title": "Name",
-          "type": "string"
-        },
-        "description": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Human-readable description of the argument.",
-          "title": "Description"
-        },
-        "required": {
-          "default": false,
-          "description": "Whether this argument must be provided when formatting the prompt.",
-          "title": "Required",
-          "type": "boolean"
-        },
-        "type_hint": {
-          "description": "Type annotation for the argument, defaults to str.",
-          "title": "Type Hint"
-        },
-        "default": {
-          "anyOf": [
-            {},
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Default value if argument is optional.",
-          "title": "Default"
-        },
-        "completion_function": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Optional function to provide argument completions.",
-          "title": "Completion Function"
-        }
-      },
-      "required": ["name"],
-      "title": "PromptParameter",
       "type": "object"
     },
     "FilePrompt": {
@@ -425,7 +376,11 @@
         "format": {
           "default": "text",
           "description": "Format of the file content (text, markdown, or jinja2 template).",
-          "enum": ["text", "markdown", "jinja2"],
+          "enum": [
+            "text",
+            "markdown",
+            "jinja2"
+          ],
           "title": "Format",
           "type": "string"
         },
@@ -443,7 +398,10 @@
           "type": "boolean"
         }
       },
-      "required": ["description", "path"],
+      "required": [
+        "description",
+        "path"
+      ],
       "title": "FilePrompt",
       "type": "object"
     },
@@ -509,12 +467,31 @@
         "log_level": {
           "default": "INFO",
           "description": "Log level to use for the server",
-          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+          "enum": [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL"
+          ],
           "title": "Log Level",
           "type": "string"
         },
         "jinja_environment": {
-          "$ref": "#/$defs/Jinja2Config"
+          "$ref": "#/$defs/Jinja2Config",
+          "description": "Jinja2 environment configuration"
+        },
+        "enable_resource_tools": {
+          "default": true,
+          "description": "Whether to register tools for resource loading/listing",
+          "title": "Enable Resource Tools",
+          "type": "boolean"
+        },
+        "enable_tool_management": {
+          "default": true,
+          "description": "Whether to register tools for dynamic tool registration and package management",
+          "title": "Enable Tool Management",
+          "type": "boolean"
         }
       },
       "title": "GlobalSettings",
@@ -588,11 +565,14 @@
           "title": "Alt Text"
         }
       },
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "title": "ImageResource",
       "type": "object"
     },
     "Jinja2Config": {
+      "additionalProperties": false,
       "description": "Configuration for Jinja2 environment.\n\nSee: https://jinja.palletsprojects.com/en/3.1.x/api/#jinja2.Environment",
       "properties": {
         "block_start_string": {
@@ -672,7 +652,11 @@
         "newline_sequence": {
           "default": "\n",
           "description": "Sequence that starts a newline (default: '\n').",
-          "enum": ["\n", "\r\n", "\r"],
+          "enum": [
+            "\n",
+            "\r\n",
+            "\r"
+          ],
           "title": "Newline Sequence",
           "type": "string"
         },
@@ -693,7 +677,12 @@
         "undefined": {
           "default": "default",
           "description": "Behavior when accessing undefined variables (default, strict, debug, chainable).",
-          "enum": ["default", "strict", "debug", "chainable"],
+          "enum": [
+            "default",
+            "strict",
+            "debug",
+            "chainable"
+          ],
           "title": "Undefined",
           "type": "string"
         },
@@ -726,7 +715,12 @@
       "description": "Content item in a message.",
       "properties": {
         "type": {
-          "enum": ["text", "resource", "image_url", "image_base64"],
+          "enum": [
+            "text",
+            "resource",
+            "image_url",
+            "image_base64"
+          ],
           "title": "Type",
           "type": "string"
         },
@@ -747,7 +741,10 @@
           "title": "Alt Text"
         }
       },
-      "required": ["type", "content"],
+      "required": [
+        "type",
+        "content"
+      ],
       "title": "MessageContent",
       "type": "object"
     },
@@ -794,7 +791,9 @@
           "title": "Base Url"
         }
       },
-      "required": ["spec"],
+      "required": [
+        "spec"
+      ],
       "title": "OpenAPIToolsetConfig",
       "type": "object"
     },
@@ -861,7 +860,9 @@
           "title": "Path"
         }
       },
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "title": "PathResource",
       "type": "object"
     },
@@ -887,7 +888,9 @@
           "type": "object"
         }
       },
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "title": "ProcessingStep",
       "type": "object"
     },
@@ -950,7 +953,9 @@
           "type": "object"
         }
       },
-      "required": ["import_path"],
+      "required": [
+        "import_path"
+      ],
       "title": "ProcessorConfig",
       "type": "object"
     },
@@ -958,7 +963,12 @@
       "description": "A message in a prompt template.",
       "properties": {
         "role": {
-          "enum": ["system", "user", "assistant", "tool"],
+          "enum": [
+            "system",
+            "user",
+            "assistant",
+            "tool"
+          ],
           "title": "Role",
           "type": "string"
         },
@@ -981,8 +991,72 @@
           "title": "Content"
         }
       },
-      "required": ["role"],
+      "required": [
+        "role"
+      ],
       "title": "PromptMessage",
+      "type": "object"
+    },
+    "PromptParameter": {
+      "description": "Prompt argument with validation information.",
+      "properties": {
+        "name": {
+          "description": "Name of the argument as used in the prompt.",
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable description of the argument.",
+          "title": "Description"
+        },
+        "required": {
+          "default": false,
+          "description": "Whether this argument must be provided when formatting the prompt.",
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type_hint": {
+          "description": "Type annotation for the argument, defaults to str.",
+          "title": "Type Hint"
+        },
+        "default": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default value if argument is optional.",
+          "title": "Default"
+        },
+        "completion_function": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional function to provide argument completions.",
+          "title": "Completion Function"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "PromptParameter",
       "type": "object"
     },
     "SourceResource": {
@@ -1052,7 +1126,9 @@
           "type": "boolean"
         }
       },
-      "required": ["import_path"],
+      "required": [
+        "import_path"
+      ],
       "title": "SourceResource",
       "type": "object"
     },
@@ -1107,7 +1183,10 @@
           "type": "string"
         }
       },
-      "required": ["description", "messages"],
+      "required": [
+        "description",
+        "messages"
+      ],
       "title": "StaticPrompt",
       "type": "object"
     },
@@ -1166,7 +1245,9 @@
           "type": "string"
         }
       },
-      "required": ["content"],
+      "required": [
+        "content"
+      ],
       "title": "TextResource",
       "type": "object"
     },
@@ -1206,7 +1287,9 @@
           "title": "Description"
         }
       },
-      "required": ["import_path"],
+      "required": [
+        "import_path"
+      ],
       "title": "ToolConfig",
       "type": "object"
     },
