@@ -403,16 +403,20 @@ class RuntimeConfig(EventEmitter):
 
     # Resource Management
     async def load_resource(self, name: str) -> LoadedResource:
-        """Load a resource by name.
+        """Load the content of a resource by its name.
+
+        Use this tool to load the actual content of a resource. First use
+        get_resources() to see what's available, then provide the resource name
+        from that list.
 
         Args:
-            name: Name of the resource to load
+            name: Name of the resource to load (must match a name from get_resources())
 
         Returns:
-            Loaded resource content and metadata
+            The loaded resource including its content and metadata.
 
         Raises:
-            ResourceError: If resource cannot be loaded
+            ResourceError: If the resource doesn't exist or can't be loaded.
         """
         return await self._resource_registry.load(name)
 
@@ -532,10 +536,16 @@ class RuntimeConfig(EventEmitter):
         return self._resource_registry[name]
 
     def get_resources(self) -> Sequence[Resource]:
-        """Get all registered resources.
+        """List all available resources and their metadata.
+
+        This tool returns information about all resources that can be loaded, including:
+        - name: The identifier to use with load_resource
+        - description: What the resource contains
+        - uri: The resource's location
+        - mimeType: The type of content (e.g., text/markdown, application/json)
 
         Returns:
-            List of all resources
+            List of resources with their complete metadata.
         """
         return list(self._resource_registry.values())
 
