@@ -151,6 +151,7 @@ class RuntimeConfig(EventEmitter):
             CLIResourceLoader,
             ImageResourceLoader,
             PathResourceLoader,
+            RepositoryResourceLoader,
             SourceResourceLoader,
             TextResourceLoader,
         )
@@ -161,6 +162,7 @@ class RuntimeConfig(EventEmitter):
         self._loader_registry["source"] = SourceResourceLoader
         self._loader_registry["callable"] = CallableResourceLoader
         self._loader_registry["image"] = ImageResourceLoader
+        self._loader_registry["repository"] = RepositoryResourceLoader
 
         for name, proc_config in self._config.context_processors.items():
             self._processor_registry[name] = proc_config

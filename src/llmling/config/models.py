@@ -13,6 +13,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SecretStr,
     field_validator,
     model_validator,
 )
@@ -342,6 +343,29 @@ class CLIResource(BaseResource):
             msg = "When shell=False, all command parts must be strings"
             raise ValueError(msg)
         return self
+
+
+class RepositoryResource(BaseResource):
+    """Git repository content."""
+
+    resource_type: Literal["repository"] = Field("repository", init=False)
+    repo_url: str
+    """URL of the git repository."""
+
+    ref: str = "main"
+    """Git reference (branch, tag, or commit)."""
+
+    path: str = ""
+    """Path within the repository."""
+
+    sparse_checkout: list[str] | None = None
+    """Optional list of paths for sparse checkout."""
+
+    user: str | None = None
+    """Optional user name for authentication."""
+
+    password: SecretStr | None = None
+    """Optional password for authentication."""
 
 
 class SourceResource(BaseResource):

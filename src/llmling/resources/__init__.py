@@ -7,11 +7,12 @@ from llmling.resources.loaders import (
     PathResourceLoader,
     SourceResourceLoader,
     TextResourceLoader,
+    RepositoryResourceLoader,
+    ImageResourceLoader,
 )
 from llmling.resources.loaders.registry import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
 from llmling.resources.models import LoadedResource
-from llmling.resources.loaders.image import ImageResourceLoader
 
 # Create and populate the default registry
 default_registry = ResourceLoaderRegistry()
@@ -28,6 +29,7 @@ __all__ = [
     "ImageResourceLoader",
     "LoadedResource",
     "PathResourceLoader",
+    "RepositoryResourceLoader",
     "ResourceLoader",
     "ResourceLoaderRegistry",
     "ResourceRegistry",

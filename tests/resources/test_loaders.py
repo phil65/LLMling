@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import git
 import pytest
 
 from llmling.config.models import (
@@ -9,6 +10,7 @@ from llmling.config.models import (
     CLIResource,
     ImageResource,
     PathResource,
+    RepositoryResource,
     SourceResource,
     TextResource,
 )
@@ -24,6 +26,7 @@ from llmling.resources import (
     TextResourceLoader,
 )
 from llmling.resources.base import LoaderContext, ResourceLoader, create_loaded_resource
+from llmling.resources.loaders.repository import RepositoryResourceLoader
 
 
 if TYPE_CHECKING:
@@ -42,6 +45,7 @@ if TYPE_CHECKING:
         ("python://module.path", SourceResourceLoader),
         ("callable://func", CallableResourceLoader),
         ("image://test.png", ImageResourceLoader),
+        ("repository://github.com/org/repo", RepositoryResourceLoader),
     ],
 )
 def test_find_loader_for_uri(
@@ -119,6 +123,10 @@ def test_get_name_from_uri_invalid(
         (SourceResource(import_path="test"), SourceResourceLoader),
         (CallableResource(import_path="test"), CallableResourceLoader),
         (ImageResource(path="test.png"), ImageResourceLoader),
+        (
+            RepositoryResource(repo_url="https://github.com/org/repo.git"),
+            RepositoryResourceLoader,
+        ),
     ],
 )
 def test_get_loader(
@@ -173,6 +181,31 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
     result = await anext(loader.load(processor_registry=processor_registry))
     assert result.content.strip() == "test"
     assert result.source_type == "cli"
+
+
+@pytest.mark.asyncio
+async def test_repository_loader(
+    tmp_path: Path,
+    processor_registry: ProcessorRegistry,
+) -> None:
+    """Test basic repository loading functionality."""
+    # Set up a test repo
+    repo = git.Repo.init(tmp_path)
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test content")
+    repo.index.add(["test.txt"])
+    repo.index.commit("Initial commit")
+
+    # Load the file
+    resource = RepositoryResource(repo_url=str(tmp_path), path="test.txt")
+    loader = RepositoryResourceLoader(LoaderContext(resource=resource, name="test"))
+
+    async for result in loader.load(processor_registry=processor_registry):
+        assert result.content == "test content"
+        assert result.source_type == "repository"
+        assert result.metadata.mime_type == "text/plain"
+        assert "repo" in result.metadata.extra
+        break  # We only expect one file
 
 
 @pytest.mark.asyncio
@@ -263,7 +296,7 @@ def test_registry_supported_schemes(loader_registry: ResourceLoaderRegistry) -> 
 def test_registry_uri_templates(loader_registry: ResourceLoaderRegistry) -> None:
     """Test getting URI templates from registry."""
     templates = loader_registry.get_uri_templates()
-    assert len(templates) == 6  # One for each loader type  # noqa: PLR2004
+    assert len(templates) == 7  # One for each loader type  # noqa: PLR2004
     assert all("scheme" in t and "template" in t and "mimeTypes" in t for t in templates)
 
 

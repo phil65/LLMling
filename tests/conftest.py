@@ -13,6 +13,7 @@ from llmling.resources.loaders import (
     CLIResourceLoader,
     ImageResourceLoader,
     PathResourceLoader,
+    RepositoryResourceLoader,
     ResourceLoaderRegistry,
     SourceResourceLoader,
     TextResourceLoader,
@@ -49,6 +50,7 @@ def loader_registry() -> ResourceLoaderRegistry:
     registry["source"] = SourceResourceLoader
     registry["callable"] = CallableResourceLoader
     registry["image"] = ImageResourceLoader
+    registry["repository"] = RepositoryResourceLoader
     return registry
 
 
