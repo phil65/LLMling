@@ -77,10 +77,8 @@ class OpenAPITools(ToolSet):
         """Load OpenAPI specification."""
         try:
             if self.spec_url.startswith(("http://", "https://")):
-                response = httpx.get(
-                    self.spec_url,
-                    headers={"Accept": "application/json"},
-                )
+                headers = {"Accept": "application/json"}
+                response = httpx.get(self.spec_url, headers=headers)
                 response.raise_for_status()
                 content = response.text
             else:
@@ -290,9 +288,8 @@ class OpenAPITools(ToolSet):
             lines.append("Args:")
             for param in config["parameters"]:
                 schema = param.get("schema", {})
-                desc = param.get(
-                    "description", schema.get("description", "No description")
-                )
+                description = schema.get("description", "No description")
+                desc = param.get("description", description)
                 required = " (required)" if param.get("required") else ""
                 type_str = self._get_type_description(schema)
                 lines.append(f"    {param['name']}: {desc}{required} ({type_str})")
