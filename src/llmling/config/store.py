@@ -39,28 +39,31 @@ class ConfigMapping(TypedDict):
 class ConfigStore:
     """Manages stored config mappings."""
 
-    def __init__(self) -> None:
+    def __init__(self, filename: str | None = None) -> None:
         """Initialize store with default paths."""
-        self.config_dir = UPath(platformdirs.user_config_dir("llmling"))
-        self.config_file = self.config_dir / "configs.json"
+        llmling_dir = platformdirs.user_config_dir("llmling")
+        self.config_dir = UPath(llmling_dir)
+        name = filename or "configs.json"
+        self.config_file = self.config_dir / name
         self._ensure_config_dir()
 
     def _ensure_config_dir(self) -> None:
         """Create config directory if needed."""
         self.config_dir.mkdir(parents=True, exist_ok=True)
         if not self.config_file.exists():
-            self.save_mapping(ConfigMapping(configs={}, active=None))
+            mapping = ConfigMapping(configs={}, active=None)
+            self.save_mapping(mapping)
 
     def load_mapping(self) -> ConfigMapping:
         """Load config mapping from disk."""
         if not self.config_file.exists():
             return ConfigMapping(configs={}, active=None)
         try:
-            data = json.loads(self.config_file.read_text())
-            return ConfigMapping(
-                configs=data.get("configs", {}),
-                active=data.get("active"),
-            )
+            text = self.config_file.read_text()
+            data = json.loads(text)
+            active = data.get("active")
+            configs = data.get("configs", {})
+            return ConfigMapping(configs=configs, active=active)
         except Exception:
             logger.exception("Failed to load config mapping")
             return ConfigMapping(configs={}, active=None)
@@ -139,10 +142,7 @@ class ConfigStore:
         if not mapping["active"]:
             return None
         name = mapping["active"]
-        return ConfigFile(
-            name=name,
-            path=mapping["configs"][name],
-        )
+        return ConfigFile(name=name, path=mapping["configs"][name])
 
     def list_configs(self) -> list[tuple[str, str]]:
         """List all configs with their paths."""
