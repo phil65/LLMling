@@ -8,10 +8,14 @@ from llmling.cli.constants import (
     output_format_opt,
     verbose_opt,
 )
-from llmling.cli.utils import format_output
+from llmling.cli.utils import format_output, get_command_help
 
 
-prompts_cli = t.Typer(help="Prompt management commands.", no_args_is_help=True)
+PROMPTS_HELP = "Prompt management commands."
+prompts_cli = t.Typer(
+    help=get_command_help(PROMPTS_HELP),
+    no_args_is_help=True,
+)
 
 
 @prompts_cli.command("list")

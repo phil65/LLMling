@@ -11,10 +11,14 @@ from llmling.cli.constants import (
     output_format_opt,
     verbose_opt,
 )
-from llmling.cli.utils import format_output
+from llmling.cli.utils import format_output, get_command_help
 
 
-tools_cli = t.Typer(help="Tool management commands.", no_args_is_help=True)
+TOOLS_HELP = "Tool management commands."
+tools_cli = t.Typer(
+    help=get_command_help(TOOLS_HELP),
+    no_args_is_help=True,
+)
 
 
 @tools_cli.command("list")

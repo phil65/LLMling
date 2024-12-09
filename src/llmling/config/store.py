@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 from typing import TYPE_CHECKING, TypedDict
 
@@ -14,6 +15,18 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class ConfigFile:
+    """Represents an active configuration."""
+
+    name: str
+    path: str
+
+    def __str__(self) -> str:
+        """Format for display."""
+        return f"{self.name} ({self.path})"
 
 
 class ConfigMapping(TypedDict):
@@ -116,13 +129,20 @@ class ConfigStore:
         mapping["active"] = name
         self.save_mapping(mapping)
 
-    def get_active(self) -> tuple[str, str] | None:
-        """Get active config name and path."""
+    def get_active(self) -> ConfigFile | None:
+        """Get active config if one is set.
+
+        Returns:
+            ConfigFile if an active config is set, None otherwise
+        """
         mapping = self.load_mapping()
         if not mapping["active"]:
             return None
         name = mapping["active"]
-        return name, mapping["configs"][name]
+        return ConfigFile(
+            name=name,
+            path=mapping["configs"][name],
+        )
 
     def list_configs(self) -> list[tuple[str, str]]:
         """List all configs with their paths."""

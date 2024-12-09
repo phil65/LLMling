@@ -10,10 +10,14 @@ from llmling.cli.constants import (
     output_format_opt,
     verbose_opt,
 )
-from llmling.cli.utils import format_output
+from llmling.cli.utils import format_output, get_command_help
 
 
-resources_cli = t.Typer(help="Resource management commands.", no_args_is_help=True)
+RESOURCES_HELP = "Resource management commands."
+resources_cli = t.Typer(
+    help=get_command_help(RESOURCES_HELP),
+    no_args_is_help=True,
+)
 
 
 @resources_cli.command("list")

@@ -3,11 +3,13 @@ from __future__ import annotations
 import typer as t
 
 from llmling.cli.constants import output_format_opt
-from llmling.cli.utils import format_output
+from llmling.cli.utils import format_output, get_command_help
 from llmling.config.store import config_store
 
 
-config_cli = t.Typer(help="Config file management commands.", no_args_is_help=True)
+CONFIG_HELP = "Config file management commands."
+help_text = get_command_help(CONFIG_HELP)
+config_cli = t.Typer(help=help_text, no_args_is_help=True)
 
 
 @config_cli.command("add")
@@ -15,7 +17,10 @@ def add_config(
     name: str = t.Argument(help="Name for the config"),
     path: str = t.Argument(help="Path to config file"),
 ) -> None:
-    """Add a new named config."""
+    """Add a new named config (llmling config add <identifier> <path>).
+
+    Paths can be UPath protocol paths (protocol://path) or local file paths.
+    """
     try:
         config_store.add_config(name, path)
         print(f"Added config '{name}' -> {path}")
@@ -65,7 +70,7 @@ def list_configs(
                 {
                     "name": name,
                     "path": uri,
-                    "active": active and name == active[0],
+                    "active": active and name == active.name,
                 }
                 for name, uri in configs
             ],
@@ -125,7 +130,7 @@ def show_config(
         # Get config path to show
         if name is None:
             if active := config_store.get_active():
-                path = active[1]
+                path = active.path
             else:
                 print("No active config set")
                 raise t.Exit(1)  # noqa: TRY301

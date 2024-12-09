@@ -102,7 +102,7 @@ def resolve_config_path(config: str | os.PathLike[str] | None) -> str:
     """Resolve config path from name or direct path."""
     if not config:
         if active := config_store.get_active():
-            return active[1]
+            return active.path
         raise ValueError(NO_CONFIG_MESSAGE)
 
     try:
@@ -111,3 +111,10 @@ def resolve_config_path(config: str | os.PathLike[str] | None) -> str:
     except KeyError:
         # If not found, treat as direct path
         return str(config)
+
+
+def get_command_help(base_help: str) -> str:
+    """Get command help text with active config information."""
+    if active := config_store.get_active():
+        return f"{base_help}\n\n(Using config: {active})"
+    return f"{base_help}\n\n(No active config set)"
