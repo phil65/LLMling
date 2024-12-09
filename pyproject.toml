@@ -36,7 +36,8 @@ license = { file = "LICENSE" }
 dependencies = [
     "pydantic",
     # Only add below (Copier)
-    "fsspec[github, http,git]",
+    "fsspec[github,http,git]",
+    "GitPython",
     "universal-pathlib>=0.2.5",
     "yamling>=1.5.0",
     "jinja2>=3.1.4",
