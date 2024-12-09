@@ -14,9 +14,7 @@ import logfire
 from upath import UPath
 
 from llmling.config.manager import ConfigManager
-from llmling.config.models import (
-    PathResource,
-)
+from llmling.config.models import BaseResource, PathResource
 from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
 from llmling.core import exceptions
 from llmling.core.events import EventEmitter
@@ -42,7 +40,7 @@ if TYPE_CHECKING:
     import types
 
     from llmling.completions.types import CompletionFunction
-    from llmling.config.models import Config, Resource
+    from llmling.config.models import Config
     from llmling.core.events import RegistryEvents
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt
@@ -456,7 +454,7 @@ class RuntimeConfig(EventEmitter):
         """
         return await self._resource_registry.load(name)
 
-    async def resolve_resource_uri(self, uri_or_name: str) -> tuple[str, Resource]:
+    async def resolve_resource_uri(self, uri_or_name: str) -> tuple[str, BaseResource]:
         """Resolve a resource identifier to a proper URI and resource.
 
         Args:
@@ -481,7 +479,7 @@ class RuntimeConfig(EventEmitter):
             if name in self._resource_registry:
                 return uri_or_name, self._resource_registry[name]
             # Create temporary resource for the URI
-            resource: Resource = PathResource(path=uri_or_name)
+            resource: BaseResource = PathResource(path=uri_or_name)
             return uri_or_name, resource
 
         # 2. Try as resource name
@@ -557,7 +555,7 @@ class RuntimeConfig(EventEmitter):
         """
         return self._resource_registry.get_uri(name)
 
-    def get_resource(self, name: str) -> Resource:
+    def get_resource(self, name: str) -> BaseResource:
         """Get a resource configuration by name.
 
         Args:
@@ -571,7 +569,7 @@ class RuntimeConfig(EventEmitter):
         """
         return self._resource_registry[name]
 
-    def get_resources(self) -> Sequence[Resource]:
+    def get_resources(self) -> Sequence[BaseResource]:
         """List all available resources and their metadata.
 
         This tool returns information about all resources that can be loaded, including:
@@ -588,7 +586,7 @@ class RuntimeConfig(EventEmitter):
     def register_resource(
         self,
         name: str,
-        resource: Resource,
+        resource: BaseResource,
         *,
         replace: bool = False,
     ) -> None:
@@ -604,7 +602,7 @@ class RuntimeConfig(EventEmitter):
         """
         self._resource_registry.register(name, resource, replace=replace)
 
-    def get_resource_loader(self, resource: Resource) -> Any:  # type: ignore[return]
+    def get_resource_loader(self, resource: BaseResource) -> Any:  # type: ignore[return]
         """Get loader for a resource type.
 
         Args:

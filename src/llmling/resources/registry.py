@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Any
 import logfire
 
 from llmling.config.models import (
+    BaseResource,
     CallableResource,
     CLIResource,
     ImageResource,
     PathResource,
-    Resource,
     SourceResource,
     TextResource,
 )
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ResourceRegistry(BaseRegistry[str, Resource]):
+class ResourceRegistry(BaseRegistry[str, BaseResource]):
     """Registry for managing configured resources."""
 
     def __init__(
@@ -50,7 +50,7 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         self._last_loaded: dict[str, datetime] = {}
         self.watcher = ResourceWatcher(self)
 
-    def register(self, key: str, item: Resource | Any, replace: bool = False) -> None:
+    def register(self, key: str, item: BaseResource | Any, replace: bool = False) -> None:
         """Register an item."""
         try:
             # Create copy with URI if needed
@@ -98,7 +98,7 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         """Error class to use for this registry."""
         return exceptions.ResourceError
 
-    def _validate_item(self, item: Any) -> Resource:
+    def _validate_item(self, item: Any) -> BaseResource:
         """Validate and possibly transform items.
 
         Args:
@@ -113,19 +113,12 @@ class ResourceRegistry(BaseRegistry[str, Resource]):
         try:
             match item:
                 # Match against concrete resource types
-                case (
-                    PathResource()
-                    | TextResource()
-                    | CLIResource()
-                    | SourceResource()
-                    | CallableResource()
-                    | ImageResource()
-                ):
+                case BaseResource():
                     return item
 
                 case dict() if "resource_type" in item:
                     # Map resource_type to appropriate class
-                    resource_classes: dict[str, type[Resource]] = {
+                    resource_classes: dict[str, type[BaseResource]] = {
                         "path": PathResource,
                         "text": TextResource,
                         "cli": CLIResource,
