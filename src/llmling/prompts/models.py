@@ -88,6 +88,13 @@ class BasePrompt(BaseModel):
 
     model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
+    def get_messages(self) -> list[PromptMessage]:
+        """Get the messages for this prompt."""
+        if not hasattr(self, "messages"):
+            msg = f"{self.__class__.__name__} must implement 'messages' attribute"
+            raise NotImplementedError(msg)
+        return self.messages  # pyright: ignore
+
     def validate_arguments(self, provided: dict[str, Any]) -> None:
         """Validate that required arguments are provided."""
         required = {arg.name for arg in self.arguments if arg.required}
