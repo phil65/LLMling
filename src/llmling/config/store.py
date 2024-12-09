@@ -93,7 +93,7 @@ class ConfigStore:
             msg = f"Invalid config name: {name} (must be a valid Python identifier)"
             raise ValueError(msg)
 
-        path_obj = UPath(path)
+        path_obj = UPath(path).resolve()
         if not path_obj.exists():
             msg = f"Config file not found: {path}"
             raise FileNotFoundError(msg)
