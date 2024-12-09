@@ -9,10 +9,10 @@ import pytest
 import upath
 
 from llmling.config.models import (
+    BaseResource,
     CallableResource,
     CLIResource,
     PathResource,
-    Resource,
     SourceResource,
     TextResource,
 )
@@ -261,7 +261,7 @@ async def test_all_loaders_with_processors(
     # Use the actual ECHO_COMMAND content
     echo_output = "test"  # 'echo test' command outputs just 'test'
 
-    resources: list[tuple[Resource, str]] = [
+    resources: list[tuple[BaseResource, str]] = [
         (
             TextResource(
                 content=text_content, description="Test text", processors=processors

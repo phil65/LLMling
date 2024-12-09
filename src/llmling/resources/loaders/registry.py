@@ -17,7 +17,7 @@ from llmling.resources.loaders.text import TextResourceLoader
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Resource
+    from llmling.config.models import BaseResource
 
 
 logger = get_logger(__name__)
@@ -90,6 +90,6 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
                 msg = f"Invalid context loader type: {type(item)}"
                 raise exceptions.LoaderError(msg)
 
-    def get_loader(self, context: Resource) -> ResourceLoader[Any]:
+    def get_loader(self, context: BaseResource) -> ResourceLoader[Any]:
         """Get a loader instance for a context type."""
         return self.get(context.resource_type)

@@ -12,7 +12,7 @@ from llmling.resources.watching.utils import load_patterns
 
 
 if TYPE_CHECKING:
-    from llmling.config.models import Resource
+    from llmling.config.models import BaseResource
     from llmling.monitors.files import FileEvent, FileMonitor
     from llmling.resources.registry import ResourceRegistry
 
@@ -76,7 +76,7 @@ class ResourceWatcher:
         except Exception:
             logger.exception("Error stopping file system watcher")
 
-    def add_watch(self, name: str, resource: Resource) -> None:
+    def add_watch(self, name: str, resource: BaseResource) -> None:
         """Add a watch for a resource."""
         if not self._loop:
             msg = "Watcher not started"

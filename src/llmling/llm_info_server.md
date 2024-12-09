@@ -23,7 +23,7 @@ class LLMLingServer:
         """Start serving MCP protocol requests."""
 
     # How MCP protocol maps to RuntimeConfig
-    async def handle_list_resources(self) -> list[Resource]:
+    async def handle_list_resources(self) -> list[BaseResource]:
         """When client requests resource list."""
         names = self.runtime.list_resource_names()
         return [
@@ -66,7 +66,7 @@ class ResourceObserver:
         # Register for LLMling events
         server.runtime.add_observer(self.events, "resource")
 
-    def _handle_resource_modified(self, key: str, resource: Resource) -> None:
+    def _handle_resource_modified(self, key: str, resource: BaseResource) -> None:
         """When LLMling reports resource change."""
         uri = self.server.runtime.get_resource_uri(key)
         # Notify subscribed MCP clients
