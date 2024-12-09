@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import json
+from typing import TYPE_CHECKING, TypedDict
+
+import platformdirs
+from upath import UPath
+
+from llmling.core.log import get_logger
+
+
+if TYPE_CHECKING:
+    import os
+
+
+logger = get_logger(__name__)
+
+
+class ConfigMapping(TypedDict):
+    """Type for config storage format."""
+
+    configs: dict[str, str]  # name -> uri mapping
+    active: str | None
+
+
+class ConfigStore:
+    """Manages stored config mappings."""
+
+    def __init__(self) -> None:
+        """Initialize store with default paths."""
+        self.config_dir = UPath(platformdirs.user_config_dir("llmling"))
+        self.config_file = self.config_dir / "configs.json"
+        self._ensure_config_dir()
+
+    def _ensure_config_dir(self) -> None:
+        """Create config directory if needed."""
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        if not self.config_file.exists():
+            self.save_mapping(ConfigMapping(configs={}, active=None))
+
+    def load_mapping(self) -> ConfigMapping:
+        """Load config mapping from disk."""
+        if not self.config_file.exists():
+            return ConfigMapping(configs={}, active=None)
+        try:
+            data = json.loads(self.config_file.read_text())
+            return ConfigMapping(
+                configs=data.get("configs", {}),
+                active=data.get("active"),
+            )
+        except Exception:
+            logger.exception("Failed to load config mapping")
+            return ConfigMapping(configs={}, active=None)
+
+    def save_mapping(self, mapping: ConfigMapping) -> None:
+        """Save config mapping to disk."""
+        try:
+            self.config_file.write_text(json.dumps(mapping, indent=2))
+        except Exception:
+            logger.exception("Failed to save config mapping")
+
+    def add_config(self, name: str, path: str | os.PathLike[str]) -> None:
+        """Add a new named config.
+
+        Args:
+            name: Name to register the config under
+            path: Path to the config file
+
+        Raises:
+            ValueError: If name is invalid
+            FileNotFoundError: If config file doesn't exist
+            PermissionError: If config file can't be read
+            IsADirectoryError: If path points to a directory
+        """
+        # Basic validation
+        if not name.isidentifier():
+            msg = f"Invalid config name: {name} (must be a valid Python identifier)"
+            raise ValueError(msg)
+
+        path_obj = UPath(path)
+        if not path_obj.exists():
+            msg = f"Config file not found: {path}"
+            raise FileNotFoundError(msg)
+
+        if not path_obj.is_file():
+            msg = f"Path is not a file: {path}"
+            raise IsADirectoryError(msg)
+
+        try:
+            # Try to read file to verify access
+            path_obj.read_bytes()
+        except PermissionError as exc:
+            msg = f"Cannot read config file: {path}"
+            raise PermissionError(msg) from exc
+        # All good, save the config
+        mapping = self.load_mapping()
+        uri = path_obj.as_uri()
+        mapping["configs"][name] = uri
+        logger.debug("Adding config %r -> %s", name, uri)
+        self.save_mapping(mapping)
+
+    def remove_config(self, name: str) -> None:
+        """Remove a named config."""
+        mapping = self.load_mapping()
+        if name == mapping["active"]:
+            mapping["active"] = None
+        mapping["configs"].pop(name, None)
+        self.save_mapping(mapping)
+
+    def set_active(self, name: str) -> None:
+        """Set the active config."""
+        mapping = self.load_mapping()
+        if name not in mapping["configs"]:
+            msg = f"Config {name} not found"
+            raise KeyError(msg)
+        mapping["active"] = name
+        self.save_mapping(mapping)
+
+    def get_active(self) -> tuple[str, str] | None:
+        """Get active config name and path."""
+        mapping = self.load_mapping()
+        if not mapping["active"]:
+            return None
+        name = mapping["active"]
+        return name, mapping["configs"][name]
+
+    def list_configs(self) -> list[tuple[str, str]]:
+        """List all configs with their paths."""
+        mapping = self.load_mapping()
+        return list(mapping["configs"].items())
+
+    def get_config(self, name: str) -> str:
+        """Get path for a named config."""
+        mapping = self.load_mapping()
+        if name not in mapping["configs"]:
+            msg = f"Config {name} not found"
+            raise KeyError(msg)
+        return mapping["configs"][name]
+
+
+config_store = ConfigStore()

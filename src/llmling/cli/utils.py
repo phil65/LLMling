@@ -1,26 +1,21 @@
 from __future__ import annotations
 
 import json
-import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from py2openai import OpenAIFunctionTool  # noqa: TC002
 from pydantic import BaseModel
 from rich.console import Console
-import typer as t  # noqa: TC002
 import yamling
 
-from llmling.core.log import setup_logging
+from llmling.config.store import config_store
+
+
+if TYPE_CHECKING:
+    import os
 
 
 console = Console()
-
-
-def verbose_callback(ctx: t.Context, _param: t.CallbackParam, value: bool) -> bool:
-    """Handle verbose flag."""
-    if value:
-        setup_logging(level=logging.DEBUG)
-    return value
 
 
 class ToolDisplay(BaseModel):
@@ -86,3 +81,19 @@ def format_output(result: Any, output_format: str = "text") -> None:
         case _:
             msg = f"Unknown format: {output_format}"
             raise ValueError(msg)
+
+
+def resolve_config_path(config: str | os.PathLike[str] | None) -> str:
+    """Resolve config path from name or direct path."""
+    if not config:
+        if active := config_store.get_active():
+            return active[1]
+        msg = "No config provided and no active config set"
+        raise ValueError(msg)
+
+    try:
+        # First try as stored config name
+        return config_store.get_config(str(config))
+    except KeyError:
+        # If not found, treat as direct path
+        return str(config)

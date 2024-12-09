@@ -1,10 +1,79 @@
+from __future__ import annotations
+
 import typer as t
 
-from llmling.cli.constants import FORMAT_CMDS, FORMAT_HELP, config_file_arg
+from llmling.cli.constants import output_format_opt
 from llmling.cli.utils import format_output
+from llmling.config.store import config_store
 
 
 config_cli = t.Typer(help="Config file management commands.", no_args_is_help=True)
+
+
+@config_cli.command("add")
+def add_config(
+    name: str = t.Argument(help="Name for the config"),
+    path: str = t.Argument(help="Path to config file"),
+) -> None:
+    """Add a new named config."""
+    try:
+        config_store.add_config(name, path)
+        print(f"Added config '{name}' -> {path}")
+    except Exception as exc:
+        print(f"Failed to add config: {exc}")
+        raise t.Exit(1) from exc
+
+
+@config_cli.command("remove")
+def remove_config(
+    name: str = t.Argument(help="Name of config to remove"),
+) -> None:
+    """Remove a named config."""
+    try:
+        config_store.remove_config(name)
+        print(f"Removed config '{name}'")
+    except Exception as exc:
+        print(f"Failed to remove config: {exc}")
+        raise t.Exit(1) from exc
+
+
+@config_cli.command("set")
+def set_active(
+    name: str = t.Argument(help="Name of config to set as active"),
+) -> None:
+    """Set the active config."""
+    try:
+        config_store.set_active(name)
+        print(f"Set '{name}' as active config")
+    except Exception as exc:
+        print(f"Failed to set active config: {exc}")
+        raise t.Exit(1) from exc
+
+
+@config_cli.command("list")
+def list_configs(
+    output_format: str = output_format_opt,
+) -> None:
+    """List all registered configs."""
+    try:
+        configs = config_store.list_configs()
+        active = config_store.get_active()
+
+        # Create formatted output
+        result = {
+            "configs": [
+                {
+                    "name": name,
+                    "path": uri,
+                    "active": active and name == active[0],
+                }
+                for name, uri in configs
+            ],
+        }
+        format_output(result, output_format)
+    except Exception as exc:
+        print(f"Failed to list configs: {exc}")
+        raise t.Exit(1) from exc
 
 
 @config_cli.command("init")
@@ -33,14 +102,17 @@ def init_config(
 
 @config_cli.command("show")
 def show_config(
-    config_path: str = config_file_arg,
-    output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
+    name: str | None = t.Argument(
+        None,
+        help="Name of config to show (shows active if not provided)",
+    ),
+    output_format: str = output_format_opt,
     resolve: bool = t.Option(
-        True,
+        False,
         "--resolve/--no-resolve",
         help="Show resolved configuration with expanded toolsets",
     ),
-):
+) -> None:
     """Show current configuration.
 
     With --resolve (default), shows the fully resolved configuration
@@ -49,34 +121,50 @@ def show_config(
     from llmling.config.models import Config
     from llmling.config.runtime import RuntimeConfig
 
-    if not resolve:
-        # Just show the raw config file
-        config = Config.from_file(config_path)
-        format_output(config, output_format)
-        return
+    try:
+        # Get config path to show
+        if name is None:
+            if active := config_store.get_active():
+                path = active[1]
+            else:
+                print("No active config set")
+                raise t.Exit(1)  # noqa: TRY301
+        else:
+            path = config_store.get_config(name)
 
-    with RuntimeConfig.open_sync(config_path) as runtime:
-        # Create resolved view of configuration
-        resolved = {
-            "version": runtime.original_config.version,
-            "global_settings": runtime.original_config.global_settings.model_dump(),
-            "resources": {
-                resource.uri: resource.model_dump()
-                for resource in runtime.get_resources()
-                if resource.uri  # ensure we have a name
-            },
-            "tools": {
-                tool.name: {
-                    "description": tool.description,
-                    "import_path": tool.import_path,
-                    "schema": tool.get_schema(),
-                }
-                for tool in runtime.get_tools()
-            },
-            "prompts": {
-                prompt.name: prompt.model_dump()
-                for prompt in runtime.get_prompts()
-                if prompt.name  # ensure we have a name
-            },
-        }
-        format_output(resolved, output_format)
+        if not resolve:
+            # Just show the raw config file
+            config = Config.from_file(path)
+            format_output(config, output_format)
+            return
+
+        # Show resolved configuration
+        with RuntimeConfig.open_sync(path) as runtime:
+            # Create resolved view of configuration
+            resolved = {
+                "version": runtime.original_config.version,
+                "global_settings": runtime.original_config.global_settings.model_dump(),
+                "resources": {
+                    resource.uri: resource.model_dump()
+                    for resource in runtime.get_resources()
+                    if resource.uri  # ensure we have a name
+                },
+                "tools": {
+                    tool.name: {
+                        "description": tool.description,
+                        "import_path": tool.import_path,
+                        "schema": tool.get_schema(),
+                    }
+                    for tool in runtime.get_tools()
+                },
+                "prompts": {
+                    prompt.name: prompt.model_dump()
+                    for prompt in runtime.get_prompts()
+                    if prompt.name  # ensure we have a name
+                },
+            }
+            format_output(resolved, output_format)
+
+    except Exception as exc:
+        print(f"Failed to show config: {exc}")
+        raise t.Exit(1) from exc

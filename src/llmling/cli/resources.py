@@ -5,14 +5,12 @@ import asyncio
 import typer as t
 
 from llmling.cli.constants import (
-    FORMAT_CMDS,
-    FORMAT_HELP,
     RESOURCE_NAME_HELP,
-    VERBOSE_CMDS,
-    VERBOSE_HELP,
-    config_file_arg,
+    config_file_opt,
+    output_format_opt,
+    verbose_opt,
 )
-from llmling.cli.utils import format_output, verbose_callback
+from llmling.cli.utils import format_output
 
 
 resources_cli = t.Typer(help="Resource management commands.", no_args_is_help=True)
@@ -20,11 +18,9 @@ resources_cli = t.Typer(help="Resource management commands.", no_args_is_help=Tr
 
 @resources_cli.command("list")
 def list_resources(
-    config_path: str = config_file_arg,
-    output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
-    verbose: bool = t.Option(
-        False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-    ),
+    config_path: str = config_file_opt,
+    output_format: str = output_format_opt,
+    verbose: bool = verbose_opt,
 ):
     """List all configured resources."""
     from llmling.config.runtime import RuntimeConfig
@@ -35,12 +31,10 @@ def list_resources(
 
 @resources_cli.command("show")
 def show_resource(
-    config_path: str = config_file_arg,
+    config_path: str = config_file_opt,
     name: str = t.Argument(help=RESOURCE_NAME_HELP),
-    output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
-    verbose: bool = t.Option(
-        False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-    ),
+    output_format: str = output_format_opt,
+    verbose: bool = verbose_opt,
 ):
     """Show details of a specific resource."""
     from llmling.config.runtime import RuntimeConfig
@@ -51,11 +45,9 @@ def show_resource(
 
 @resources_cli.command("load")
 def load_resource(
-    config_path: str = config_file_arg,
+    config_path: str = config_file_opt,
     name: str = t.Argument(help=RESOURCE_NAME_HELP),
-    verbose: bool = t.Option(
-        False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-    ),
+    verbose: bool = verbose_opt,
 ):
     """Load and display resource content."""
     from llmling.config.runtime import RuntimeConfig

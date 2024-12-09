@@ -6,14 +6,12 @@ import typer as t
 
 from llmling.cli.constants import (
     ARGS_HELP,
-    FORMAT_CMDS,
-    FORMAT_HELP,
     TOOL_NAME_HELP,
-    VERBOSE_CMDS,
-    VERBOSE_HELP,
-    config_file_arg,
+    config_file_opt,
+    output_format_opt,
+    verbose_opt,
 )
-from llmling.cli.utils import format_output, verbose_callback
+from llmling.cli.utils import format_output
 
 
 tools_cli = t.Typer(help="Tool management commands.", no_args_is_help=True)
@@ -21,11 +19,9 @@ tools_cli = t.Typer(help="Tool management commands.", no_args_is_help=True)
 
 @tools_cli.command("list")
 def list_tools(
-    config_path: str = config_file_arg,
-    output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
-    verbose: bool = t.Option(
-        False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-    ),
+    config_path: str = config_file_opt,
+    output_format: str = output_format_opt,
+    verbose: bool = verbose_opt,
 ):
     """List available tools."""
     from llmling.config.runtime import RuntimeConfig
@@ -36,12 +32,10 @@ def list_tools(
 
 @tools_cli.command("show")
 def show_tool(
-    config_path: str = config_file_arg,
+    config_path: str = config_file_opt,
     name: str = t.Argument(help=TOOL_NAME_HELP),
-    output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
-    verbose: bool = t.Option(
-        False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-    ),
+    output_format: str = output_format_opt,
+    verbose: bool = verbose_opt,
 ):
     """Show tool documentation and schema."""
     from llmling.config.runtime import RuntimeConfig
@@ -52,12 +46,10 @@ def show_tool(
 
 @tools_cli.command("call")
 def call_tool(
-    config_path: str = config_file_arg,
+    config_path: str = config_file_opt,
     name: str = t.Argument(help=TOOL_NAME_HELP),
     args: list[str] = t.Argument(None, help=ARGS_HELP),  # noqa: B008
-    verbose: bool = t.Option(
-        False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-    ),
+    verbose: bool = verbose_opt,
 ):
     """Execute a tool with given arguments."""
     from llmling.config.runtime import RuntimeConfig
