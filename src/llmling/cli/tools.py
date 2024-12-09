@@ -6,13 +6,12 @@ import typer as t
 
 from llmling.cli.constants import (
     ARGS_HELP,
-    CONFIG_CMDS,
-    CONFIG_HELP,
     FORMAT_CMDS,
     FORMAT_HELP,
     TOOL_NAME_HELP,
     VERBOSE_CMDS,
     VERBOSE_HELP,
+    config_file_arg,
 )
 from llmling.cli.utils import format_output, verbose_callback
 
@@ -22,7 +21,7 @@ tools_cli = t.Typer(help="Tool management commands.", no_args_is_help=True)
 
 @tools_cli.command("list")
 def list_tools(
-    config_path: str = t.Option(None, *CONFIG_CMDS, help=CONFIG_HELP, show_default=False),
+    config_path: str = config_file_arg,
     output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
     verbose: bool = t.Option(
         False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
@@ -37,8 +36,8 @@ def list_tools(
 
 @tools_cli.command("show")
 def show_tool(
+    config_path: str = config_file_arg,
     name: str = t.Argument(help=TOOL_NAME_HELP),
-    config_path: str = t.Option(None, *CONFIG_CMDS, help=CONFIG_HELP, show_default=False),
     output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
     verbose: bool = t.Option(
         False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
@@ -53,9 +52,9 @@ def show_tool(
 
 @tools_cli.command("call")
 def call_tool(
+    config_path: str = config_file_arg,
     name: str = t.Argument(help=TOOL_NAME_HELP),
     args: list[str] = t.Argument(None, help=ARGS_HELP),  # noqa: B008
-    config_path: str = t.Option(None, *CONFIG_CMDS, help=CONFIG_HELP, show_default=False),
     verbose: bool = t.Option(
         False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
     ),

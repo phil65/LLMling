@@ -1,6 +1,6 @@
 import typer as t
 
-from llmling.cli.constants import CONFIG_HELP, FORMAT_CMDS, FORMAT_HELP
+from llmling.cli.constants import FORMAT_CMDS, FORMAT_HELP, config_file_arg
 from llmling.cli.utils import format_output
 
 
@@ -33,7 +33,7 @@ def init_config(
 
 @config_cli.command("show")
 def show_config(
-    config_path: str = t.Argument(help=CONFIG_HELP),
+    config_path: str = config_file_arg,
     output_format: str = t.Option("text", *FORMAT_CMDS, help=FORMAT_HELP),
     resolve: bool = t.Option(
         True,

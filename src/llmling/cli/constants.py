@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typer as t
+
 
 # Help texts
 CONFIG_HELP = "Path to LLMling configuration file"
@@ -14,3 +16,6 @@ ARGS_HELP = "Tool arguments in key=value format (can be specified multiple times
 CONFIG_CMDS = "-c", "--config"
 FORMAT_CMDS = "-f", "--format"
 VERBOSE_CMDS = "-v", "--verbose"
+
+
+config_file_arg = t.Argument(..., help=CONFIG_HELP)
