@@ -16,12 +16,7 @@ from llmling.resources.models import LoadedResource
 
 # Create and populate the default registry
 default_registry = ResourceLoaderRegistry()
-default_registry["image"] = ImageResourceLoader
-default_registry["path"] = PathResourceLoader
-default_registry["text"] = TextResourceLoader
-default_registry["cli"] = CLIResourceLoader
-default_registry["source"] = SourceResourceLoader
-default_registry["callable"] = CallableResourceLoader
+default_registry.register_default_loaders()
 
 __all__ = [
     "CLIResourceLoader",

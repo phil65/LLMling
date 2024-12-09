@@ -45,6 +45,25 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
         """Get all supported URI schemes."""
         return [loader.uri_scheme for loader in self._items.values()]
 
+    def register_default_loaders(self) -> None:
+        from llmling.resources import (
+            CallableResourceLoader,
+            CLIResourceLoader,
+            ImageResourceLoader,
+            PathResourceLoader,
+            RepositoryResourceLoader,
+            SourceResourceLoader,
+            TextResourceLoader,
+        )
+
+        self["path"] = PathResourceLoader
+        self["text"] = TextResourceLoader
+        self["cli"] = CLIResourceLoader
+        self["source"] = SourceResourceLoader
+        self["callable"] = CallableResourceLoader
+        self["image"] = ImageResourceLoader
+        self["repository"] = RepositoryResourceLoader
+
     def get_uri_templates(self) -> list[dict[str, Any]]:
         """Get URI templates for all registered loaders."""
         return [

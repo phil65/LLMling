@@ -145,24 +145,7 @@ class RuntimeConfig(EventEmitter):
 
     def _register_default_components(self) -> None:
         """Register all default components and config items."""
-        from llmling.resources import (
-            CallableResourceLoader,
-            CLIResourceLoader,
-            ImageResourceLoader,
-            PathResourceLoader,
-            RepositoryResourceLoader,
-            SourceResourceLoader,
-            TextResourceLoader,
-        )
-
-        self._loader_registry["path"] = PathResourceLoader
-        self._loader_registry["text"] = TextResourceLoader
-        self._loader_registry["cli"] = CLIResourceLoader
-        self._loader_registry["source"] = SourceResourceLoader
-        self._loader_registry["callable"] = CallableResourceLoader
-        self._loader_registry["image"] = ImageResourceLoader
-        self._loader_registry["repository"] = RepositoryResourceLoader
-
+        self._loader_registry.register_default_loaders()
         for name, proc_config in self._config.context_processors.items():
             self._processor_registry[name] = proc_config
 
