@@ -18,6 +18,21 @@ if TYPE_CHECKING:
 console = Console()
 
 
+NO_CONFIG_MESSAGE = """
+No configuration specified. To fix this:
+
+1. Use -c/--config to specify a config file:
+   llmling -c path/to/config.yml resource list
+
+2. Set an active config:
+   llmling config add myconfig path/to/config.yml
+   llmling config set myconfig
+
+3. Create a new config:
+   llmling config init path/to/config.yml
+""".strip()
+
+
 class ToolDisplay(BaseModel):
     """Display representation of a LLMCallableTool."""
 
@@ -88,8 +103,7 @@ def resolve_config_path(config: str | os.PathLike[str] | None) -> str:
     if not config:
         if active := config_store.get_active():
             return active[1]
-        msg = "No config provided and no active config set"
-        raise ValueError(msg)
+        raise ValueError(NO_CONFIG_MESSAGE)
 
     try:
         # First try as stored config name
