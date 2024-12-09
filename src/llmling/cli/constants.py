@@ -40,6 +40,16 @@ def complete_config_names(
     return [name for name in names if name.startswith(incomplete)]
 
 
+def complete_output_formats(
+    ctx: click.Context,
+    param: click.Parameter,
+    incomplete: str,
+) -> list[str]:
+    """Complete output format options."""
+    formats = ["text", "json", "yaml"]
+    return [f for f in formats if f.startswith(incomplete)]
+
+
 def verbose_callback(ctx: t.Context, _param: t.CallbackParam, value: bool) -> bool:
     """Handle verbose flag."""
     if value:
@@ -51,7 +61,12 @@ config_file_opt = t.Option(
     None, "-c", "--config", shell_complete=complete_config_names, help=CONFIG_HELP
 )
 
-output_format_opt = t.Option("text", *OUTPUT_FORMAT_CMDS, help=OUTPUT_FORMAT_HELP)
+output_format_opt = t.Option(
+    "text",
+    *OUTPUT_FORMAT_CMDS,
+    help=OUTPUT_FORMAT_HELP,
+    shell_complete=complete_output_formats,
+)
 verbose_opt = t.Option(
     False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
 )
