@@ -1,3 +1,5 @@
+"""Manages stored config mappings."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

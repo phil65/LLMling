@@ -1,3 +1,5 @@
+"""Registry for content processors."""
+
 from __future__ import annotations
 
 import asyncio

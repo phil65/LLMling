@@ -1,3 +1,5 @@
+"""Base class for implementing tools callable by an LLM via tool calling."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

@@ -1,4 +1,4 @@
-"""Callable context loader."""
+"""Callable execution utilities."""
 
 from __future__ import annotations
 

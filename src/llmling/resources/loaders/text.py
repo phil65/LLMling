@@ -1,3 +1,5 @@
+"""Resource loader for text content."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar

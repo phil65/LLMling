@@ -1,3 +1,5 @@
+"""Resource loader for Git repositories."""
+
 from __future__ import annotations
 
 import tempfile

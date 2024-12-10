@@ -1,4 +1,4 @@
-"""Source code context loader."""
+"""Utilities for importing callables and classes from dotted paths."""
 
 from __future__ import annotations
 

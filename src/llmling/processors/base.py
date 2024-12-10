@@ -1,3 +1,5 @@
+"""Base classes for content processors."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

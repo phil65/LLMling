@@ -1,3 +1,5 @@
+"""Utility functions for the watcher."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
