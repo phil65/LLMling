@@ -110,9 +110,8 @@ class ConfigStore:
             raise PermissionError(msg) from exc
         # All good, save the config
         mapping = self.load_mapping()
-        uri = path_obj.as_uri()
-        mapping["configs"][name] = uri
-        logger.debug("Adding config %r -> %s", name, uri)
+        mapping["configs"][name] = str(path_obj)
+        logger.debug("Adding config %r -> %s", name, path_obj)
         self.save_mapping(mapping)
 
     def remove_config(self, name: str) -> None:
