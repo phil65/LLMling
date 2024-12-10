@@ -8,8 +8,6 @@ from llmling.tools.base import LLMCallableTool
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-
     from llmling.config.runtime import RuntimeConfig
 
 
@@ -23,55 +21,48 @@ class LLMTools:
         self.runtime = runtime
 
     async def load_resource(self, name: str) -> dict[str, Any]:
-        """Load the content of a resource by its name.
+        """Load the content of a resource to use in the current interaction.
 
-        Use this tool to load the actual content of a resource. First use
-        get_resources() to see what's available, then provide the resource name
-        from that list.
+        Use this to access content from available resources that you want
+        to analyze or work with.
 
         Args:
-            name: Name of the resource to load (must match a name from get_resources())
+            name: Name of an available resource to load
 
         Returns:
-            The loaded resource including its content and metadata.
-
-        Raises:
-            ResourceError: If the resource doesn't exist or can't be loaded.
+            The resource content and metadata
         """
         resource = await self.runtime.load_resource(name)
         return resource.model_dump()
 
     def get_resources(self) -> list[dict]:
-        """List all available resources and their metadata.
+        """List all resources that are available for loading.
 
-        This tool returns information about all resources that can be loaded, including:
-        - name: The identifier to use with load_resource
-        - description: What the resource contains
-        - mimeType: The type of content (e.g., text/markdown, application/json)
+        Use this to discover what resources you can access using load_resource().
 
         Returns:
-            List of resources with their complete metadata.
+            List of available resources with their descriptions
         """
         return [i.model_dump(exclude={"uri"}) for i in self.runtime.get_resources()]
 
     async def register_tool(
         self,
         name: str,
-        function: str | Callable[..., Any],
+        function: str,
         description: str | None = None,
     ) -> str:
-        """Register a new tool from a function or import path.
+        """Register an importable function as a tool for future interactions.
 
-        This tool can register a callable from an import path as string
-        (e.g. "webbrowser.open")
+        IMPORTANT: The registered tool will NOT be available in this current
+        interaction. It can only be used in future requests.
 
         Args:
-            name: Name for the new tool
-            function: Function to register (callable or import path)
-            description: Optional description override (uses function docstring if None)
+            function: Import path to the function (e.g. "json.dumps")
+            name: Optional custom name for the tool (uses function name if not provided)
+            description: What the tool does and how to use it
 
         Returns:
-            Message confirming the tool registration
+            Confirmation message about the registration
         """
         return await self.runtime.register_tool(function, name, description)
 
@@ -81,41 +72,32 @@ class LLMTools:
         code: str,
         description: str | None = None,
     ) -> str:
-        """Register a new tool from Python code.
+        """Register new tool functionality for future interactions.
 
-        The provided code should define a function that will be converted into a tool.
-        The function's docstring will be used as the tool's description if no description
-        is provided.
+        IMPORTANT: The registered tool will NOT be available in this current
+        interaction. It can only be used in future requests.
 
         Args:
-            name: Name for the new tool
-            code: Python code defining the tool function
-            description: Optional description override (uses function docstring if None)
+            name: Identifying name for the new tool
+            code: Python code that implements the tool
+            description: What the tool does and how to use it
 
         Returns:
-            Message confirming the tool registration
+            Confirmation message about the registration
         """
         return await self.runtime.register_code_tool(name, code, description)
-
-    def get_tools(self) -> Sequence[LLMCallableTool]:
-        """Get all registered tools.
-
-        Returns:
-            List of all tools
-        """
-        return self.runtime.get_tools()
 
     async def install_package(
         self,
         package: str,
     ) -> str:
-        """Install a Python package.
+        """Install a Python package for future tool functionality.
 
-        This allows installing packages needed for tool functionality.
-        Package specifications follow PIP format (e.g. "requests>=2.28.0").
+        NOTE: Installed packages will only be available for tools in future requests,
+        not in the current interaction.
 
         Args:
-            package: Package specification to install (e.g. "requests", "pillow>=10.0.0")
+            package: Package specification to install (e.g. "requests>=2.28.0")
 
         Returns:
             Message confirming the installation
@@ -130,7 +112,6 @@ class LLMTools:
         fns = [
             self.register_tool,
             self.register_code_tool,
-            self.get_tools,
             self.install_package,
         ]
         return [LLMCallableTool.from_callable(fn) for fn in fns]  # type: ignore

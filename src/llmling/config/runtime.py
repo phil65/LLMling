@@ -397,20 +397,16 @@ class RuntimeConfig(EventEmitter):
 
     # Resource Management
     async def load_resource(self, name: str) -> LoadedResource:
-        """Load the content of a resource by its name.
-
-        Use this tool to load the actual content of a resource. First use
-        get_resources() to see what's available, then provide the resource name
-        from that list.
+        """Load a resource by its registered name.
 
         Args:
-            name: Name of the resource to load (must match a name from get_resources())
+            name: Name of the resource as registered in configuration
 
         Returns:
-            The loaded resource including its content and metadata.
+            LoadedResource containing content and metadata
 
         Raises:
-            ResourceError: If the resource doesn't exist or can't be loaded.
+            ResourceError: If resource doesn't exist or cannot be loaded
         """
         return await self._resource_registry.load(name)
 
@@ -530,16 +526,10 @@ class RuntimeConfig(EventEmitter):
         return self._resource_registry[name]
 
     def get_resources(self) -> Sequence[BaseResource]:
-        """List all available resources and their metadata.
-
-        This tool returns information about all resources that can be loaded, including:
-        - name: The identifier to use with load_resource
-        - description: What the resource contains
-        - uri: The resource's location
-        - mimeType: The type of content (e.g., text/markdown, application/json)
+        """Get all registered resource configurations.
 
         Returns:
-            List of resources with their complete metadata.
+            List of all resource configurations
         """
         return list(self._resource_registry.values())
 
@@ -641,11 +631,10 @@ class RuntimeConfig(EventEmitter):
     ) -> str:
         """Install a Python package using the dependency manager.
 
-        This allows installing packages needed for tool functionality.
         Package specifications follow PIP format (e.g. "requests>=2.28.0").
 
         Args:
-            package: Package specification to install (e.g. "requests", "pillow>=10.0.0")
+            package: Package specification to install
 
         Returns:
             Message confirming the installation
@@ -653,9 +642,8 @@ class RuntimeConfig(EventEmitter):
         Raises:
             ToolError: If installation fails or package spec is invalid
 
-        Examples:
-            >>> await install_package("requests")
-            >>> await install_package("pillow>=10.0.0")
+        Example:
+            >>> await runtime.install_package("requests>=2.28.0")
         """
         try:
             await self._dep_manager.install_dependency(package)
@@ -672,24 +660,20 @@ class RuntimeConfig(EventEmitter):
     ) -> str:
         """Register a new tool from a function or import path.
 
-        This tool can register a callable either from:
-        - A direct callable object (function/method)
-        - An import path as string (e.g. "webbrowser.open")
-
         Args:
             function: Function to register (callable or import path)
-            name: Name for the new tool (if None, function name is used)
-            description: Optional description override (uses function docstring if None)
+            name: Optional name override (uses function name if None)
+            description: Optional description override (uses docstring if None)
 
         Returns:
-            Message confirming the tool registration
+            Message confirming the registration
 
         Raises:
-            ToolError: If registration fails (e.g. invalid import path, invalid function)
+            ToolError: If registration fails
 
-        Examples:
-            >>> await register_tool("webbrowser.open", "open_url")
-            >>> await register_tool(my_function)
+        Example:
+            >>> await runtime.register_tool("webbrowser.open", "open_url")
+            >>> await runtime.register_tool(my_function)
         """
         try:
             tool = LLMCallableTool.from_callable(
@@ -718,23 +702,21 @@ class RuntimeConfig(EventEmitter):
         Args:
             name: Name for the new tool
             code: Python code defining the tool function
-            description: Optional description override (uses function docstring if None)
+            description: Optional description override
 
         Returns:
-            Message confirming the tool registration
+            Message confirming the registration
 
         Raises:
-            ToolError: If registration fails (e.g. invalid code, no callable found)
+            ToolError: If registration fails
 
-        Examples:
-            >>> await register_code_tool(
-            ...     name="word_count",
-            ...     code='''
-            ...     async def count_words(text: str) -> dict[str, int]:
-            ...         words = text.split()
-            ...         return {"total": len(words)}
-            ...     '''
-            ... )
+        Example:
+            >>> code = '''
+            ... async def count_words(text: str) -> dict[str, int]:
+            ...     words = text.split()
+            ...     return {"total": len(words)}
+            ... '''
+            >>> await runtime.register_code_tool("word_count", code)
         """
         try:
             namespace: dict[str, Any] = {}
