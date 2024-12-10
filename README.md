@@ -235,10 +235,7 @@ Start the server directly from command line:
 
 ```bash
 # Latest version
-uvx --upgrade --from llmling@latest mcp-server-llmling
-
-# Specific version
-uvx --from llmling==0.7.0 mcp-server-llmling path/to/config.yml
+uvx mcp-server-llmling@latest start path/to/your/config.yml
 ```
 
 
