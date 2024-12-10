@@ -685,8 +685,8 @@ class RuntimeConfig(EventEmitter):
 
     async def register_tool(
         self,
-        name: str,
         function: str | Callable[..., Any],
+        name: str | None = None,
         description: str | None = None,
     ) -> str:
         """Register a new tool from a function or import path.
@@ -696,8 +696,8 @@ class RuntimeConfig(EventEmitter):
         - An import path as string (e.g. "webbrowser.open")
 
         Args:
-            name: Name for the new tool
             function: Function to register (callable or import path)
+            name: Name for the new tool (if None, function name is used)
             description: Optional description override (uses function docstring if None)
 
         Returns:
@@ -707,14 +707,14 @@ class RuntimeConfig(EventEmitter):
             ToolError: If registration fails (e.g. invalid import path, invalid function)
 
         Examples:
-            >>> await register_tool("open_url", "webbrowser.open")
-            >>> await register_tool("my_tool", my_function)
+            >>> await register_tool("webbrowser.open", "open_url")
+            >>> await register_tool(my_function)
         """
         try:
             tool = LLMCallableTool.from_callable(
                 function, name_override=name, description_override=description
             )
-            self._tool_registry.register(name, tool)
+            self._tool_registry.register(name or tool.name, tool)
             source = function if isinstance(function, str) else function.__name__
         except Exception as exc:
             msg = f"Failed to register tool: {exc}"
