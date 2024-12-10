@@ -110,11 +110,11 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
         return [self.get_schema(name) for name in self._items]
 
     @logfire.instrument("Executing tool {name}")
-    async def execute(self, name: str, **params: Any) -> Any:
+    async def execute(self, _name: str, **params: Any) -> Any:
         """Execute a registered function.
 
         Args:
-            name: Name of the function to execute
+            _name: Name of the function to execute
             **params: Parameters to pass to the function
 
         Returns:
@@ -125,9 +125,9 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             ToolError: If execution fails
         """
         try:
-            tool = self.get(name)
+            tool = self.get(_name)
         except KeyError as exc:
-            msg = f"Function {name} not found"
+            msg = f"Function {_name} not found"
             raise ToolNotFoundError(msg) from exc
 
         # Let the original exception propagate
