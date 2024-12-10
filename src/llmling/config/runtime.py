@@ -89,7 +89,7 @@ class RuntimeConfig(EventEmitter):
         self._initialized = False
         # Register builtin processors
         proc = Jinja2Processor(config.global_settings.jinja_environment)
-        self._processor_registry.register("jinja_template", proc)
+        self._processor_registry["jinja_template"] = proc
         settings = self._config.global_settings
         self._dep_manager = depkit.DependencyManager(
             prefer_uv=settings.prefer_uv,
