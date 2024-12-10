@@ -530,6 +530,14 @@ toolsets:
   - llmling.web   # Web/browser tools
 ```
 
+## Toolsets
+
+Toolsets are, like the name says, a collection of tools. Right now LLMling supports:
+
+- Extension point system
+- OpenAPI endpoints
+- class-based toolsets
+
 ### Function-Based Tools
 
 Tools can be created from any Python function:
@@ -576,34 +584,10 @@ class BrowserTool(LLMCallableTool):
     name = "browser"
     description = "Control web browser to navigate and interact with web pages"
 
-    async def execute(
-        self,
-        action: Literal["open", "click", "read"] = "open",
-        url: str | None = None,
-        selector: str | None = None,
-    ) -> dict[str, str]:
-        """Execute browser action.
+    ...
 
-        Args:
-            action: Browser action to perform
-            url: URL to navigate to (for 'open' action)
-            selector: Element selector (for 'click' and 'read' actions)
-        """
-        match action:
-            case "open":
-                return await self._open_page(url)
-            case "click":
-                return await self._click_element(selector)
-            case "read":
-                return await self._read_content(selector)
-
-    async def startup(self) -> None:
-        """Initialize browser on startup."""
-        self.page = await self._launch_browser()
-
-    async def shutdown(self) -> None:
-        """Clean up browser resources."""
-        await self.page.close()
+    def get_tools(self):
+        return [self.open_url, self.click_button]
 ```
 
 ### Tool Collections (Toolsets)
