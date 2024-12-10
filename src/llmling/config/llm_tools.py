@@ -1,10 +1,16 @@
 """Wrapper for tools supplied to the LLM."""
 
-from collections.abc import Callable, Sequence
-from typing import Any
+from __future__ import annotations
 
-from llmling.config.runtime import RuntimeConfig
+from typing import TYPE_CHECKING, Any
+
 from llmling.tools.base import LLMCallableTool
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    from llmling.config.runtime import RuntimeConfig
 
 
 class LLMTools:
