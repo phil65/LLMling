@@ -759,3 +759,16 @@ class AnalysisTool(LLMCallableTool):
         """Clean up analysis engine."""
         await self.analyzer.close()
 ```
+
+More: (ATTENTION: THESE ARE MOSTLY AI GENERATED AND OUTDATED, NO GUARANTEE FOR CORRECTNESS)
+[introduction](https://github.com/phil65/LLMling/blob/main/docs/introduction.md)
+[quick_example](https://github.com/phil65/LLMling/blob/main/docs/quick_example.md)
+[usage](https://github.com/phil65/LLMling/blob/main/docs/usage.md)
+[yaml_config](https://github.com/phil65/LLMling/blob/main/docs/yaml_config.md)
+[CLI](https://github.com/phil65/LLMling/blob/main/docs/cli.md)
+
+[resources](https://github.com/phil65/LLMling/blob/main/docs/resources.md)
+[prompts](https://github.com/phil65/LLMling/blob/main/docs/prompts.md)
+[tools](https://github.com/phil65/LLMling/blob/main/docs/tools.md)
+[server](https://github.com/phil65/LLMling/blob/main/docs/server.md)
+[extending](https://github.com/phil65/LLMling/blob/main/docs/extending.md)
