@@ -90,14 +90,17 @@ graph TB
     classDef cli fill:#fff3e0,stroke:#e65100
     classDef mcp fill:#f3e5f5,stroke:#4a148c
     classDef agent fill:#e8f5e9,stroke:#1b5e20
-    classDef access fill:#fff,stroke:#666
+    classDef access fill:#e8eaf6,stroke:#666
+    classDef serverBox fill:#7986cb,stroke:#3949ab
+    classDef agentBox fill:#81c784,stroke:#2e7d32
 
     class RT core
     class Resources,Tools,Prompts comp
     class CLI,MCP_CLI,Agent_CLI cli
     class MCP,Injection mcp
     class LLM,Agent_Web agent
-    class Direct_Access,Function_Access access
+    class Direct_Access serverBox
+    class Function_Access agentBox
 ```
 
 
