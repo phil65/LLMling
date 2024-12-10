@@ -50,6 +50,9 @@ The YAML configuration creates a complete environment that provides the LLM with
 - Structured prompts for consistent interaction
 - Tools for extending capabilities
 
+
+An overview about the whole system:
+
 ```mermaid
 graph TB
     subgraph LLMling[LLMling Core Package]
@@ -68,13 +71,13 @@ graph TB
         CLI -->|modify| Core_Components
     end
 
-    subgraph Direct_Access[Direct Component Access]
+    subgraph Direct_Access[mcp-server-llmling<br/>Direct Component Access]
         MCP[HTTP/SSE Server<br/>- Start/Stop server]
         MCP_CLI[Server CLI<br/>- Start/Stop server]
         Injection[Injection Server<br/>- Inject components<br/>during runtime]
     end
 
-    subgraph Function_Access[Access via Function Calling]
+    subgraph Function_Access[llmling-agent<br/>Access via Function Calling]
         LLM[LLM Integration<br/>- Function calling<br/>- Resource access<br/>- Tool execution<br/>- Structured output]
         Agent_CLI[Agent CLI<br/>- One-shot execution<br/>- Batch processing]
         Agent_Web[Agent Web UI<br/>- Interactive chat]
