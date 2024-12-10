@@ -109,7 +109,7 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
         """
         return [self.get_schema(name) for name in self._items]
 
-    @logfire.instrument("Executing tool {name}")
+    @logfire.instrument("Executing tool {_name}")
     async def execute(self, _name: str, **params: Any) -> Any:
         """Execute a registered function.
 
