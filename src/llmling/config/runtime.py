@@ -368,11 +368,16 @@ class RuntimeConfig(EventEmitter):
             prompt_registry=prompt_registry,
             tool_registry=tool_registry,
         )
+        from llmling.config.llm_tools import LLMTools
+
+        llm_tools = LLMTools(runtime)
         if config.global_settings.enable_resource_tools:
-            runtime._register_resource_tools()
+            for tool in llm_tools.get_llm_resource_tools():
+                tool_registry.register(tool.name, tool)
 
         if config.global_settings.enable_tool_management:
-            runtime._register_tool_management_tools()
+            for tool in llm_tools.get_llm_tool_management_tools():
+                tool_registry.register(tool.name, tool)
 
         return runtime
 
@@ -389,34 +394,6 @@ class RuntimeConfig(EventEmitter):
         await self._resource_registry.shutdown()
         await self._tool_registry.shutdown()
         await self._processor_registry.shutdown()
-
-    def _register_resource_tools(self) -> None:
-        """Register resource tools if enabled."""
-        # Resource management
-        tool = LLMCallableTool.from_callable(self.get_resources)
-        self._tool_registry.register("get_resources", tool)
-
-        # Resource loading
-        tool = LLMCallableTool.from_callable(self.load_resource)
-        self._tool_registry.register("load_resource", tool)
-
-    def _register_tool_management_tools(self) -> None:
-        """Register tools for dynamic tool management and dependencies."""
-        # Tool registration tools
-        tool = LLMCallableTool.from_callable(self.register_tool)
-        self._tool_registry.register("register_tool", tool)
-
-        # Code-based tool registration
-        tool = LLMCallableTool.from_callable(self.register_code_tool)
-        self._tool_registry.register("register_code_tool", tool)
-
-        # Package management
-        tool = LLMCallableTool.from_callable(self.install_package)
-        self._tool_registry.register("install_package", tool)
-
-        # Tool discovery
-        tool = LLMCallableTool.from_callable(self.get_tools)
-        self._tool_registry.register("list_tools", tool)
 
     # Resource Management
     async def load_resource(self, name: str) -> LoadedResource:
