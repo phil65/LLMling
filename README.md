@@ -70,11 +70,13 @@ graph TB
     subgraph Direct_Access[Direct Component Access]
         MCP[HTTP/SSE Server<br/>- Start/Stop server]
         MCP_CLI[Server CLI<br/>- Start/Stop server]
+        Injection[Injection Server<br/>- Inject components<br/>during runtime]
     end
 
     subgraph Function_Access[Access via Function Calling]
         LLM[LLM Integration<br/>- Function calling<br/>- Resource access<br/>- Tool execution<br/>- Structured output]
-        Agent_CLI[Agent CLI<br/>- Interactive chat<br/>- Batch processing]
+        Agent_CLI[Agent CLI<br/>- One-shot execution<br/>- Batch processing]
+        Agent_Web[Agent Web UI<br/>- Interactive chat]
     end
 
     RT -->|All components:<br/>Resources, Tools, Prompts| MCP
@@ -92,15 +94,87 @@ graph TB
     class RT core
     class Resources,Tools,Prompts comp
     class CLI,MCP_CLI,Agent_CLI cli
-    class MCP mcp
-    class LLM agent
+    class MCP,Injection mcp
+    class LLM,Agent_Web agent
     class Direct_Access,Function_Access access
 ```
 
 
 ## Usage
 
-### With Zed Editor
+### 1. CLI Usage
+
+Create a basic configuration file:
+```bash
+# Create a new config file with basic settings
+llmling config init my_config.yml
+
+# Add it to your stored configs
+llmling config add myconfig my_config.yml
+llmling config set myconfig  # Make it active
+```
+
+Basic CLI commands:
+```bash
+# List available resources
+llmling resource list
+
+# Load a resource
+llmling resource load python_files
+
+# Execute a tool
+llmling tool call open_url url=https://github.com
+
+# Show a prompt
+llmling prompt show greet
+
+# Many more commands. The CLI will get extended when installing
+# llmling-agent and mcp-server-llmling
+```
+
+### 2. Agent Usage (powered by pydantic-AI)
+
+Create a configuration file (`config.yml`):
+```yaml
+tools:
+  open_url:
+    import_path: "webbrowser.open"
+
+resources:
+  bookmarks:
+    type: text
+    description: "Common Python URLs"
+    content: |
+      Python Website: https://python.org
+```
+
+Use the agent with this configuration:
+```python
+from llmling.config.runtime import RuntimeConfig
+from llmling_agent import LLMLingAgent
+from pydantic import BaseModel
+
+class WebResult(BaseModel):
+    opened_url: str
+    success: bool
+
+async with RuntimeConfig.open("config.yml") as runtime:
+    agent = LLMLingAgent[WebResult](runtime)
+    result = await agent.run(
+        "Load the bookmarks resource and open the Python website URL"
+    )
+    print(f"Opened: {result.data.opened_url}")
+```
+
+The agent will:
+1. Load the bookmarks resource
+2. Extract the Python website URL
+3. Use the `open_url` tool to open it
+4. Return the structured result
+
+### 3. Server Usage
+
+#### With Zed Editor
 
 Add LLMLing as a context server in your `settings.json`:
 
@@ -124,7 +198,7 @@ Add LLMLing as a context server in your `settings.json`:
 }
 ```
 
-### With Claude Desktop
+#### With Claude Desktop
 
 Configure LLMLing in your `claude_desktop_config.json`:
 
@@ -144,7 +218,7 @@ Configure LLMLing in your `claude_desktop_config.json`:
 }
 ```
 
-### Manual Server Start
+#### Manual Server Start
 
 Start the server directly from command line:
 
@@ -155,7 +229,7 @@ uvx --upgrade --from llmling@latest mcp-server-llmling
 # Specific version
 uvx --from llmling==0.7.0 mcp-server-llmling path/to/config.yml
 ```
-```
+
 
 ## Resources
 
