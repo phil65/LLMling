@@ -51,6 +51,10 @@ The YAML configuration creates a complete environment that provides the LLM with
 - Tools for extending capabilities
 
 
+- Written from ground up in modern python (minimum 3.12 required)
+- 100% typed
+- pydantic(-ai) based
+
 An overview about the whole system:
 
 ```mermaid
