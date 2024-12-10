@@ -63,8 +63,9 @@ graph TB
 
         CLI[Core CLI<br/>- config add/remove/list<br/>- resource list/load<br/>- tool list/execute<br/>- prompt list/render]
 
-        Core_Components --> RT
-        RT --> CLI
+        Core_Components -->|YAML configuration| RT
+        RT -->|All components| CLI
+        CLI -->|modify| Core_Components
     end
 
     subgraph Direct_Access[Direct Component Access]
@@ -79,7 +80,7 @@ graph TB
         Agent_Web[Agent Web UI<br/>- Interactive chat]
     end
 
-    RT -->|All components:<br/>Resources, Tools, Prompts| MCP
+    RT -->|All components| MCP
     RT -->|Resources & Tools<br/>via function calling| LLM
     MCP_CLI --> CLI
     Agent_CLI --> CLI
