@@ -594,11 +594,15 @@ class RuntimeConfig(EventEmitter):
         """
         return dict(self._tool_registry)
 
-    async def execute_tool(self, name: str, **params: Any) -> Any:
+    async def execute_tool(
+        self,
+        _name: str,  # prefixed with "_" to avoid name collisions
+        **params: Any,
+    ) -> Any:
         """Execute a tool by name.
 
         Args:
-            name: Name of the tool to execute
+            _name: Name of the tool to execute
             **params: Parameters to pass to the tool
 
         Returns:
@@ -607,7 +611,7 @@ class RuntimeConfig(EventEmitter):
         Raises:
             ToolError: If tool execution fails
         """
-        return await self._tool_registry.execute(name, **params)
+        return await self._tool_registry.execute(_name, **params)
 
     def get_tool(self, name: str) -> LLMCallableTool:
         """Get a tool by name.
