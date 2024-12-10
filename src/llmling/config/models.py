@@ -70,6 +70,25 @@ class ConfigModel(BaseModel):
         return cls.model_validate(data)
 
 
+class LLMCapabilitiesConfig(ConfigModel):
+    """Configuration for LLM system capabilities."""
+
+    load_resource: bool = True
+    """Whether the LLM can load and access resource content."""
+
+    get_resources: bool = True
+    """Whether the LLM can discover available resources."""
+
+    install_package: bool = False
+    """Whether the LLM can install new Python packages for future tools."""
+
+    register_tool: bool = False
+    """Whether the LLM can register importable functions as new tools."""
+
+    register_code_tool: bool = False
+    """Whether the LLM can create new tools from provided Python code."""
+
+
 class Jinja2Config(ConfigModel):
     """Configuration for Jinja2 environment.
 
@@ -200,11 +219,8 @@ class GlobalSettings(ConfigModel):
     jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
     """Jinja2 environment configuration"""
 
-    enable_resource_tools: bool = True
-    """Whether to register tools for resource loading/listing"""
-
-    enable_tool_management: bool = True
-    """Whether to register tools for dynamic tool registration and package management"""
+    llm_capabilities: LLMCapabilitiesConfig = Field(default_factory=LLMCapabilitiesConfig)
+    """Control which system capabilities are exposed to LLMs."""
 
 
 class BaseResource(BaseModel):

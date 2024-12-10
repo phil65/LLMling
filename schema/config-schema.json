@@ -481,17 +481,9 @@
           "$ref": "#/$defs/Jinja2Config",
           "description": "Jinja2 environment configuration"
         },
-        "enable_resource_tools": {
-          "default": true,
-          "description": "Whether to register tools for resource loading/listing",
-          "title": "Enable Resource Tools",
-          "type": "boolean"
-        },
-        "enable_tool_management": {
-          "default": true,
-          "description": "Whether to register tools for dynamic tool registration and package management",
-          "title": "Enable Tool Management",
-          "type": "boolean"
+        "llm_capabilities": {
+          "$ref": "#/$defs/LLMCapabilitiesConfig",
+          "description": "Control which system capabilities are exposed to LLMs."
         }
       },
       "title": "GlobalSettings",
@@ -709,6 +701,44 @@
         }
       },
       "title": "Jinja2Config",
+      "type": "object"
+    },
+    "LLMCapabilitiesConfig": {
+      "additionalProperties": false,
+      "description": "Configuration for LLM system capabilities.",
+      "properties": {
+        "load_resource": {
+          "default": true,
+          "description": "Whether the LLM can load and access resource content.",
+          "title": "Load Resource",
+          "type": "boolean"
+        },
+        "get_resources": {
+          "default": true,
+          "description": "Whether the LLM can discover available resources.",
+          "title": "Get Resources",
+          "type": "boolean"
+        },
+        "install_package": {
+          "default": false,
+          "description": "Whether the LLM can install new Python packages for future tools.",
+          "title": "Install Package",
+          "type": "boolean"
+        },
+        "register_tool": {
+          "default": false,
+          "description": "Whether the LLM can register importable functions as new tools.",
+          "title": "Register Tool",
+          "type": "boolean"
+        },
+        "register_code_tool": {
+          "default": false,
+          "description": "Whether the LLM can create new tools from provided Python code.",
+          "title": "Register Code Tool",
+          "type": "boolean"
+        }
+      },
+      "title": "LLMCapabilitiesConfig",
       "type": "object"
     },
     "MessageContent": {

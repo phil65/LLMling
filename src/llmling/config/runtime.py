@@ -371,13 +371,19 @@ class RuntimeConfig(EventEmitter):
         from llmling.config.llm_tools import LLMTools
 
         llm_tools = LLMTools(runtime)
-        if config.global_settings.enable_resource_tools:
-            for tool in llm_tools.get_llm_resource_tools():
-                tool_registry.register(tool.name, tool)
+        capabilities = config.global_settings.llm_capabilities
 
-        if config.global_settings.enable_tool_management:
-            for tool in llm_tools.get_llm_tool_management_tools():
-                tool_registry.register(tool.name, tool)
+        # Register enabled capabilities
+        if capabilities.load_resource:
+            tool_registry["load_resource"] = llm_tools.load_resource
+        if capabilities.get_resources:
+            tool_registry["get_resources"] = llm_tools.get_resources
+        if capabilities.install_package:
+            tool_registry["install_package"] = llm_tools.install_package
+        if capabilities.register_tool:
+            tool_registry["register_tool"] = llm_tools.register_tool
+        if capabilities.register_code_tool:
+            tool_registry["register_code_tool"] = llm_tools.register_code_tool
 
         return runtime
 
