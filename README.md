@@ -50,6 +50,54 @@ The YAML configuration creates a complete environment that provides the LLM with
 - Structured prompts for consistent interaction
 - Tools for extending capabilities
 
+```mermaid
+graph TB
+    subgraph LLMling[LLMling Core Package]
+        RT[RuntimeConfig]
+
+        subgraph Core_Components[Core Components]
+            Resources[Resource Management<br/>- Load files/URLs<br/>- Process content<br/>- Watch changes]
+            Tools[Tool System<br/>- Execute functions<br/>- Register new tools<br/>- OpenAPI integration]
+            Prompts[Prompt System<br/>- Static/Dynamic prompts<br/>- Template rendering<br/>- Completion support]
+        end
+
+        CLI[Core CLI<br/>- config add/remove/list<br/>- resource list/load<br/>- tool list/execute<br/>- prompt list/render]
+
+        Core_Components --> RT
+        RT --> CLI
+    end
+
+    subgraph Direct_Access[Direct Component Access]
+        MCP[HTTP/SSE Server<br/>- Start/Stop server]
+        MCP_CLI[Server CLI<br/>- Start/Stop server]
+    end
+
+    subgraph Function_Access[Access via Function Calling]
+        LLM[LLM Integration<br/>- Function calling<br/>- Resource access<br/>- Tool execution<br/>- Structured output]
+        Agent_CLI[Agent CLI<br/>- Interactive chat<br/>- Batch processing]
+    end
+
+    RT -->|All components:<br/>Resources, Tools, Prompts| MCP
+    RT -->|Resources & Tools<br/>via function calling| LLM
+    MCP_CLI --> CLI
+    Agent_CLI --> CLI
+
+    classDef core fill:#e1f5fe,stroke:#01579b
+    classDef comp fill:#e3f2fd,stroke:#1565c0
+    classDef cli fill:#fff3e0,stroke:#e65100
+    classDef mcp fill:#f3e5f5,stroke:#4a148c
+    classDef agent fill:#e8f5e9,stroke:#1b5e20
+    classDef access fill:#fff,stroke:#666
+
+    class RT core
+    class Resources,Tools,Prompts comp
+    class CLI,MCP_CLI,Agent_CLI cli
+    class MCP mcp
+    class LLM agent
+    class Direct_Access,Function_Access access
+```
+
+
 ## Usage
 
 ### With Zed Editor
