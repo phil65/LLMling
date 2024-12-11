@@ -59,15 +59,40 @@ class ConfigModel(BaseModel):
 
         return merge_models(self, other)
 
-    def to_yaml(self) -> str:
-        """Serialize to YAML string."""
-        return yamling.dump_yaml(self.model_dump(exclude_none=True))
-
     @classmethod
     def from_yaml(cls, content: str) -> Self:
         """Create from YAML string."""
         data = yamling.load_yaml(content)
         return cls.model_validate(data)
+
+    def model_dump_yaml(self) -> str:
+        """Dump configuration to YAML string."""
+        import yamling
+
+        return yamling.dump_yaml(self.model_dump(exclude_none=True))
+
+    def save(self, path: str | os.PathLike[str], overwrite: bool = False) -> None:
+        """Save configuration to a YAML file.
+
+        Args:
+            path: Path to save the configuration to
+            overwrite: Whether to overwrite an existing file
+
+        Raises:
+            OSError: If file cannot be written
+            ValueError: If path is invalid
+        """
+        try:
+            yaml_str = self.model_dump_yaml()
+            file_path = upath.UPath(path)
+            if file_path.exists() and not overwrite:
+                msg = f"File already exists: {path}"
+                raise FileExistsError(msg)  # noqa: TRY301
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.write_text(yaml_str)
+        except Exception as exc:
+            msg = f"Failed to save configuration to {path}"
+            raise ValueError(msg) from exc
 
 
 class LLMCapabilitiesConfig(ConfigModel):
@@ -648,12 +673,6 @@ class Config(ConfigModel):
                 if processor.name not in self.context_processors:
                     msg = f"Processor {processor.name!r} not found"
                     raise ValueError(msg)
-
-    def model_dump_yaml(self) -> str:
-        """Dump configuration to YAML string."""
-        import yamling
-
-        return yamling.dump_yaml(self.model_dump(exclude_none=True))
 
     @classmethod
     @logfire.instrument("Loading configuration from {path}")
