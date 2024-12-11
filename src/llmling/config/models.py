@@ -239,7 +239,7 @@ class GlobalSettings(ConfigModel):
     """Explicitely use uv for package installation / management """
 
     log_level: LogLevel = "INFO"
-    """Log level to use for the server"""
+    """Log level for LLMling core."""
 
     jinja_environment: Jinja2Config = Field(default_factory=Jinja2Config)
     """Jinja2 environment configuration"""
