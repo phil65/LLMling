@@ -44,6 +44,9 @@ class EventType(Enum):
     PROMPT_REMOVED = auto()
     PROMPT_LIST_CHANGED = auto()
 
+    # Config events
+    CONFIG_FILE_CHANGED = auto()
+
     # General registry events
     REGISTRY_RESET = auto()
 

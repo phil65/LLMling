@@ -1,8 +1,4 @@
-"""Configuration management and validation.
-
-This module provides the ConfigManager class which handles all static configuration
-operations including loading, validation, and saving.
-"""
+"""Configuration management and validation."""
 
 from __future__ import annotations
 
@@ -10,47 +6,37 @@ import importlib
 import re
 from typing import TYPE_CHECKING, Self
 
-import logfire
 from upath import UPath
-import yamling
 
 from llmling.config.models import Config
 from llmling.core import exceptions
+from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger, setup_logging
-from llmling.prompts.models import DynamicPrompt, StaticPrompt
 
 
 if TYPE_CHECKING:
     import os
 
-
 logger = get_logger(__name__)
 
 
-class ConfigManager:
-    """Manages and validates static configuration.
+class ConfigManager(EventEmitter):
+    """Manages configuration state and lifecycle.
 
-    This class handles all operations on the static configuration including
-    validation, saving, and loading. It ensures configuration integrity
-    before it gets transformed into runtime state.
+    Handles loading, storing and validating configurations.
+    Foundation for future features like watching and overlays.
     """
 
-    def __init__(self, config: Config) -> None:
-        """Initialize with configuration.
+    def __init__(self, config: Config | None = None) -> None:
+        """Initialize config manager.
 
         Args:
-            config: Configuration to manage
+            config: Optional initial configuration (backward compatibility)
         """
-        self._config = config
-
-    @property
-    def config(self) -> Config:
-        """Get the managed configuration."""
-        return self._config
-
-    @config.setter
-    def config(self, value: Config) -> None:
-        self._config = value
+        super().__init__()
+        self._configs: list[Config] = []
+        if config is not None:
+            self._configs.append(config)
 
     def save(
         self,
@@ -65,68 +51,11 @@ class ConfigManager:
             validate: Whether to validate before saving
 
         Raises:
-            ConfigError: If validation or saving fails
+            ConfigError: If validation fails
         """
-        try:
-            if validate:
-                self.validate_or_raise()
-
-            content = self.config.model_dump(exclude_none=True)
-            string = yamling.dump_yaml(content)
-            _ = UPath(path).write_text(string)
-            logger.info("Configuration saved to %s", path)
-
-        except Exception as exc:
-            msg = f"Failed to save configuration to {path}"
-            raise exceptions.ConfigError(msg) from exc
-
-    @logfire.instrument("Validating configuration")
-    def validate(self) -> list[str]:
-        """Validate configuration.
-
-        Performs various validation checks on the configuration including:
-        - Resource reference validation
-        - Processor configuration validation
-        - Tool configuration validation
-
-        Returns:
-            List of validation warnings
-        """
-        warnings: list[str] = []
-        warnings.extend(self._validate_requirements())
-        warnings.extend(self._validate_resources())
-        warnings.extend(self._validate_processors())
-        warnings.extend(self._validate_tools())
-        return warnings
-
-    def _validate_requirements(self) -> list[str]:
-        """Validate requirement specifications."""
-        # Validate requirement format
-        req_pattern = re.compile(
-            r"^([a-zA-Z0-9][a-zA-Z0-9._-]*)(>=|<=|==|!=|>|<|~=)?([0-9a-zA-Z._-]+)?$"
-        )
-        warnings = [
-            f"Invalid requirement format: {req}"
-            for req in self.config.global_settings.requirements
-            if not req_pattern.match(req)
-        ]
-
-        # Validate pip index URL if specified
-        if (
-            index_url := self.config.global_settings.pip_index_url
-        ) and not index_url.startswith(("http://", "https://")):
-            warnings.append(f"Invalid pip index URL: {index_url}")
-
-        # Validate extra paths exist
-        for path in self.config.global_settings.extra_paths:
-            try:
-                path_obj = UPath(path)
-                if not path_obj.exists():
-                    warnings.append(f"Extra path does not exist: {path}")
-            except Exception as exc:  # noqa: BLE001
-                warnings.append(f"Invalid extra path {path}: {exc}")
-
-        return warnings
+        if validate:
+            self.validate_or_raise()
+        self.config.save(path)
 
     def validate_or_raise(self) -> None:
         """Run validations and raise on warnings.
@@ -138,69 +67,166 @@ class ConfigManager:
             msg = "Configuration validation failed:\n" + "\n".join(warnings)
             raise exceptions.ConfigError(msg)
 
-    def _validate_prompts(self) -> list[str]:
-        """Validate prompt configuration."""
-        warnings: list[str] = []
-        for name, prompt in self.config.prompts.items():
-            match prompt:
-                case StaticPrompt():
-                    if not prompt.messages:
-                        warnings.append(f"Static prompt {name} has no messages")
-                case DynamicPrompt():
-                    if not prompt.import_path:
-                        warnings.append(f"Dynamic prompt {name} missing import_path")
-                    else:
-                        # Try to import the module
-                        try:
-                            module_name = prompt.import_path.split(".")[0]
-                            _ = importlib.import_module(module_name)
-                        except ImportError:
-                            path = prompt.import_path
-                            msg = f"Cannot import module for prompt {name}: {path}"
-                            warnings.append(msg)
-                case _:
-                    warnings.append(f"Invalid prompt type for {name}: {type(prompt)}")
-        return warnings
+    @property
+    def config(self) -> Config:
+        """Get first loaded configuration (backward compatibility).
 
-    def _validate_resources(self) -> list[str]:
-        """Validate resource configuration.
+        Returns:
+            The first loaded configuration
+
+        Raises:
+            ValueError: If no configurations are loaded
+        """
+        if not self._configs:
+            msg = "No configurations loaded"
+            raise ValueError(msg)
+        return self._configs[0]
+
+    @classmethod
+    def load(
+        cls,
+        path: str | os.PathLike[str],
+        *,
+        validate: bool = True,
+        strict: bool = False,
+    ) -> ConfigManager:
+        """Load configuration from file (backward compatibility).
+
+        This classmethod maintains the existing pattern for backward compatibility.
+        For new code, prefer using the instance method add_config() instead.
+
+        Args:
+            path: Path to configuration file
+            validate: Whether to validate the configuration
+            strict: Whether to raise on validation warnings
+
+        Returns:
+            Configured manager instance
+
+        Raises:
+            ConfigError: If loading fails or validation fails with strict=True
+        """
+        manager = cls()
+        manager.add_config(path, validate=validate, strict=strict)
+        return manager
+
+    def add_config(
+        self,
+        path: str | os.PathLike[str],
+        *,
+        validate: bool = True,
+        strict: bool = False,
+    ) -> Config:
+        """Add a new configuration.
+
+        Args:
+            path: Path to configuration file
+            validate: Whether to validate the configuration
+            strict: Whether to raise on validation warnings
+
+        Returns:
+            Loaded configuration
+
+        Raises:
+            ConfigError: If loading fails or validation fails with strict=True
+        """
+        config = Config.from_file(path)
+        # First add to list so validate() works
+        self._configs.append(config)
+
+        if validate:
+            try:
+                if warnings := self.validate():
+                    if strict:
+                        msg = "Config validation failed:\n" + "\n".join(warnings)
+                        raise exceptions.ConfigError(msg)  # noqa: TRY301
+                    logger.warning("Config warnings:\n%s", "\n".join(warnings))
+            except Exception:
+                # Remove config on validation failure
+                self._configs.remove(config)
+                raise
+
+        setup_logging(level=config.global_settings.log_level)
+        return config
+
+    def validate(self) -> list[str]:
+        """Validate configuration.
+
+        Performs various validation checks on the configuration including:
+        - Resource reference validation
+        - Processor configuration validation
+        - Tool configuration validation
 
         Returns:
             List of validation warnings
         """
+        config = self.config
+        warnings: list[str] = []
+        warnings.extend(self._validate_requirements(config))
+        warnings.extend(self._validate_resources(config))
+        warnings.extend(self._validate_processors(config))
+        warnings.extend(self._validate_tools(config))
+        return warnings
+
+    def _validate_requirements(self, config: Config) -> list[str]:
+        """Validate requirement specifications."""
+        # Validate requirement format
+        req_pattern = re.compile(
+            r"^([a-zA-Z0-9][a-zA-Z0-9._-]*)(>=|<=|==|!=|>|<|~=)?([0-9a-zA-Z._-]+)?$"
+        )
+        warnings = [
+            f"Invalid requirement format: {req}"
+            for req in config.global_settings.requirements
+            if not req_pattern.match(req)
+        ]
+
+        # Validate pip index URL if specified
+        if (
+            index_url := config.global_settings.pip_index_url
+        ) and not index_url.startswith(("http://", "https://")):
+            warnings.append(f"Invalid pip index URL: {index_url}")
+
+        # Validate extra paths exist
+        for path in config.global_settings.extra_paths:
+            try:
+                path_obj = UPath(path)
+                if not path_obj.exists():
+                    warnings.append(f"Extra path does not exist: {path}")
+            except Exception as exc:  # noqa: BLE001
+                warnings.append(f"Invalid extra path {path}: {exc}")
+
+        return warnings
+
+    def _validate_resources(self, config: Config) -> list[str]:
+        """Validate resource configuration."""
         warnings: list[str] = []
 
         # Check resource group references
         warnings.extend(
             f"Resource {resource} in group {group} not found"
-            for group, resources in self.config.resource_groups.items()
+            for group, resources in config.resource_groups.items()
             for resource in resources
-            if resource not in self.config.resources
+            if resource not in config.resources
         )
 
         # Check processor references in resources
         warnings.extend(
             f"Processor {proc.name} in resource {name} not found"
-            for name, resource in self.config.resources.items()
+            for name, resource in config.resources.items()
             for proc in resource.processors
-            if proc.name not in self.config.context_processors
+            if proc.name not in config.context_processors
         )
 
         # Resource-specific validation
-        for resource in self.config.resources.values():
+        for resource in config.resources.values():
             warnings.extend(resource.validate_resource())
 
         return warnings
 
-    def _validate_processors(self) -> list[str]:
-        """Validate processor configuration.
-
-        Checks:
-        - import_path is provided
-        - module can be imported
-        """
+    def _validate_processors(self, config: Config) -> list[str]:
+        """Validate processor configuration."""
         warnings = []
-        for name, processor in self.config.context_processors.items():
+        for name, processor in config.context_processors.items():
             if not processor.import_path:
                 warnings.append(f"Processor {name} missing import_path")
                 continue
@@ -215,60 +241,26 @@ class ConfigManager:
 
         return warnings
 
-    def _validate_tools(self) -> list[str]:
-        """Validate tool configuration.
-
-        Returns:
-            List of validation warnings
-        """
+    def _validate_tools(self, config: Config) -> list[str]:
+        """Validate tool configuration."""
         warnings = []
 
-        for name, tool in self.config.tools.items():
+        for name, tool in config.tools.items():
             if not tool.import_path:
                 warnings.append(f"Tool {name} missing import_path")
                 # Check for duplicate tool names
             warnings.extend(
                 f"Tool {name} defined both explicitly and in toolset"
-                for toolset_tool in self.config.toolsets
+                for toolset_tool in config.toolsets
                 if toolset_tool == name
             )
 
         return warnings
 
-    @classmethod
-    def load(
-        cls,
-        path: str | os.PathLike[str],
-        *,
-        validate: bool = True,
-        strict: bool = False,
-    ) -> Self:
-        """Load and optionally validate configuration from file.
+    async def __aenter__(self) -> Self:
+        """Enter async context."""
+        return self
 
-        Args:
-            path: Path to configuration file
-            validate: Whether to validate the config (default: True)
-            strict: Whether to raise on validation warnings (default: False)
-
-        Returns:
-            ConfigManager instance
-
-        Raises:
-            ConfigError: If loading fails or validation fails with strict=True
-        """
-        try:
-            config = Config.from_file(path)
-            manager = cls(config)
-
-            if validate and (warnings := manager.validate()):
-                if strict:
-                    msg = "Configuration validation failed:\n" + "\n".join(warnings)
-                    raise exceptions.ConfigError(msg)  # noqa: TRY301
-                logger.warning("Configuration warnings:\n%s", "\n".join(warnings))
-
-            setup_logging(level=config.global_settings.log_level)
-        except Exception as exc:
-            msg = f"Failed to load configuration from {path}"
-            raise exceptions.ConfigError(msg) from exc
-        else:
-            return manager
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Exit async context."""
+        self._configs.clear()
