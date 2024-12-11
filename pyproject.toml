@@ -53,6 +53,7 @@ dependencies = [
     "openapi-spec-validator>=0.7.1",
     "httpx>=0.28.1",
     "typer",
+    "promptantic>=0.4.3",
 ]
 
 [project.scripts]

@@ -84,25 +84,41 @@ def list_configs(
 @config_cli.command("init")
 def init_config(
     output: str = t.Argument(help="Path to write configuration file"),
+    interactive: bool = t.Option(
+        False,
+        "--interactive/--no-interactive",
+        help="Use interactive configuration wizard",
+    ),
 ):
     """Initialize a new configuration file with basic settings.
 
-    Creates a new configuration file at the specified path using the basic template.
-    The basic template includes a text resource, a browser tool, and example prompts
-    that work out of the box.
+    Creates a new configuration file at the specified path. Use --interactive
+    for a guided setup process.
     """
-    import shutil
+    from promptantic import ModelGenerator
 
-    from llmling import config_resources
+    from llmling import Config
 
-    # Copy our basic template to the output path
-    shutil.copy2(config_resources.BASIC_CONFIG, output)
-    print(f"Created configuration file: {output}")
-    print("\nTry these commands:")
-    print("  llmling resource list")
-    print("  llmling tool call open_url url=https://github.com")
-    print("  llmling prompt show greet")
-    print("  llmling prompt show get_user")
+    if interactive:
+        generator = ModelGenerator(
+            show_progress=True,
+            allow_back=True,
+            retry_on_validation_error=True,
+        )
+        config = generator.populate(Config)
+        config.save(output)
+        print(f"Created configuration file: {output}")
+    else:
+        import shutil
+
+        from llmling import config_resources
+
+        shutil.copy2(config_resources.BASIC_CONFIG, output)
+        print(f"Created configuration file: {output}")
+        print("\nTry these commands:")
+        print("  llmling resource list")
+        print("  llmling tool call open_url url=https://github.com")
+        print("  llmling prompt show greet")
 
 
 @config_cli.command("show")
