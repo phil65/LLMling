@@ -83,11 +83,12 @@ class ResourceWatcher:
             raise RuntimeError(msg)
 
         try:
-            if not hasattr(resource, "path"):
+            # Skip if resource doesn't provide a watch path
+            if not (watch_path := resource.get_watch_path()):
                 return
 
             patterns = load_patterns(
-                patterns=resource.watch.patterns,  # type: ignore
+                patterns=resource.watch.patterns if resource.watch else None,
                 ignore_file=None,
             )
             logger.debug("Setting up watch for %s with patterns: %s", name, patterns)
@@ -102,16 +103,15 @@ class ResourceWatcher:
                         name,
                     )
 
-            path = str(resource.path)  # type: ignore
-            if is_watchable_path(path):
-                self.monitor.add_watch(path, patterns=patterns, callback=on_change)
+            if is_watchable_path(watch_path):
+                self.monitor.add_watch(watch_path, patterns=patterns, callback=on_change)
                 self.handlers[name] = None
-                logger.debug("Added watch for: %s -> %s", name, path)
+                logger.debug("Added watch for: %s -> %s", name, watch_path)
             else:
                 logger.debug(
                     "Skipping watch for non-local path: %s -> %s",
                     name,
-                    path,
+                    watch_path,
                 )
 
         except Exception:

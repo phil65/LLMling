@@ -8,7 +8,6 @@ from llmling.resources.loaders import (
     SourceResourceLoader,
     TextResourceLoader,
     RepositoryResourceLoader,
-    ImageResourceLoader,
 )
 from llmling.resources.loaders.registry import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
@@ -21,7 +20,6 @@ default_registry.register_default_loaders()
 __all__ = [
     "CLIResourceLoader",
     "CallableResourceLoader",
-    "ImageResourceLoader",
     "LoadedResource",
     "PathResourceLoader",
     "RepositoryResourceLoader",

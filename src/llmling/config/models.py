@@ -32,7 +32,7 @@ from llmling.utils.importing import import_callable
 from llmling.utils.paths import guess_mime_type
 
 
-ResourceType = Literal["path", "text", "cli", "source", "callable", "image"]
+ResourceType = Literal["path", "text", "cli", "source", "callable"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 logger = get_logger(__name__)
@@ -271,6 +271,10 @@ class BaseResource(BaseModel):
         """Whether this resource supports URI templates."""
         return False  # Default: resources are static
 
+    def get_watch_path(self) -> str | None:
+        """Get the path to watch if this resource supports watching."""
+        return None
+
     @property
     def mime_type(self) -> str:
         """Get the MIME type for this resource.
@@ -313,6 +317,10 @@ class PathResource(BaseResource):
             warnings.warn(msg, UserWarning, stacklevel=2)
             return False
         return True
+
+    def get_watch_path(self) -> str | None:
+        """Get the path to watch."""
+        return str(self.path) if self.supports_watching else None
 
     @model_validator(mode="after")
     def validate_path(self) -> PathResource:
@@ -474,58 +482,7 @@ class CallableResource(BaseResource):
         return bool(sig.parameters)
 
 
-class ImageResource(BaseResource):
-    """Resource for image input."""
-
-    resource_type: Literal["image"] = Field(default="image", init=False)
-    """Discriminator field identifying this as an image resource."""
-
-    path: str
-    """Path or URL to the image file."""
-
-    alt_text: str | None = None
-    """Alternative text description of the image."""
-
-    watch: WatchConfig | None = None
-    """Configuration for watching the image file for changes."""
-
-    @property
-    def supports_watching(self) -> bool:
-        """Whether this resource instance supports watching."""
-        return True
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_path(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Validate that path is not empty."""
-        if isinstance(data, dict) and not data.get("path"):
-            msg = "Path cannot be empty for image resource"
-            raise ValueError(msg)
-        return data
-
-    @property
-    def mime_type(self) -> str:
-        """Get MIME type based on file extension or default to image/jpeg."""
-        try:
-            mime = guess_mime_type(self.path)
-            # If it's an image type, return it
-            if mime.startswith("image/"):
-                return mime
-            # If not an image type or unknown, fall back to jpeg
-        except Exception:  # noqa: BLE001
-            return "image/jpeg"
-        else:
-            return "image/jpeg"
-
-
-Resource = (
-    PathResource
-    | TextResource
-    | CLIResource
-    | SourceResource
-    | CallableResource
-    | ImageResource
-)
+Resource = PathResource | TextResource | CLIResource | SourceResource | CallableResource
 
 
 class WatchConfig(ConfigModel):

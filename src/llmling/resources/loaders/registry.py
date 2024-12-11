@@ -49,7 +49,6 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
         from llmling.resources import (
             CallableResourceLoader,
             CLIResourceLoader,
-            ImageResourceLoader,
             PathResourceLoader,
             RepositoryResourceLoader,
             SourceResourceLoader,
@@ -61,7 +60,6 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
         self["cli"] = CLIResourceLoader
         self["source"] = SourceResourceLoader
         self["callable"] = CallableResourceLoader
-        self["image"] = ImageResourceLoader
         self["repository"] = RepositoryResourceLoader
 
     def get_uri_templates(self) -> list[dict[str, Any]]:

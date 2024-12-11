@@ -143,32 +143,6 @@ resources:
 - Async function support
 - Result caching
 
-## Image Resource
-
-The `image` resource type handles image content:
-
-```yaml
-resources:
-  diagram:
-    type: image
-    path: "./docs/architecture.png"
-    alt_text: "System architecture diagram"  # For LLM context
-    watch:
-      enabled: true                         # Watch for changes
-      patterns: ["*.png", "*.jpg"]
-
-  remote_image:
-    type: image
-    path: "https://example.com/image.jpg"
-    alt_text: "Remote image example"
-```
-
-### Image Resource Features
-- Local and remote images
-- Alt text for LLM context
-- File watching
-- Common image format support
-- Base64 encoding for LLMs
 
 ## Resource Groups
 

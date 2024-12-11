@@ -8,7 +8,6 @@ import pytest
 from llmling.config.models import (
     CallableResource,
     CLIResource,
-    ImageResource,
     PathResource,
     RepositoryResource,
     SourceResource,
@@ -20,7 +19,6 @@ from llmling.processors.base import ProcessorConfig
 from llmling.resources import (
     CallableResourceLoader,
     CLIResourceLoader,
-    ImageResourceLoader,
     PathResourceLoader,
     SourceResourceLoader,
     TextResourceLoader,
@@ -44,7 +42,6 @@ if TYPE_CHECKING:
         ("cli://command", CLIResourceLoader),
         ("python://module.path", SourceResourceLoader),
         ("callable://func", CallableResourceLoader),
-        ("image://test.png", ImageResourceLoader),
         ("repository://github.com/org/repo", RepositoryResourceLoader),
     ],
 )
@@ -122,7 +119,6 @@ def test_get_name_from_uri_invalid(
         (CLIResource(command="test"), CLIResourceLoader),
         (SourceResource(import_path="test"), SourceResourceLoader),
         (CallableResource(import_path="test"), CallableResourceLoader),
-        (ImageResource(path="test.png"), ImageResourceLoader),
         (
             RepositoryResource(repo_url="https://github.com/org/repo.git"),
             RepositoryResourceLoader,
@@ -228,7 +224,6 @@ async def test_source_loader(processor_registry: ProcessorRegistry) -> None:
         ("cli://{name}", "command", "cli://command"),
         ("python://{name}", "module.path", "python://module.path"),
         ("callable://{name}", "func", "callable://func"),
-        ("image://{name}", "test.png", "image://test.png"),
     ],
 )
 def test_uri_creation(uri_template: str, name: str, expected: str) -> None:
@@ -274,7 +269,6 @@ def test_create_loaded_resource() -> None:
         (CLIResourceLoader, "cli"),
         (SourceResourceLoader, "python"),
         (CallableResourceLoader, "callable"),
-        (ImageResourceLoader, "image"),
     ],
 )
 def test_uri_scheme_support(loader_cls: type[ResourceLoader], scheme: str) -> None:
@@ -288,15 +282,14 @@ def test_registry_supported_schemes(loader_registry: ResourceLoaderRegistry) -> 
     """Test getting supported schemes from registry."""
     schemes = loader_registry.get_supported_schemes()
     assert all(
-        scheme in schemes
-        for scheme in ["text", "file", "cli", "python", "callable", "image"]
+        scheme in schemes for scheme in ["text", "file", "cli", "python", "callable"]
     )
 
 
 def test_registry_uri_templates(loader_registry: ResourceLoaderRegistry) -> None:
     """Test getting URI templates from registry."""
     templates = loader_registry.get_uri_templates()
-    assert len(templates) == 7  # One for each loader type  # noqa: PLR2004
+    assert len(templates) == 6  # One for each loader type  # noqa: PLR2004
     assert all("scheme" in t and "template" in t and "mimeTypes" in t for t in templates)
 
 

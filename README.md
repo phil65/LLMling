@@ -300,13 +300,6 @@ resources:
     keyword_args:  # Optional arguments
       aliased: true
 
-  # Load and display images
-  architecture:
-    type: image
-    path: "./docs/architecture.png"
-    alt_text: "System architecture diagram"
-    watch:  # Images can be watched too
-      enabled: true
 ```
 
 ### Resource Groups

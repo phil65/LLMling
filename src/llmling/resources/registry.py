@@ -11,7 +11,6 @@ from llmling.config.models import (
     BaseResource,
     CallableResource,
     CLIResource,
-    ImageResource,
     PathResource,
     SourceResource,
     TextResource,
@@ -124,7 +123,6 @@ class ResourceRegistry(BaseRegistry[str, BaseResource]):
                         "cli": CLIResource,
                         "source": SourceResource,
                         "callable": CallableResource,
-                        "image": ImageResource,
                     }
 
                     resource_type = item["resource_type"]
