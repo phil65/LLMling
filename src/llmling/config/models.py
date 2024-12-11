@@ -243,6 +243,21 @@ class BaseResource(BaseModel):
 
     model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
+    def validate_resource(self) -> list[str]:
+        """Validate resource at runtime.
+
+        This validation is intentionally separated from Pydantic's model validation
+        to handle:
+        - Remote resources and URLs
+        - Template/placeholder paths that don't exist during config loading
+        - Resources that may become available after config loading
+        - Validation of actual resource availability separate from config structure
+
+        Returns:
+            List of validation warnings (empty if all valid)
+        """
+        return []
+
     @property
     def supports_watching(self) -> bool:
         """Whether this resource instance supports watching."""
@@ -277,6 +292,17 @@ class PathResource(BaseResource):
 
     watch: WatchConfig | None = None
     """Configuration for watching the file for changes."""
+
+    def validate_resource(self) -> list[str]:
+        """Check if path exists for local files."""
+        warnings = []
+        path = upath.UPath(self.path)
+        prefixes = ("http://", "https://")
+
+        if not path.exists() and not path.as_uri().startswith(prefixes):
+            warnings.append(f"Resource path not found: {path}")
+
+        return warnings
 
     @property
     def supports_watching(self) -> bool:
@@ -389,6 +415,12 @@ class RepositoryResource(BaseResource):
 
     password: SecretStr | None = None
     """Optional password for authentication."""
+
+    def validate_resource(self) -> list[str]:
+        warnings = []
+        if self.user and not self.password:
+            warnings.append(f"Repository {self.repo_url} has user but no password")
+        return warnings
 
 
 class SourceResource(BaseResource):

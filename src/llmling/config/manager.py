@@ -186,13 +186,9 @@ class ConfigManager:
             if proc.name not in self.config.context_processors
         )
 
-        # Check resource paths exist for local resources
+        # Resource-specific validation
         for resource in self.config.resources.values():
-            if hasattr(resource, "path"):
-                path = UPath(resource.path)
-                prefixes = ("http://", "https://")
-                if not path.exists() and not path.as_uri().startswith(prefixes):
-                    warnings.append(f"Resource path not found: {path}")
+            warnings.extend(resource.validate_resource())
 
         return warnings
 
