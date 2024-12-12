@@ -209,6 +209,7 @@ class DynamicPrompt(BasePrompt):
     async def format(
         self, arguments: dict[str, Any] | None = None
     ) -> list[PromptMessage]:
+        """Format this prompt with given arguments."""
         args = arguments or {}
         self.validate_arguments(args)
 

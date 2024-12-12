@@ -193,20 +193,14 @@ async def test_repository_loader(
     commit = repo.index.commit("Initial commit")
 
     # Create and checkout main branch explicitly
-    default_branch = "main"
-    if default_branch not in repo.heads:
-        repo.create_head(
-            default_branch, commit.hexsha
-        )  # Use hexsha instead of Commit object
-    repo.head.reference = repo.heads[default_branch]
+    branch = "main"
+    if branch not in repo.heads:
+        repo.create_head(branch, commit.hexsha)
+    repo.head.reference = repo.heads[branch]
     repo.head.reset(index=True, working_tree=True)
 
     # Load the file
-    resource = RepositoryResource(
-        repo_url=str(tmp_path),
-        ref=default_branch,
-        path="test.txt",
-    )
+    resource = RepositoryResource(repo_url=str(tmp_path), ref=branch, path="test.txt")
     loader = RepositoryResourceLoader(LoaderContext(resource=resource, name="test"))
 
     async for result in loader.load(processor_registry=processor_registry):
