@@ -179,7 +179,6 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
     assert result.source_type == "cli"
 
 
-@pytest.mark.asyncio
 async def test_repository_loader(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
@@ -190,17 +189,21 @@ async def test_repository_loader(
     test_file = tmp_path / "test.txt"
     test_file.write_text("test content")
     repo.index.add(["test.txt"])
-    repo.index.commit("Initial commit")
+    commit = repo.index.commit("Initial commit")
 
-    # Create master/main branch - important!
-    if not repo.heads:
-        repo.create_head("main")
-    repo.heads.main.checkout()
+    # Create and checkout main branch explicitly
+    default_branch = "main"
+    if default_branch not in repo.heads:
+        repo.create_head(
+            default_branch, commit.hexsha
+        )  # Use hexsha instead of Commit object
+    repo.head.reference = repo.heads[default_branch]
+    repo.head.reset(index=True, working_tree=True)
 
     # Load the file
     resource = RepositoryResource(
         repo_url=str(tmp_path),
-        ref="main",  # Explicitly use main branch
+        ref=default_branch,
         path="test.txt",
     )
     loader = RepositoryResourceLoader(LoaderContext(resource=resource, name="test"))
