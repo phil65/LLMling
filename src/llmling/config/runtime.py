@@ -17,6 +17,7 @@ from llmling.config.manager import ConfigManager
 from llmling.config.models import BaseResource, PathResource
 from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
 from llmling.core import exceptions
+from llmling.core.chain import ChainTool
 from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
@@ -384,7 +385,8 @@ class RuntimeConfig(EventEmitter):
             tool_registry["register_tool"] = llm_tools.register_tool
         if capabilities.register_code_tool:
             tool_registry["register_code_tool"] = llm_tools.register_code_tool
-
+        if capabilities.chain_tools:
+            tool_registry["chain"] = ChainTool(runtime)
         return runtime
 
     async def startup(self) -> None:

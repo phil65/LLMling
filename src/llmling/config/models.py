@@ -113,6 +113,9 @@ class LLMCapabilitiesConfig(ConfigModel):
     register_code_tool: bool = False
     """Whether the LLM can create new tools from provided Python code."""
 
+    chain_tools: bool = False
+    """Whether the LLM gains capability to chain multiple tool calls into one."""
+
 
 class Jinja2Config(ConfigModel):
     """Configuration for Jinja2 environment.
