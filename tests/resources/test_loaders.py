@@ -192,8 +192,17 @@ async def test_repository_loader(
     repo.index.add(["test.txt"])
     repo.index.commit("Initial commit")
 
+    # Create master/main branch - important!
+    if not repo.heads:
+        repo.create_head("main")
+    repo.heads.main.checkout()
+
     # Load the file
-    resource = RepositoryResource(repo_url=str(tmp_path), path="test.txt")
+    resource = RepositoryResource(
+        repo_url=str(tmp_path),
+        ref="main",  # Explicitly use main branch
+        path="test.txt",
+    )
     loader = RepositoryResourceLoader(LoaderContext(resource=resource, name="test"))
 
     async for result in loader.load(processor_registry=processor_registry):
@@ -201,7 +210,7 @@ async def test_repository_loader(
         assert result.source_type == "repository"
         assert result.metadata.mime_type == "text/plain"
         assert "repo" in result.metadata.extra
-        break  # We only expect one file
+        break
 
 
 @pytest.mark.asyncio

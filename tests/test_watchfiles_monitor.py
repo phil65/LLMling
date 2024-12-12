@@ -42,13 +42,11 @@ async def test_basic_file_watch(monitor: WatchfilesMonitor, temp_dir: Path) -> N
     changes: list[str] = []
 
     def on_change(events):
-        changes.extend(str(e.path) for e in events)
+        # Normalize paths for comparison
+        changes.extend(Path(e.path).resolve().as_posix() for e in events)
         event.set()
 
-    # Add watch
     monitor.add_watch(test_file, callback=on_change)
-
-    # Small delay to ensure watch is set up
     await asyncio.sleep(0.1)
 
     # Modify file
@@ -57,7 +55,7 @@ async def test_basic_file_watch(monitor: WatchfilesMonitor, temp_dir: Path) -> N
     try:
         await asyncio.wait_for(event.wait(), timeout=1.0)
         assert changes, "No changes detected"
-        assert str(test_file) in changes
+        assert test_file.resolve().as_posix() in changes
     except TimeoutError:
         pytest.fail(f"No changes detected for {test_file}")
 
