@@ -179,6 +179,7 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
     assert result.source_type == "cli"
 
 
+@pytest.mark.asyncio
 async def test_repository_loader(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
