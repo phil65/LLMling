@@ -652,7 +652,7 @@ class RuntimeConfig(EventEmitter):
             >>> await runtime.install_package("requests>=2.28.0")
         """
         try:
-            await self._dep_manager.install_dependency(package)
+            self._dep_manager.install_dependency(package)
             return f"Successfully installed package: {package}"  # noqa: TRY300
         except Exception as exc:
             msg = f"Failed to install package: {exc}"
