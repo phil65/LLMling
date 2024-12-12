@@ -31,7 +31,7 @@ class PromptParameter(BaseModel):
     required: bool = False
     """Whether this argument must be provided when formatting the prompt."""
 
-    type_hint: Any = str
+    type_hint: ImportString = Field(default="str")
     """Type annotation for the argument, defaults to str."""
 
     default: Any | None = None
