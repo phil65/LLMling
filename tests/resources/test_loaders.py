@@ -358,15 +358,10 @@ async def test_path_loader_directory_with_processors(
     (tmp_path / "file2.txt").write_text("test2")
 
     # Set up processor
-    processor_registry.register(
-        "reverse",
-        ProcessorConfig(import_path="llmling.testing.processors.reverse_text"),
-    )
-
-    resource = PathResource(
-        path=str(tmp_path),
-        processors=[ProcessingStep(name="reverse")],
-    )
+    cfg = ProcessorConfig(import_path="llmling.testing.processors.reverse_text")
+    processor_registry.register("reverse", cfg)
+    procs = [ProcessingStep(name="reverse")]
+    resource = PathResource(path=str(tmp_path), processors=procs)
     loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
     files = [
         result async for result in loader.load(processor_registry=processor_registry)

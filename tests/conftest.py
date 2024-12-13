@@ -43,28 +43,16 @@ def loader_registry() -> ResourceLoaderRegistry:
 def test_config() -> Config:
     """Create test configuration with sample data."""
     prompt_msg = PromptMessage(role="user", content="Test message")
+    text = TextResource(content="test content", description="Test resource")
+    path = "llmling.testing.tools.example_tool"
+    desc = "Example tool for testing"
+    cfg = ToolConfig(import_path=path, name="example", description=desc)
+    prompt = StaticPrompt(name="test-prompt", description="Test", messages=[prompt_msg])
     return Config(
-        version="1.0.0",
         global_settings=GlobalSettings(),
-        resources={
-            "test-resource": TextResource(
-                content="test content", description="Test resource"
-            ),
-        },
-        tools={
-            "example": ToolConfig(
-                import_path="llmling.testing.tools.example_tool",
-                name="example",
-                description="Example tool for testing",
-            ),
-        },
-        prompts={
-            "test-prompt": StaticPrompt(
-                name="test-prompt",
-                description="Test prompt",
-                messages=[prompt_msg],
-            ),
-        },
+        resources={"test-resource": text},
+        tools={"example": cfg},
+        prompts={"test-prompt": prompt},
     )
 
 
