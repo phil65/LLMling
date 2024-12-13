@@ -127,7 +127,7 @@ def test_validate_processor_references(valid_config: Config) -> None:
 
     # Add resource with non-existent processor
     procs = [{"name": "nonexistent", "required": True}]
-    manager.config.resources["invalid"] = TextResource(content="test", processors=procs)
+    manager.config.resources["invalid"] = TextResource(content="test", processors=procs)  # type: ignore
 
     warnings = manager.validate()
     assert warnings

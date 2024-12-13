@@ -72,7 +72,7 @@ def test_item_added_event():
 
     # Check event was triggered
     assert called_with is not None
-    key, item = called_with
+    key, item = called_with  # type: ignore
     assert key == "test"
     assert item is test_item
 
@@ -100,7 +100,7 @@ def test_item_modified_event():
 
     # Check event was triggered
     assert called_with is not None
-    key, item = called_with
+    key, item = called_with  # type: ignore
     assert key == "test"
     assert item is new_item
 
@@ -128,7 +128,7 @@ def test_item_removed_event():
 
     # Check event was triggered
     assert called_with is not None
-    key, item = called_with
+    key, item = called_with  # type: ignore
     assert key == "test"
     assert item is test_item
 
