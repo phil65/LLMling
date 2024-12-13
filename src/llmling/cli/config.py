@@ -100,11 +100,7 @@ def init_config(
     from llmling import Config
 
     if interactive:
-        generator = ModelGenerator(
-            show_progress=True,
-            allow_back=True,
-            retry_on_validation_error=True,
-        )
+        generator = ModelGenerator()
         config = generator.populate(Config)
         config.save(output)
         print(f"Created configuration file: {output}")
