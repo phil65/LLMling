@@ -28,8 +28,7 @@ from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import PromptType  # noqa: TC001
 from llmling.tools.toolsets import ToolSet
-from llmling.utils import importing
-from llmling.utils.importing import import_callable
+from llmling.utils.importing import import_callable, import_class
 from llmling.utils.paths import guess_mime_type
 
 
@@ -132,8 +131,6 @@ class Jinja2Config(ConfigModel):
         """
         import jinja2
 
-        from llmling.utils import importing
-
         # Start with basic string/bool config items
         kwargs = self.model_dump(exclude={"undefined", "filters", "tests"})
 
@@ -147,13 +144,10 @@ class Jinja2Config(ConfigModel):
 
         try:
             # Import filters and tests (must be callables)
-            kwargs["filters"] = {
-                name: importing.import_callable(path)
-                for name, path in self.filters.items()
-            }
-            kwargs["tests"] = {
-                name: importing.import_callable(path) for name, path in self.tests.items()
-            }
+            filters = {name: import_callable(path) for name, path in self.filters.items()}
+            kwargs["filters"] = filters
+            tests = {name: import_callable(path) for name, path in self.tests.items()}
+            kwargs["tests"] = tests
         except Exception as exc:
             msg = f"Failed to import Jinja2 filters/tests: {exc}"
             raise ValueError(msg) from exc
@@ -527,7 +521,7 @@ class CustomToolsetConfig(BaseToolsetConfig):
     def validate_import_path(cls, v: str) -> str:
         # v is already confirmed to be a str here
         try:
-            cls = importing.import_class(v)
+            cls = import_class(v)
             if not issubclass(cls, ToolSet):
                 msg = f"{v} must be a ToolSet class"
                 raise ValueError(msg)  # noqa: TRY004, TRY301

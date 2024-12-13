@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     import os
 
 logger = get_logger(__name__)
+REQ_PATTERN = re.compile(
+    r"^([a-zA-Z0-9][a-zA-Z0-9._-]*)(>=|<=|==|!=|>|<|~=)?([0-9a-zA-Z._-]+)?$"
+)
 
 
 class ConfigManager(EventEmitter):
@@ -171,13 +174,10 @@ class ConfigManager(EventEmitter):
     def _validate_requirements(self, config: Config) -> list[str]:
         """Validate requirement specifications."""
         # Validate requirement format
-        req_pattern = re.compile(
-            r"^([a-zA-Z0-9][a-zA-Z0-9._-]*)(>=|<=|==|!=|>|<|~=)?([0-9a-zA-Z._-]+)?$"
-        )
         warnings = [
             f"Invalid requirement format: {req}"
             for req in config.global_settings.requirements
-            if not req_pattern.match(req)
+            if not REQ_PATTERN.match(req)
         ]
 
         # Validate pip index URL if specified
