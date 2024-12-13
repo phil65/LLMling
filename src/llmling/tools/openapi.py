@@ -17,6 +17,8 @@ from llmling.tools.toolsets import ToolSet
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from jsonschema_path.typing import Schema
+
 
 logger = get_logger(__name__)
 T = TypeVar("T")
@@ -50,11 +52,11 @@ class OpenAPITools(ToolSet):
         self.base_url = base_url
         self.headers = headers or {}
         self._client = httpx.AsyncClient(base_url=self.base_url, headers=self.headers)
-        self._spec: dict[str, Any] = {}
+        self._spec: Schema = {}
         self._schemas: dict[str, Any] = {}
         self._operations: dict[str, Any] = {}
 
-    def _store_spec(self, spec_data: dict[str, Any]) -> None:
+    def _store_spec(self, spec_data: Schema) -> None:
         """Helper to store and parse spec data."""
         self._spec = spec_data
         self._schemas = self._spec.get("components", {}).get("schemas", {})
@@ -70,7 +72,7 @@ class OpenAPITools(ToolSet):
             spec_data = self._load_spec()
             self._store_spec(spec_data)
 
-    def _load_spec(self) -> dict[str, Any]:
+    def _load_spec(self) -> Schema:
         """Load OpenAPI specification."""
         try:
             if self.spec_url.startswith(("http://", "https://")):

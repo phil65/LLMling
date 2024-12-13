@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 from openapi_spec_validator import validate
 from openapi_spec_validator.exceptions import OpenAPISpecValidatorError
@@ -9,8 +10,12 @@ import pytest
 from llmling.tools.openapi import OpenAPITools
 
 
+if TYPE_CHECKING:
+    from jsonschema_path.typing import Schema
+
+
 BASE_URL = "https://api.example.com"
-PETSTORE_SPEC = {
+PETSTORE_SPEC: Schema = {
     "openapi": "3.0.0",
     "info": {"title": "Pet Store API", "version": "1.0.0"},
     "paths": {
