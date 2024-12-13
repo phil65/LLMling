@@ -1,4 +1,4 @@
-version: "1.0"
+# yaml-language-server: $schema=https://raw.githubusercontent.com/phil65/LLMling/refs/heads/main/schema/config-schema.json
 
 global_settings:
   log_level: "INFO"
