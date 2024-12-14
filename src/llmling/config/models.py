@@ -207,6 +207,9 @@ class BaseResource(BaseModel):
     watch: WatchConfig | None = None
     """Configuration for file system watching, if supported."""
 
+    name: str | None = Field(None, exclude=True)
+    """Technical identifier (automatically set from config key during registration)."""
+
     model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     def validate_resource(self) -> list[str]:
