@@ -61,7 +61,7 @@ class ConfigStore:
         if not self.config_file.exists():
             return ConfigMapping(configs={}, active=None)
         try:
-            text = self.config_file.read_text()
+            text = self.config_file.read_text("utf-8")
             data = json.loads(text)
             active = data.get("active")
             configs = data.get("configs", {})

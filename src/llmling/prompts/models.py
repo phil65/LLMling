@@ -350,7 +350,7 @@ class FilePrompt(BasePrompt):
     @property
     def messages(self) -> list[PromptMessage]:
         """Get messages from file content."""
-        content = upath.UPath(self.path).read_text()
+        content = upath.UPath(self.path).read_text("utf-8")
 
         match self.fmt:
             case "text":
@@ -381,7 +381,7 @@ class FilePrompt(BasePrompt):
             if arg.name not in args and not arg.required:
                 args[arg.name] = arg.default if arg.default is not None else ""
 
-        content = upath.UPath(self.path).read_text()
+        content = upath.UPath(self.path).read_text("utf-8")
 
         if self.fmt == "jinja2":
             # Use jinja2 for template formatting

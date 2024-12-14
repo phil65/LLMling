@@ -63,7 +63,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
     ) -> LoadedResource:
         """Create LoadedResource from file."""
         try:
-            content = path.read_text()
+            content = path.read_text("utf-8")
             description = f"Repository content from {resource.repo_url} ({resource.ref})"
             return create_loaded_resource(
                 content=content,
