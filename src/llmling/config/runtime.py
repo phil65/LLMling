@@ -693,7 +693,7 @@ class RuntimeConfig(EventEmitter):
             msg = f"Failed to register tool: {exc}"
             raise ToolError(msg) from exc
         else:
-            return f"Successfully registered tool: {name} from {source}"
+            return f"Successfully registered tool: {tool.name} from {source}"
 
     async def register_code_tool(
         self,
