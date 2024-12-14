@@ -41,9 +41,8 @@ class CallableResourceLoader(ResourceLoader[CallableResource]):
 
             # If we have a URI context, extract and merge parameters
             if self.context:
-                uri_params = self.get_params_from_uri(
-                    self.create_uri(name=self.context.name)
-                )
+                uri = self.create_uri(name=self.context.name)
+                uri_params = self.get_params_from_uri(uri)
                 kwargs.update(uri_params)
 
             # Execute the callable with combined parameters

@@ -39,8 +39,7 @@ def load_patterns(
     # Add patterns from file
     if ignore_file:
         try:
-            path = UPath(ignore_file)
-            if path.exists():
+            if (path := UPath(ignore_file)).exists():
                 # Filter empty lines and comments
                 file_patterns = [
                     line.strip()

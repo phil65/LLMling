@@ -93,29 +93,27 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
             if path.is_dir():
                 # Handle directory recursively
-                for file_path in path.rglob("*"):
-                    if file_path.is_file():
-                        content = file_path.read_text("utf-8")
-                        if processor_registry and (procs := resource.processors):
-                            processed = await processor_registry.process(content, procs)
-                            content = processed.content
-
-                        yield create_loaded_resource(
-                            content=content,
-                            source_type="path",
-                            uri=self.create_uri(
-                                name=file_path.name
-                            ),  # Use filename for URI
-                            mime_type=self.supported_mime_types[0],
-                            name=resource.description or file_path.name,
-                            description=resource.description,
-                            additional_metadata={
-                                "type": "path",
-                                "path": str(file_path),
-                                "scheme": file_path.protocol,
-                                "relative_to": str(path),  # Add original directory
-                            },
-                        )
+                files = [p for p in path.rglob("*") if p.is_file()]
+                for file_path in files:
+                    content = file_path.read_text("utf-8")
+                    if processor_registry and (procs := resource.processors):
+                        processed = await processor_registry.process(content, procs)
+                        content = processed.content
+                    meta = {
+                        "type": "path",
+                        "path": str(file_path),
+                        "scheme": file_path.protocol,
+                        "relative_to": str(path),
+                    }
+                    yield create_loaded_resource(
+                        content=content,
+                        source_type="path",
+                        uri=self.create_uri(name=file_path.name),  # Use filename for URI
+                        mime_type=self.supported_mime_types[0],
+                        name=resource.description or file_path.name,
+                        description=resource.description,
+                        additional_metadata=meta,
+                    )
             else:
                 # Handle single file
                 content = path.read_text("utf-8")

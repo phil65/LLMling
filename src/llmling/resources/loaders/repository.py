@@ -100,9 +100,8 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
                         branch=resource.ref,
                     )
                     if resource.sparse_checkout:
-                        repo.git.sparse_checkout(
-                            "set", " ".join(resource.sparse_checkout)
-                        )
+                        path_str = " ".join(resource.sparse_checkout)
+                        repo.git.sparse_checkout("set", path_str)
                     self._cache_repo(resource.repo_url, repo)
 
             # Switch to requested ref
@@ -119,20 +118,16 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
                 yield loaded
             else:
                 # Directory - yield all matching files
-                for file_path in base_path.rglob("*"):
-                    if file_path.is_file():
-                        rel_path = file_path.relative_to(base_path)
-                        loaded = self._create_resource(
-                            file_path,
-                            str(rel_path),
-                            resource,
+                files = [p for p in base_path.rglob("*") if p.is_file()]
+                for file_path in files:
+                    rel_path = file_path.relative_to(base_path)
+                    loaded = self._create_resource(file_path, str(rel_path), resource)
+                    if processor_registry and resource.processors:
+                        result = await processor_registry.process(
+                            loaded.content, resource.processors
                         )
-                        if processor_registry and resource.processors:
-                            result = await processor_registry.process(
-                                loaded.content, resource.processors
-                            )
-                            loaded.content = result.content
-                        yield loaded
+                        loaded.content = result.content
+                    yield loaded
 
         except git.exc.GitCommandError as exc:
             msg = f"Git operation failed: {exc}"
