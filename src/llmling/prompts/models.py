@@ -11,9 +11,12 @@ from pydantic import BaseModel, ConfigDict, Field, ImportString
 import upath
 
 from llmling.completions import CompletionFunction  # noqa: TC001
+from llmling.core.log import get_logger
 from llmling.core.typedefs import MessageContent, MessageRole
 from llmling.utils import calling, importing
 
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -205,6 +208,20 @@ class DynamicPrompt(BasePrompt):
             PromptMessage(role="system", content=sys_content),
             PromptMessage(role="user", content=user_content),
         ]
+
+    def get_completion_functions(self) -> dict[str, CompletionFunction]:
+        """Resolve completion function import paths and return a completion fn dict."""
+        completion_funcs: dict[str, CompletionFunction] = {}
+        if not self.completions:
+            return {}
+        for arg_name, import_path in self.completions.items():
+            try:
+                func = importing.import_callable(import_path)
+                completion_funcs[arg_name] = func
+            except ValueError:
+                msg = "Failed to import completion function for %s: %s"
+                logger.warning(msg, arg_name, import_path)
+        return completion_funcs
 
     async def format(
         self, arguments: dict[str, Any] | None = None

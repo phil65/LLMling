@@ -33,7 +33,6 @@ from llmling.resources.registry import ResourceRegistry
 from llmling.tools.base import LLMCallableTool
 from llmling.tools.exceptions import ToolError
 from llmling.tools.registry import ToolRegistry
-from llmling.utils import importing
 
 
 if TYPE_CHECKING:
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     import os
     import types
 
-    from llmling.completions.types import CompletionFunction
     from llmling.config.models import Config
     from llmling.core.events import RegistryEvents
     from llmling.processors.base import ProcessorResult
@@ -166,16 +164,8 @@ class RuntimeConfig(EventEmitter):
         for name, prompt_config in self._config.prompts.items():
             if isinstance(prompt_config, DynamicPrompt):
                 # Convert completion function import paths to actual functions
-                if completions := prompt_config.completions:
-                    completion_funcs: dict[str, CompletionFunction] = {}
-                    for arg_name, import_path in completions.items():
-                        try:
-                            func = importing.import_callable(import_path)
-                            completion_funcs[arg_name] = func
-                        except ValueError:
-                            msg = "Failed to import completion function for %s: %s"
-                            logger.warning(msg, arg_name, import_path)
-                    prompt_config.completions = completion_funcs  # type: ignore
+                # TODO: we are setting .completions to a non-allowed type here
+                prompt_config.completions = prompt_config.get_completion_functions()  # type: ignore
                 args, desc = extract_function_info(
                     prompt_config.import_path, prompt_config.completions
                 )
