@@ -161,19 +161,17 @@ class RuntimeConfig(EventEmitter):
 
         self._initialize_toolsets()
 
-        for name, prompt_config in self._config.prompts.items():
-            if isinstance(prompt_config, DynamicPrompt):
+        for name, prompt in self._config.prompts.items():
+            if isinstance(prompt, DynamicPrompt):
                 # Convert completion function import paths to actual functions
                 # TODO: we are setting .completions to a non-allowed type here
-                prompt_config.completions = prompt_config.get_completion_functions()  # type: ignore
-                args, desc = extract_function_info(
-                    prompt_config.import_path, prompt_config.completions
-                )
-                prompt_config.arguments = args
-                if not prompt_config.description:
-                    prompt_config.description = desc
+                prompt.completions = prompt.get_completion_functions()  # type: ignore
+                args, desc = extract_function_info(prompt.import_path, prompt.completions)
+                prompt.arguments = args
+                if not prompt.description:
+                    prompt.description = desc
 
-            self._prompt_registry[name] = prompt_config
+            self._prompt_registry[name] = prompt
 
     def _initialize_toolsets(self) -> None:
         """Initialize toolsets from config."""
@@ -250,13 +248,7 @@ class RuntimeConfig(EventEmitter):
 
         Example:
             ```python
-            # Using a config file:
             async with RuntimeConfig.open("config.yml") as runtime:
-                resource = await runtime.load_resource("example")
-
-            # Using an existing Config object:
-            config = Config(...)
-            async with RuntimeConfig.open(config) as runtime:
                 resource = await runtime.load_resource("example")
             ```
 
@@ -301,13 +293,7 @@ class RuntimeConfig(EventEmitter):
 
         Example:
             ```python
-            # Using a config file:
             with RuntimeConfig.open_sync("config.yml") as runtime:
-                resource = runtime.load_resource_sync("example")
-
-            # Using an existing Config object:
-            config = Config(...)
-            with RuntimeConfig.open_sync(config) as runtime:
                 resource = runtime.load_resource_sync("example")
             ```
 
