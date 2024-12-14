@@ -52,11 +52,14 @@ class ResourceRegistry(BaseRegistry[str, BaseResource]):
     def register(self, key: str, item: BaseResource | Any, replace: bool = False) -> None:
         """Register an item."""
         try:
-            # Create copy with URI if needed
-            if not item.uri:
+            # Create copy with name and URI if needed
+            updates = {"name": key}  # Always set name from key
+            if not item.uri:  # Set URI if missing
                 loader = self.loader_registry.get_loader(item)
                 uri = loader.create_uri(name=key)
-                item = item.model_copy(update={"uri": uri})
+                updates["uri"] = uri
+            item = item.model_copy(update=updates)
+
         except exceptions.LoaderError as exc:
             msg = f"No loader registered for resource type '{item.resource_type}'"
             raise exceptions.ResourceError(msg) from exc
