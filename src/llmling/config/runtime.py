@@ -520,11 +520,12 @@ class RuntimeConfig(EventEmitter):
         """
         return self._resource_registry.get_uri(name)
 
-    def get_resource(self, name: str) -> BaseResource:
-        """Get a resource configuration by name.
+    def get_resource(self, name_or_uri: str) -> BaseResource:
+        """Get a resource configuration by name or URI.
 
         Args:
-            name: Name of the resource to get
+            name_or_uri: Name of the resource or its URI. URIs must start with a scheme
+                (e.g., "file://", "text://", etc.)
 
         Returns:
             The resource configuration
@@ -532,7 +533,13 @@ class RuntimeConfig(EventEmitter):
         Raises:
             ResourceError: If resource not found
         """
-        return self._resource_registry[name]
+        if "://" in name_or_uri:  # It's a URI
+            for resource in self._resource_registry.values():
+                if resource.uri == name_or_uri:
+                    return resource
+            msg = f"No resource found with URI: {name_or_uri}"
+            raise exceptions.ResourceError(msg)
+        return self._resource_registry[name_or_uri]
 
     def get_resources(self) -> Sequence[BaseResource]:
         """Get all registered resource configurations.
