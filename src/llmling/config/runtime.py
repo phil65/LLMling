@@ -7,6 +7,7 @@ This module provides the RuntimeConfig class which represents the fully initiali
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, contextmanager
+import importlib
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 import depkit
@@ -665,6 +666,8 @@ class RuntimeConfig(EventEmitter):
         function: str | Callable[..., Any],
         name: str | None = None,
         description: str | None = None,
+        *,
+        auto_install: bool = False,
     ) -> str:
         """Register a new tool from a function or import path.
 
@@ -672,6 +675,7 @@ class RuntimeConfig(EventEmitter):
             function: Function to register (callable or import path)
             name: Optional name override (uses function name if None)
             description: Optional description override (uses docstring if None)
+            auto_install: Whether to attempt installing missing package
 
         Returns:
             Message confirming the registration
@@ -684,6 +688,15 @@ class RuntimeConfig(EventEmitter):
             >>> await runtime.register_tool(my_function)
         """
         try:
+            if auto_install and isinstance(function, str):
+                # Try to import root module, install if missing
+                package = function.split(".")[0]
+                try:
+                    importlib.import_module(package)
+                except ImportError:
+                    logger.info("Attempting to install package: %s", package)
+                    await self.install_package(package)
+
             tool = LLMCallableTool.from_callable(
                 function, name_override=name, description_override=description
             )
