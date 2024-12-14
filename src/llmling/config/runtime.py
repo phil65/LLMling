@@ -549,6 +549,58 @@ class RuntimeConfig(EventEmitter):
         """
         return list(self._resource_registry.values())
 
+    async def register_resource_by_loader(
+        self,
+        loader_type: str,
+        name: str,
+        *,
+        description: str = "",
+        **params: Any,
+    ) -> BaseResource:
+        """Register a resource using a loader type.
+
+        Provides a parameter-based interface for registering resources
+        without requiring resource objects.
+
+        Args:
+            loader_type: Type of loader to use ("path", "text", "cli", etc.)
+            name: Name for the resource
+            description: Optional description
+            **params: Loader-specific parameters
+
+        Example:
+            await runtime.register_resource_by_loader(
+                "path",
+                "readme",
+                description="Project readme",
+                path="README.md"
+            )
+
+            await runtime.register_resource_by_loader(
+                "text",
+                "greeting",
+                content="Hello, world!"
+            )
+        """
+        try:
+            # Get loader class from registry
+            loader_cls = self._loader_registry[loader_type]
+
+            # Get the resource class from the loader
+            resource_class = loader_cls.context_class
+
+            # Create resource instance with just the essential fields
+            resource = resource_class(description=description, **params)
+            self._resource_registry.register(name, resource)
+        except KeyError as exc:
+            msg = f"Unknown loader type: {loader_type}"
+            raise exceptions.ResourceError(msg) from exc
+        except Exception as exc:
+            msg = f"Failed to create resource: {exc}"
+            raise exceptions.ResourceError(msg) from exc
+        else:
+            return resource
+
     def register_resource(
         self,
         name: str,
