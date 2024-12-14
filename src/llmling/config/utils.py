@@ -32,10 +32,7 @@ T = TypeVar("T", bound=BaseModel)
 def toolset_config_to_toolset(config) -> ToolSet:
     match config:
         case OpenAPIToolsetConfig():
-            return OpenAPITools(
-                spec=config.spec,
-                base_url=config.base_url or "",
-            )
+            return OpenAPITools(spec=config.spec, base_url=config.base_url or "")
         case EntryPointToolsetConfig():
             return EntryPointTools(config.module)
         case CustomToolsetConfig():

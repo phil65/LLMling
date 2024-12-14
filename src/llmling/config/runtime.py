@@ -420,7 +420,7 @@ class RuntimeConfig(EventEmitter):
             if name in self._resource_registry:
                 return uri_or_name, self._resource_registry[name]
             # Create temporary resource for the URI
-            resource: BaseResource = PathResource(path=uri_or_name)
+            resource: BaseResource = PathResource(path=uri_or_name)  # pyright: ignore
             return uri_or_name, resource
 
         # 2. Try as resource name
@@ -439,7 +439,7 @@ class RuntimeConfig(EventEmitter):
         if "/" in uri_or_name or "\\" in uri_or_name or "." in uri_or_name:
             try:
                 logger.debug("Trying as file path")
-                resource = PathResource(path=uri_or_name)
+                resource = PathResource(path=uri_or_name)  # pyright: ignore
                 loader = PathResourceLoader.create(resource, uri_or_name)
                 uri = loader.create_uri(name=uri_or_name)
             except Exception as exc:  # noqa: BLE001

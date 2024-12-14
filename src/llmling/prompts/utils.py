@@ -34,34 +34,6 @@ def extract_function_info(
 ) -> tuple[list[PromptParameter], str]:
     """Extract parameter info and description from a function.
 
-    Example:
-        >>> async def search_docs(query: str, max_results: int = 10) -> list[str]:
-        ...     '''Search documentation.
-        ...     Args:
-        ...         query: Search string
-        ...         max_results: Maximum number of results
-        ...     '''
-        ...
-        >>> args, desc = extract_function_info(search_docs)
-        >>> args
-        [
-            PromptParameter(
-                name="query",
-                description="Search string",
-                required=True,
-                type_hint=str,
-            ),
-            PromptParameter(
-                name="max_results",
-                description="Maximum number of results",
-                required=False,
-                type_hint=int,
-                default=10,
-            ),
-        ]
-        >>> desc
-        'Search documentation.'
-
     Args:
         fn_or_path: Function or import path to analyze
         completions: Optional mapping of parameter names to completion functions
