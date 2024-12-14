@@ -30,27 +30,18 @@ class EntryPointTools(ToolSet):
 
     def _load_tools(self) -> None:
         """Load tools from entry points."""
-        try:
-            if entry_point := self.registry.get("tools"):
-                get_tools = entry_point.load()
-                for item in get_tools():
-                    try:
-                        self._tools.append(item)
-                        logger.debug(
-                            "Loaded tool %s from entry point %s",
-                            getattr(item, "__name__", str(item)),
-                            self.module,
-                        )
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning(
-                            "Failed to load tool from %s: %s", self.module, exc
-                        )
-            else:
-                msg = f"No tools entry point found for {self.module}"
-                raise ValueError(msg)  # noqa: TRY301
-        except Exception as exc:
-            msg = f"Failed to load tools from {self.module}"
-            raise ValueError(msg) from exc
+        if entry_point := self.registry.get("tools"):
+            get_tools = entry_point.load()
+            for item in get_tools():
+                try:
+                    self._tools.append(item)
+                    name = getattr(item, "__name__", str(item))
+                    logger.debug("Loaded tool %s from entry point %s", name, self.module)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Failed to load tool from %s: %s", self.module, exc)
+        else:
+            msg = f"No tools entry point found for {self.module}"
+            raise ValueError(msg)
 
     def get_tools(self) -> list[Callable[..., Any]]:
         """Get all tools loaded from entry points."""
