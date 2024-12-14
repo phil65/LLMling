@@ -34,6 +34,32 @@ class StepCondition(BaseModel):
     operator: Literal["eq", "gt", "lt", "contains", "exists"]
     value: Any = None
 
+    def evaluate_with_value(self, value: Any) -> bool:
+        """Evaluate this condition against a value.
+
+        Args:
+            value: The value to evaluate against the condition.
+
+        Returns:
+            bool: True if the condition is met, False otherwise.
+        """
+        field_value = value.get(self.field) if isinstance(value, dict) else value
+
+        match self.operator:
+            case "eq":
+                return field_value == self.value
+            case "gt":
+                return field_value > self.value
+            case "lt":
+                return field_value < self.value
+            case "contains":
+                try:
+                    return self.value in field_value  # type: ignore
+                except TypeError:
+                    return False
+            case "exists":
+                return field_value is not None
+
 
 @dataclass
 class StepResult:
@@ -246,15 +272,8 @@ class ChainTool(LLMCallableTool):
         while True:
             try:
                 # Check condition if any
-                if step.condition and not self._evaluate_condition(
-                    step.condition, input_value
-                ):
-                    return StepResult(
-                        success=True,
-                        result=input_value,  # Pass through unchanged
-                        duration=0,
-                    )
-
+                if step.condition and not step.condition.evaluate_with_value(input_value):
+                    return StepResult(success=True, result=input_value, duration=0)
                 # Prepare kwargs
                 if isinstance(input_value, dict):
                     kwargs = {**input_value, **step.keyword_args}
@@ -263,10 +282,8 @@ class ChainTool(LLMCallableTool):
 
                 # Execute with timeout if specified
                 if step.timeout:
-                    result = await asyncio.wait_for(
-                        self.runtime.execute_tool(step.tool, **kwargs),
-                        timeout=step.timeout,
-                    )
+                    fut = self.runtime.execute_tool(step.tool, **kwargs)
+                    result = await asyncio.wait_for(fut, timeout=step.timeout)
                 else:
                     result = await self.runtime.execute_tool(step.tool, **kwargs)
 
@@ -303,30 +320,7 @@ class ChainTool(LLMCallableTool):
                             continue
                         raise  # Max retries exceeded
 
-    def _evaluate_condition(self, condition: StepCondition, value: Any) -> bool:
-        """Evaluate a step condition."""
-        field_value = value.get(condition.field) if isinstance(value, dict) else value
-
-        match condition.operator:
-            case "eq":
-                return field_value == condition.value
-            case "gt":
-                return field_value > condition.value
-            case "lt":
-                return field_value < condition.value
-            case "contains":
-                try:
-                    return condition.value in field_value  # type: ignore
-                except TypeError:
-                    return False
-            case "exists":
-                return field_value is not None
-
-    async def _execute_sequential(
-        self,
-        pipeline: Pipeline,
-        results: StepResults,
-    ) -> Any:
+    async def _execute_sequential(self, pipeline: Pipeline, results: StepResults) -> Any:
         """Execute steps sequentially."""
         current = pipeline.input
 
@@ -338,11 +332,7 @@ class ChainTool(LLMCallableTool):
 
         return current
 
-    async def _execute_parallel(
-        self,
-        pipeline: Pipeline,
-        results: StepResults,
-    ) -> Any:
+    async def _execute_parallel(self, pipeline: Pipeline, results: StepResults) -> Any:
         """Execute independent steps in parallel."""
         semaphore = asyncio.Semaphore(pipeline.max_parallel)
 

@@ -129,7 +129,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
                         loaded.content = result.content
                     yield loaded
 
-        except git.exc.GitCommandError as exc:
+        except git.exc.GitCommandError as exc:  # type: ignore
             msg = f"Git operation failed: {exc}"
             raise exceptions.LoaderError(msg) from exc
         except Exception as exc:

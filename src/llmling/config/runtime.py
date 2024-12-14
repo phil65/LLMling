@@ -890,11 +890,7 @@ class RuntimeConfig(EventEmitter):
                     first_line[:100] + "..." if len(first_line) > 100 else first_line  # noqa: PLR2004
                 )
 
-            prompt = StaticPrompt(
-                name=name,
-                description=description,
-                messages=messages,
-            )
+            prompt = StaticPrompt(name=name, description=description, messages=messages)
             self._prompt_registry.register(name, prompt, replace=replace)
 
         except Exception as exc:

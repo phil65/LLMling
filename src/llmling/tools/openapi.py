@@ -39,6 +39,47 @@ FORMAT_MAP = {
 }
 
 
+def parse_operations(paths: dict) -> dict[str, dict[str, Any]]:
+    operations = {}
+    for path, path_item in paths.items():
+        for method, operation in path_item.items():
+            if method not in {"get", "post", "put", "delete", "patch"}:
+                continue
+
+            # Generate operation ID if not provided
+            op_id = operation.get("operationId")
+            if not op_id:
+                op_id = f"{method}_{path.replace('/', '_').strip('_')}"
+
+            # Collect all parameters (path, query, header)
+            params = operation.get("parameters", [])
+            if (
+                (request_body := operation.get("requestBody"))
+                and (content := request_body.get("content", {}))
+                and (json_schema := content.get("application/json", {}).get("schema"))
+                and (properties := json_schema.get("properties", {}))
+            ):
+                # Convert request body to parameters
+                for name, schema in properties.items():
+                    params.append({
+                        "name": name,
+                        "in": "body",
+                        "required": name in json_schema.get("required", []),
+                        "schema": schema,
+                        "description": schema.get("description", ""),
+                    })
+
+            operations[op_id] = {
+                "method": method,
+                "path": path,
+                "description": operation.get("description", ""),
+                "parameters": params,
+                "responses": operation.get("responses", {}),
+            }
+
+    return operations
+
+
 class OpenAPITools(ToolSet):
     """Tool collection for OpenAPI endpoints."""
 
@@ -91,50 +132,11 @@ class OpenAPITools(ToolSet):
 
     def _parse_operations(self) -> dict[str, dict[str, Any]]:
         """Parse OpenAPI spec into operation configurations."""
-        operations = {}
-
         # Get server URL if not overridden
         if not self.base_url and "servers" in self._spec:
             self.base_url = self._spec["servers"][0]["url"]
-
-        # Parse paths and operations
-        for path, path_item in self._spec.get("paths", {}).items():
-            for method, operation in path_item.items():
-                if method not in {"get", "post", "put", "delete", "patch"}:
-                    continue
-
-                # Generate operation ID if not provided
-                op_id = operation.get("operationId")
-                if not op_id:
-                    op_id = f"{method}_{path.replace('/', '_').strip('_')}"
-
-                # Collect all parameters (path, query, header)
-                parameters = operation.get("parameters", [])
-                if (
-                    (request_body := operation.get("requestBody"))
-                    and (content := request_body.get("content", {}))
-                    and (json_schema := content.get("application/json", {}).get("schema"))
-                    and (properties := json_schema.get("properties", {}))
-                ):
-                    # Convert request body to parameters
-                    for name, schema in properties.items():
-                        parameters.append({
-                            "name": name,
-                            "in": "body",
-                            "required": name in json_schema.get("required", []),
-                            "schema": schema,
-                            "description": schema.get("description", ""),
-                        })
-
-                operations[op_id] = {
-                    "method": method,
-                    "path": path,
-                    "description": operation.get("description", ""),
-                    "parameters": parameters,
-                    "responses": operation.get("responses", {}),
-                }
-
-        return operations
+        paths = self._spec.get("paths", {})
+        return parse_operations(paths)
 
     def _resolve_schema_ref(self, schema: dict[str, Any]) -> dict[str, Any]:
         """Resolve schema reference."""

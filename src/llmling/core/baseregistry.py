@@ -112,13 +112,13 @@ class BaseRegistry[TKey, TItem](MutableMapping[TKey, TItem], ABC):
 
     async def _initialize_item(self, item: TItem) -> None:
         """Initialize an item during startup."""
-        if hasattr(item, "startup") and callable(item.startup):
-            await item.startup()
+        if hasattr(item, "startup") and callable(item.startup):  # pyright: ignore
+            await item.startup()  # pyright: ignore
 
     async def _cleanup_item(self, item: TItem) -> None:
         """Clean up an item during shutdown."""
-        if hasattr(item, "shutdown") and callable(item.shutdown):
-            await item.shutdown()
+        if hasattr(item, "shutdown") and callable(item.shutdown):  # pyright: ignore
+            await item.shutdown()  # pyright: ignore
 
     # Implementing MutableMapping methods
     def __getitem__(self, key: TKey) -> TItem:
