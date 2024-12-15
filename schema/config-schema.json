@@ -1388,7 +1388,17 @@
     },
     "resources": {
       "additionalProperties": {
-        "anyOf": [
+        "discriminator": {
+          "mapping": {
+            "callable": "#/$defs/CallableResource",
+            "cli": "#/$defs/CLIResource",
+            "path": "#/$defs/PathResource",
+            "source": "#/$defs/SourceResource",
+            "text": "#/$defs/TextResource"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
           {
             "$ref": "#/$defs/PathResource"
           },

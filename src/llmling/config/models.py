@@ -210,6 +210,7 @@ class BaseResource(BaseModel):
     name: str | None = Field(None, exclude=True)
     """Technical identifier (automatically set from config key during registration)."""
 
+    # TODO: proper extra="forbid" for all subclasses.
     model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     def validate_resource(self) -> list[str]:
@@ -451,7 +452,10 @@ class CallableResource(BaseResource):
         return bool(sig.parameters)
 
 
-Resource = PathResource | TextResource | CLIResource | SourceResource | CallableResource
+Resource = Annotated[
+    PathResource | TextResource | CLIResource | SourceResource | CallableResource,
+    Field(discriminator="type"),
+]
 
 
 class WatchConfig(ConfigModel):
