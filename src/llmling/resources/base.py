@@ -224,7 +224,7 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
     def resource_type(self) -> str:
         """Infer context type from context class."""
         fields = self.context_class.model_fields  # type: ignore
-        return fields["resource_type"].default  # type: ignore
+        return fields["type"].default  # type: ignore
 
     @overload
     def load(

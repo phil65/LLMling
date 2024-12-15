@@ -385,5 +385,17 @@ async def test_path_loader_directory_with_processors(
     assert {f.content for f in files} == {"1tset", "2tset"}  # Reversed content
 
 
+def test_resource_loader_type_field():
+    """Test that ResourceLoader correctly reads the type field from resources."""
+    from llmling.config.models import TextResource
+    from llmling.resources.loaders.text import TextResourceLoader
+
+    loader = TextResourceLoader.create(
+        resource=TextResource(name="test", content="test"), name="test"
+    )
+
+    assert loader.resource_type == "text"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
