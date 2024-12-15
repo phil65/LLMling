@@ -109,4 +109,4 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
 
     def get_loader(self, context: BaseResource) -> ResourceLoader[Any]:
         """Get a loader instance for a context type."""
-        return self.get(context.resource_type)
+        return self.get(context.type)

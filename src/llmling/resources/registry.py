@@ -61,7 +61,7 @@ class ResourceRegistry(BaseRegistry[str, BaseResource]):
             item = item.model_copy(update=updates)
 
         except exceptions.LoaderError as exc:
-            msg = f"No loader registered for resource type '{item.resource_type}'"
+            msg = f"No loader registered for resource type '{item.type}'"
             raise exceptions.ResourceError(msg) from exc
 
         # Call parent registration

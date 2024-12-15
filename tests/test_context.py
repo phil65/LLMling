@@ -292,7 +292,7 @@ async def test_all_loaders_with_processors(
     }
 
     for context, original_content in resources:
-        loader = loaders[context.resource_type]
+        loader = loaders[context.type]
         result = await anext(loader.load(context, processor_registry))
         assert isinstance(result, LoadedResource)
         assert result.content

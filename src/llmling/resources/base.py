@@ -93,7 +93,7 @@ class LoaderContext[TResource]:
         # Cast to Protocol to make type checker happy
         resource = cast(BaseResource, self.resource)
         cls_name = self.__class__.__name__
-        return f"{cls_name}(name={self.name!r}, type={resource.resource_type})"
+        return f"{cls_name}(name={self.name!r}, type={resource.type})"
 
 
 class ResourceLoader[TResource](ABC, CompletionProvider):

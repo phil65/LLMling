@@ -192,7 +192,7 @@ class GlobalSettings(ConfigModel):
 class BaseResource(BaseModel):
     """Base class for all resource types."""
 
-    resource_type: str = Field(init=False)
+    type: str = Field(init=False)
     """Type identifier for this resource."""
 
     description: str = ""
@@ -257,7 +257,7 @@ class BaseResource(BaseModel):
 class PathResource(BaseResource):
     """Resource loaded from a file or URL."""
 
-    resource_type: Literal["path"] = Field(default="path", init=False)
+    type: Literal["path"] = Field(default="path", init=False)
     """Discriminator field identifying this as a path-based resource."""
 
     path: str | os.PathLike[str]
@@ -312,7 +312,7 @@ class PathResource(BaseResource):
 class TextResource(BaseResource):
     """Raw text resource."""
 
-    resource_type: Literal["text"] = Field(default="text", init=False)
+    type: Literal["text"] = Field(default="text", init=False)
     """Discriminator field identifying this as a text-based resource."""
 
     content: str
@@ -340,7 +340,7 @@ class TextResource(BaseResource):
 class CLIResource(BaseResource):
     """Resource from CLI command execution."""
 
-    resource_type: Literal["cli"] = Field(default="cli", init=False)
+    type: Literal["cli"] = Field(default="cli", init=False)
     """Discriminator field identifying this as a CLI-based resource."""
 
     command: str | TypingSequence[str]
@@ -374,7 +374,7 @@ class CLIResource(BaseResource):
 class RepositoryResource(BaseResource):
     """Git repository content."""
 
-    resource_type: Literal["repository"] = Field("repository", init=False)
+    type: Literal["repository"] = Field("repository", init=False)
     repo_url: str
     """URL of the git repository."""
 
@@ -403,7 +403,7 @@ class RepositoryResource(BaseResource):
 class SourceResource(BaseResource):
     """Resource from Python source code."""
 
-    resource_type: Literal["source"] = Field(default="source", init=False)
+    type: Literal["source"] = Field(default="source", init=False)
     """Discriminator field identifying this as a source code resource."""
 
     import_path: str
@@ -427,7 +427,7 @@ class SourceResource(BaseResource):
 class CallableResource(BaseResource):
     """Resource from executing a Python callable."""
 
-    resource_type: Literal["callable"] = Field(default="callable", init=False)
+    type: Literal["callable"] = Field(default="callable", init=False)
     """Discriminator field identifying this as a callable-based resource."""
 
     import_path: str
