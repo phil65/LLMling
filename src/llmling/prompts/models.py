@@ -356,18 +356,16 @@ class FilePrompt(BasePrompt):
             case "text":
                 # Simple text format - whole file as user message
                 msg = MessageContent(type="text", content=content)
-                return [PromptMessage(role="user", content=msg)]
             case "markdown":
                 # TODO: Parse markdown sections into separate messages
                 msg = MessageContent(type="text", content=content)
-                return [PromptMessage(role="user", content=msg)]
             case "jinja2":
                 # Raw template - will be formatted during format()
                 msg = MessageContent(type="text", content=content)
-                return [PromptMessage(role="user", content=msg)]
             case _:
                 msg = f"Unsupported format: {self.fmt}"
                 raise ValueError(msg)
+        return [PromptMessage(role="user", content=msg)]
 
     async def format(
         self, arguments: dict[str, Any] | None = None
