@@ -41,10 +41,10 @@ logger = get_logger(__name__)
 class LLMCapabilitiesConfig(ConfigModel):
     """Configuration for LLM system capabilities."""
 
-    load_resource: bool = True
+    load_resource: bool = False
     """Whether the LLM can load and access resource content."""
 
-    get_resources: bool = True
+    get_resources: bool = False
     """Whether the LLM can discover available resources."""
 
     install_package: bool = False
