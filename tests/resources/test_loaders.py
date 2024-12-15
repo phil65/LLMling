@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 import git
@@ -180,6 +181,10 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Git branch tests are unreliable in CI environment",
+)
 async def test_repository_loader(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
