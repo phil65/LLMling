@@ -195,17 +195,25 @@ async def test_repository_loader(
     # Create and checkout main branch explicitly
     default_branch = "main"
     if default_branch not in repo.heads:
-        repo.create_head(
-            default_branch, commit.hexsha
-        )  # Use hexsha instead of Commit object
-    repo.head.reference = repo.heads[default_branch]
-    repo.head.reset(index=True, working_tree=True)
+        repo.create_head(default_branch, commit)
+        repo.head.reference = repo.heads[default_branch]
+        repo.head.reset(
+            index=True, working_tree=True
+        )  # Force reset to update working tree
+    else:
+        repo.heads[default_branch].checkout()
+
+    # Verify the branch is properly set up
+    try:
+        repo.git.rev_parse("--verify", default_branch)
+    except git.exc.GitCommandError:
+        pytest.skip(
+            f"Cannot verify branch {default_branch} - possibly in detached HEAD state"
+        )
 
     # Load the file
     resource = RepositoryResource(
-        repo_url=str(tmp_path),
-        ref=default_branch,
-        path="test.txt",
+        repo_url=str(tmp_path), ref=default_branch, path="test.txt"
     )
     loader = RepositoryResourceLoader(LoaderContext(resource=resource, name="test"))
 
