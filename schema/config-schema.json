@@ -3,11 +3,11 @@
     "CLIResource": {
       "description": "Resource from CLI command execution.",
       "properties": {
-        "resource_type": {
+        "type": {
           "const": "cli",
           "default": "cli",
           "description": "Discriminator field identifying this as a CLI-based resource.",
-          "title": "Resource Type",
+          "title": "Type",
           "type": "string"
         },
         "description": {
@@ -48,6 +48,19 @@
           ],
           "default": null,
           "description": "Configuration for file system watching, if supported."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
+          "title": "Name"
         },
         "command": {
           "anyOf": [
@@ -106,11 +119,11 @@
     "CallableResource": {
       "description": "Resource from executing a Python callable.",
       "properties": {
-        "resource_type": {
+        "type": {
           "const": "callable",
           "default": "callable",
           "description": "Discriminator field identifying this as a callable-based resource.",
-          "title": "Resource Type",
+          "title": "Type",
           "type": "string"
         },
         "description": {
@@ -151,6 +164,19 @@
           ],
           "default": null,
           "description": "Configuration for file system watching, if supported."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
+          "title": "Name"
         },
         "import_path": {
           "description": "Dotted import path to the callable to execute.",
@@ -466,7 +492,7 @@
         },
         "log_level": {
           "default": "INFO",
-          "description": "Log level to use for the server",
+          "description": "Log level for LLMling core.",
           "enum": [
             "DEBUG",
             "INFO",
@@ -487,80 +513,6 @@
         }
       },
       "title": "GlobalSettings",
-      "type": "object"
-    },
-    "ImageResource": {
-      "description": "Resource for image input.",
-      "properties": {
-        "resource_type": {
-          "const": "image",
-          "default": "image",
-          "description": "Discriminator field identifying this as an image resource.",
-          "title": "Resource Type",
-          "type": "string"
-        },
-        "description": {
-          "default": "",
-          "description": "Human-readable description of the resource.",
-          "title": "Description",
-          "type": "string"
-        },
-        "uri": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Canonical URI for this resource, set during registration if unset.",
-          "title": "Uri"
-        },
-        "processors": {
-          "description": "Processing steps to apply when loading this resource.",
-          "items": {
-            "$ref": "#/$defs/ProcessingStep"
-          },
-          "title": "Processors",
-          "type": "array"
-        },
-        "watch": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WatchConfig"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Configuration for watching the image file for changes."
-        },
-        "path": {
-          "description": "Path or URL to the image file.",
-          "title": "Path",
-          "type": "string"
-        },
-        "alt_text": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Alternative text description of the image.",
-          "title": "Alt Text"
-        }
-      },
-      "required": [
-        "path"
-      ],
-      "title": "ImageResource",
       "type": "object"
     },
     "Jinja2Config": {
@@ -708,13 +660,13 @@
       "description": "Configuration for LLM system capabilities.",
       "properties": {
         "load_resource": {
-          "default": true,
+          "default": false,
           "description": "Whether the LLM can load and access resource content.",
           "title": "Load Resource",
           "type": "boolean"
         },
         "get_resources": {
-          "default": true,
+          "default": false,
           "description": "Whether the LLM can discover available resources.",
           "title": "Get Resources",
           "type": "boolean"
@@ -735,6 +687,12 @@
           "default": false,
           "description": "Whether the LLM can create new tools from provided Python code.",
           "title": "Register Code Tool",
+          "type": "boolean"
+        },
+        "chain_tools": {
+          "default": false,
+          "description": "Whether the LLM gains capability to chain multiple tool calls into one.",
+          "title": "Chain Tools",
           "type": "boolean"
         }
       },
@@ -830,11 +788,11 @@
     "PathResource": {
       "description": "Resource loaded from a file or URL.",
       "properties": {
-        "resource_type": {
+        "type": {
           "const": "path",
           "default": "path",
           "description": "Discriminator field identifying this as a path-based resource.",
-          "title": "Resource Type",
+          "title": "Type",
           "type": "string"
         },
         "description": {
@@ -875,6 +833,19 @@
           ],
           "default": null,
           "description": "Configuration for watching the file for changes."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
+          "title": "Name"
         },
         "path": {
           "anyOf": [
@@ -1055,8 +1026,10 @@
           "type": "boolean"
         },
         "type_hint": {
+          "default": "str",
           "description": "Type annotation for the argument, defaults to str.",
-          "title": "Type Hint"
+          "title": "Type Hint",
+          "type": "string"
         },
         "default": {
           "anyOf": [
@@ -1092,11 +1065,11 @@
     "SourceResource": {
       "description": "Resource from Python source code.",
       "properties": {
-        "resource_type": {
+        "type": {
           "const": "source",
           "default": "source",
           "description": "Discriminator field identifying this as a source code resource.",
-          "title": "Resource Type",
+          "title": "Type",
           "type": "string"
         },
         "description": {
@@ -1137,6 +1110,19 @@
           ],
           "default": null,
           "description": "Configuration for file system watching, if supported."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
+          "title": "Name"
         },
         "import_path": {
           "description": "Dotted import path to the Python module or object.",
@@ -1223,11 +1209,11 @@
     "TextResource": {
       "description": "Raw text resource.",
       "properties": {
-        "resource_type": {
+        "type": {
           "const": "text",
           "default": "text",
           "description": "Discriminator field identifying this as a text-based resource.",
-          "title": "Resource Type",
+          "title": "Type",
           "type": "string"
         },
         "description": {
@@ -1268,6 +1254,19 @@
           ],
           "default": null,
           "description": "Configuration for file system watching, if supported."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Technical identifier (automatically set from config key during registration).",
+          "title": "Name"
         },
         "content": {
           "description": "The actual text content of the resource.",
@@ -1404,9 +1403,6 @@
           },
           {
             "$ref": "#/$defs/CallableResource"
-          },
-          {
-            "$ref": "#/$defs/ImageResource"
           }
         ]
       },
