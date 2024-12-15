@@ -11,11 +11,8 @@ from llmling.cli.constants import (
 from llmling.cli.utils import format_output, get_command_help
 
 
-PROMPTS_HELP = "Prompt management commands."
-prompts_cli = t.Typer(
-    help=get_command_help(PROMPTS_HELP),
-    no_args_is_help=True,
-)
+help_cmd = get_command_help("Prompt management commands.")
+prompts_cli = t.Typer(help=help_cmd, no_args_is_help=True)
 
 
 @prompts_cli.command("list")

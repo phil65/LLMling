@@ -13,11 +13,8 @@ from llmling.cli.constants import (
 from llmling.cli.utils import format_output, get_command_help
 
 
-RESOURCES_HELP = "Resource management commands."
-resources_cli = t.Typer(
-    help=get_command_help(RESOURCES_HELP),
-    no_args_is_help=True,
-)
+help_cmd = get_command_help("Resource management commands.")
+resources_cli = t.Typer(help=help_cmd, no_args_is_help=True)
 
 
 @resources_cli.command("list")

@@ -14,11 +14,8 @@ from llmling.cli.constants import (
 from llmling.cli.utils import format_output, get_command_help
 
 
-TOOLS_HELP = "Tool management commands."
-tools_cli = t.Typer(
-    help=get_command_help(TOOLS_HELP),
-    no_args_is_help=True,
-)
+help_cmd = get_command_help("Tool management commands.")
+tools_cli = t.Typer(help=help_cmd, no_args_is_help=True)
 
 
 @tools_cli.command("list")
@@ -58,8 +55,7 @@ def call_tool(
     """Execute a tool with given arguments."""
     from llmling.config.runtime import RuntimeConfig
 
+    kwargs = dict(arg.split("=", 1) for arg in (args or []))
     with RuntimeConfig.open_sync(config_path) as runtime:
-        kwargs = dict(arg.split("=", 1) for arg in (args or []))
-        with RuntimeConfig.open_sync(config_path) as runtime:
-            result = asyncio.run(runtime.execute_tool(name, **kwargs))
-            print(result)
+        result = asyncio.run(runtime.execute_tool(name, **kwargs))
+        print(result)

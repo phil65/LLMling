@@ -7,8 +7,7 @@ from llmling.cli.utils import format_output, get_command_help
 from llmling.config.store import config_store
 
 
-CONFIG_HELP = "Config file management commands."
-help_text = get_command_help(CONFIG_HELP)
+help_text = get_command_help("Config file management commands.")
 config_cli = t.Typer(help=help_text, no_args_is_help=True)
 
 
