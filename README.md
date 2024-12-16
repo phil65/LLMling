@@ -161,8 +161,8 @@ resources:
 
 Use the agent with this configuration:
 ```python
-from llmling.config.runtime import RuntimeConfig
-from llmling_agent import LLMLingAgent
+from llmling import RuntimeConfig
+from llmling_agent import LLMlingAgent
 from pydantic import BaseModel
 
 class WebResult(BaseModel):
@@ -170,7 +170,7 @@ class WebResult(BaseModel):
     success: bool
 
 async with RuntimeConfig.open("config.yml") as runtime:
-    agent = LLMLingAgent[WebResult](runtime)
+    agent = LLMlingAgent[WebResult](runtime)
     result = await agent.run(
         "Load the bookmarks resource and open the Python website URL"
     )
@@ -200,7 +200,8 @@ Add LLMLing as a context server in your `settings.json`:
         "args": [
           "mcp-server-llmling@latest",
           "start",
-          "path/to/your/config.yml"
+          "path/to/your/config.yml",
+          "--zed-mode"
         ]
       },
       "settings": {}
