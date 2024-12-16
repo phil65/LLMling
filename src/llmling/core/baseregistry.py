@@ -28,6 +28,9 @@ class BaseRegistry[TKey, TItem](MutableMapping[TKey, TItem], ABC):
         self._configs: dict[TKey, Any] = {}
         self._observers: set[RegistryEvents[TKey, TItem]] = set()
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._items})"
+
     @property
     def is_empty(self) -> bool:
         """Check if registry has any items."""
