@@ -65,20 +65,12 @@ class ResourceWatcher:
                 patterns=resource.watch.patterns if resource.watch else None,
                 ignore_file=None,
             )
-
-            logger.debug(
-                "Adding watch for %s -> %s with patterns %s", name, watch_path, patterns
-            )
-
             if is_watchable_path(watch_path):
                 self.watcher.add_watch(watch_path, patterns=patterns)
                 logger.debug("Added watch for: %s -> %s", name, watch_path)
             else:
-                logger.debug(
-                    "Skipping watch for non-local path: %s -> %s",
-                    name,
-                    watch_path,
-                )
+                msg = "Skipping watch for non-local path: %s -> %s"
+                logger.debug(msg, name, watch_path)
 
         except Exception:
             logger.exception("Failed to add watch for: %s", name)
@@ -104,8 +96,6 @@ class ResourceWatcher:
     def _invalidate_resources_for_path(self, path: str) -> None:
         """Invalidate any resources watching the given path."""
         path_obj = Path(path)
-        logger.debug("Checking resources for path: %s", path)
-
         for name, resource in self.registry.items():
             watch_path = Path(resource.get_watch_path() or "")
             logger.debug("Checking resource %s with watch path %s", name, watch_path)
