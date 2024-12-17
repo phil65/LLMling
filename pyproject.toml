@@ -55,6 +55,7 @@ dependencies = [
     "httpx",
     "typer",
     "promptantic>=0.4.3",
+    "psygnal>=0.11.1",
 ]
 
 [project.scripts]

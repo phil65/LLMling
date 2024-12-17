@@ -19,7 +19,6 @@ from llmling.config.models import BaseResource, PathResource
 from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
 from llmling.core import exceptions
 from llmling.core.chain import ChainTool
-from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep
 from llmling.processors.jinjaprocessor import Jinja2Processor
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
     import types
 
     from llmling.config.models import Config
-    from llmling.core.events import RegistryEvents
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt
     from llmling.resources.models import LoadedResource
@@ -51,7 +49,7 @@ logger = get_logger(__name__)
 RegistryType = Literal["resource", "prompt", "tool"]
 
 
-class RuntimeConfig(EventEmitter):
+class RuntimeConfig:
     """Fully initialized runtime configuration.
 
     This represents the "live" state of a Config, with all components
@@ -1060,46 +1058,6 @@ class RuntimeConfig(EventEmitter):
         return await self._processor_registry.process(
             content, [ProcessingStep(name=processor_name, kwargs=kwargs)]
         )
-
-    # Registry Observation
-
-    def add_observer(
-        self,
-        observer: RegistryEvents[str, Any],
-        registry_type: RegistryType,
-    ) -> None:
-        """Add an observer for registry changes.
-
-        Args:
-            observer: Observer to add
-            registry_type: Type of registry to observe
-        """
-        match registry_type:
-            case "resource":
-                self._resource_registry.add_observer(observer)
-            case "prompt":
-                self._prompt_registry.add_observer(observer)
-            case "tool":
-                self._tool_registry.add_observer(observer)
-
-    def remove_observer(
-        self,
-        observer: RegistryEvents[str, Any],
-        registry_type: RegistryType,
-    ) -> None:
-        """Remove a registry observer.
-
-        Args:
-            observer: Observer to remove
-            registry_type: Type of registry to remove from
-        """
-        match registry_type:
-            case "resource":
-                self._resource_registry.remove_observer(observer)
-            case "prompt":
-                self._prompt_registry.remove_observer(observer)
-            case "tool":
-                self._tool_registry.remove_observer(observer)
 
     @property
     def original_config(self) -> Config:

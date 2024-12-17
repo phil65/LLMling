@@ -10,7 +10,6 @@ from upath import UPath
 
 from llmling.config.models import Config
 from llmling.core import exceptions
-from llmling.core.events import EventEmitter
 from llmling.core.log import get_logger, setup_logging
 
 
@@ -23,7 +22,7 @@ REQ_PATTERN = re.compile(
 )
 
 
-class ConfigManager(EventEmitter):
+class ConfigManager:
     """Manages configuration state and lifecycle.
 
     Handles loading, storing and validating configurations.
