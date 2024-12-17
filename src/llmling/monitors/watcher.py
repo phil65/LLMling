@@ -39,6 +39,7 @@ class FileWatcher:
         step_ms: int = 50,
         polling: bool | None = None,
         poll_delay_ms: int = 300,
+        max_retries: int = 3,
     ) -> None:
         """Initialize watcher.
 
@@ -47,6 +48,7 @@ class FileWatcher:
             step_ms: Time between checks (milliseconds)
             polling: Whether to force polling mode (None = auto)
             poll_delay_ms: Delay between polls if polling is used
+            max_retries: Maximum number of retries for watch failures
         """
         self._running = False
         self._watches: dict[str, set[str]] = {}  # path -> patterns
@@ -56,6 +58,7 @@ class FileWatcher:
         self._polling = polling
         self._poll_delay_ms = poll_delay_ms
         self.signals = FileWatcherSignals()
+        self._max_retries = max_retries
 
     async def start(self) -> None:
         self._running = True
@@ -82,9 +85,14 @@ class FileWatcher:
             raise RuntimeError(msg)
 
         path_str = str(path)
-        logger.debug("Setting up watch for %s with patterns %s", path_str, patterns)
+        # Validate path before creating watch task
+        if not Path(path_str).exists():
+            msg = f"Path does not exist: {path_str}"
+            exc = FileNotFoundError(msg)
+            self.signals.watch_error.emit(path_str, exc)
+            return
 
-        # Create watch task
+        logger.debug("Setting up watch for %s with patterns %s", path_str, patterns)
         coro = self._watch_path(path_str, patterns or ["*"])
         task = asyncio.create_task(coro, name=f"watch-{path_str}")
         self._tasks.add(task)
@@ -97,32 +105,48 @@ class FileWatcher:
 
     async def _watch_path(self, path: str, patterns: list[str]) -> None:
         """Watch a path and emit signals for changes."""
-        try:
-            logger.debug("Starting watch on %s with patterns %s", path, patterns)
+        retries = self._max_retries
+        while retries and self._running:
+            try:
+                logger.debug("Starting watch on %s with patterns %s", path, patterns)
 
-            async for changes in awatch(
-                path,
-                watch_filter=lambda _, p: any(
-                    fnmatch.fnmatch(Path(p).name, pattern) for pattern in patterns
-                ),
-                debounce=self._debounce_ms,
-                step=self._step_ms,
-                recursive=True,
-            ):
-                if not self._running:
+                async for changes in awatch(
+                    path,
+                    watch_filter=lambda _, p: any(
+                        fnmatch.fnmatch(Path(p).name, pattern) for pattern in patterns
+                    ),
+                    debounce=self._debounce_ms,
+                    step=self._step_ms,
+                    recursive=True,
+                    force_polling=self._polling,
+                    poll_delay_ms=self._poll_delay_ms,
+                ):
+                    if not self._running:
+                        break
+
+                    for change_type, changed_path in changes:
+                        logger.debug(
+                            "Detected change: %s -> %s", change_type, changed_path
+                        )
+                        match change_type:
+                            case Change.added:
+                                self.signals.file_added.emit(changed_path)
+                            case Change.modified:
+                                self.signals.file_modified.emit(changed_path)
+                            case Change.deleted:
+                                self.signals.file_deleted.emit(changed_path)
+
+            except asyncio.CancelledError:
+                logger.debug("Watch cancelled for: %s", path)
+                break
+            except Exception as exc:
+                logger.warning(
+                    "Watch error for %s: %s. Retries left: %d", path, exc, retries
+                )
+                retries -= 1
+                if retries:
+                    await asyncio.sleep(1)
+                else:
+                    logger.exception("Watch failed for: %s", path)
+                    self.signals.watch_error.emit(path, exc)
                     break
-
-                for change_type, changed_path in changes:
-                    logger.debug("Detected change: %s -> %s", change_type, changed_path)
-                    match change_type:
-                        case Change.added:
-                            self.signals.file_added.emit(changed_path)
-                        case Change.modified:
-                            self.signals.file_modified.emit(changed_path)
-                        case Change.deleted:
-                            self.signals.file_deleted.emit(changed_path)
-        except asyncio.CancelledError:
-            logger.debug("Watch cancelled for: %s", path)
-        except Exception as exc:
-            logger.exception("Watch error for: %s", path)
-            self.signals.watch_error.emit(path, exc)

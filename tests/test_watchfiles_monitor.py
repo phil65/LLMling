@@ -51,7 +51,7 @@ async def test_basic_file_watch(watcher: FileWatcher, temp_dir: Path) -> None:
         event.set()
 
     watcher.add_watch(test_file)
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.3)
 
     test_file.write_text("modified")
 
@@ -80,10 +80,10 @@ async def test_pattern_matching(watcher: FileWatcher, temp_dir: Path) -> None:
         event.set()
 
     watcher.add_watch(temp_dir, patterns=["*.py"])
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.3)
 
     py_file.write_text("python modified")
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.3)
     txt_file.write_text("text modified")
 
     try:
@@ -112,7 +112,7 @@ async def test_watch_direct_file(watcher: FileWatcher, temp_dir: Path) -> None:
             event.set()
 
     watcher.add_watch(str(test_file))
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.3)
 
     test_file.write_text("modified")
 
@@ -137,7 +137,7 @@ async def test_path_resolution(watcher: FileWatcher, temp_dir: Path) -> None:
         event.set()
 
     watcher.add_watch(test_file.absolute())
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.3)
 
     test_file.write_text("modified")
 
@@ -176,7 +176,7 @@ async def test_multiple_signals(watcher: FileWatcher, temp_dir: Path) -> None:
         event.set()
 
     watcher.add_watch(temp_dir)
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.3)
 
     # Test creation
     test_file.write_text("initial")
@@ -199,15 +199,21 @@ async def test_multiple_signals(watcher: FileWatcher, temp_dir: Path) -> None:
 async def test_watch_error_handling(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test error handling in watcher."""
     errors: list[tuple[str, Exception]] = []
+    event = asyncio.Event()
 
     @watcher.signals.watch_error.connect
     def on_error(path: str, exc: Exception) -> None:
         errors.append((path, exc))
+        event.set()
 
     # Try to watch a non-existent directory
     nonexistent = temp_dir / "nonexistent"
     watcher.add_watch(nonexistent)
 
-    await asyncio.sleep(0.1)
-    assert errors, "No error reported for invalid watch"
-    assert str(nonexistent) in errors[0][0]
+    try:
+        await asyncio.wait_for(event.wait(), timeout=0.5)
+        assert errors, "No error reported for invalid watch"
+        assert str(nonexistent) in errors[0][0]
+        assert isinstance(errors[0][1], FileNotFoundError)
+    except TimeoutError:
+        pytest.fail("No error reported within timeout")
