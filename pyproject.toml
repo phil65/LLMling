@@ -9,7 +9,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llmling"
-description = "LLM simplified."
+description = "A backend for pydantic-AI agents and MCP servers."
 authors = [
     { name = "Philipp Temminghoff", email = "philipptemminghoff@googlemail.com" },
 ]
@@ -28,6 +28,7 @@ classifiers = [
     "Topic :: Software Development",
     "Topic :: Utilities",
     "Typing :: Typed",
+    "Framework :: Pydantic :: 2",
 
 ]
 keywords = []
