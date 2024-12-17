@@ -1,4 +1,4 @@
-"""Tests for watchfiles-based file monitoring."""
+"""Tests for signal-based file monitoring."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from llmling.monitors.implementations.watchfiles_watcher import WatchfilesMonitor
+from llmling.monitors.watcher import FileWatcher
 
 
 if TYPE_CHECKING:
@@ -29,15 +29,15 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-async def monitor() -> AsyncIterator[WatchfilesMonitor]:
-    """Create and start a test monitor."""
-    mon = WatchfilesMonitor()
-    await mon.start()
-    yield mon
-    await mon.stop()
+async def watcher() -> AsyncIterator[FileWatcher]:
+    """Create and start a test watcher."""
+    w = FileWatcher()
+    await w.start()
+    yield w
+    await w.stop()
 
 
-async def test_basic_file_watch(monitor: WatchfilesMonitor, temp_dir: Path) -> None:
+async def test_basic_file_watch(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test basic file change detection."""
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
@@ -45,11 +45,12 @@ async def test_basic_file_watch(monitor: WatchfilesMonitor, temp_dir: Path) -> N
     changes: list[str] = []
     event = asyncio.Event()
 
-    def on_change(events):
-        changes.extend(normalize_path(e.path) for e in events)
+    @watcher.signals.file_modified.connect
+    def on_change(path: str) -> None:
+        changes.append(normalize_path(path))
         event.set()
 
-    monitor.add_watch(test_file, callback=on_change)
+    watcher.add_watch(test_file)
     await asyncio.sleep(0.1)
 
     test_file.write_text("modified")
@@ -62,7 +63,7 @@ async def test_basic_file_watch(monitor: WatchfilesMonitor, temp_dir: Path) -> N
         pytest.fail(f"No changes detected for {test_file}")
 
 
-async def test_pattern_matching(monitor: WatchfilesMonitor, temp_dir: Path) -> None:
+async def test_pattern_matching(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test pattern matching works."""
     py_file = temp_dir / "test.py"
     txt_file = temp_dir / "test.txt"
@@ -73,16 +74,12 @@ async def test_pattern_matching(monitor: WatchfilesMonitor, temp_dir: Path) -> N
     matched_files: list[str] = []
     event = asyncio.Event()
 
-    def on_change(events):
-        matched_files.extend(normalize_path(e.path) for e in events)
+    @watcher.signals.file_modified.connect
+    def on_change(path: str) -> None:
+        matched_files.append(normalize_path(path))
         event.set()
 
-    monitor.add_watch(
-        temp_dir,
-        patterns=["*.py"],
-        callback=on_change,
-    )
-
+    watcher.add_watch(temp_dir, patterns=["*.py"])
     await asyncio.sleep(0.1)
 
     py_file.write_text("python modified")
@@ -99,7 +96,7 @@ async def test_pattern_matching(monitor: WatchfilesMonitor, temp_dir: Path) -> N
         pytest.fail("No changes detected")
 
 
-async def test_watch_direct_file(monitor: WatchfilesMonitor, temp_dir: Path) -> None:
+async def test_watch_direct_file(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test watching a specific file works."""
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
@@ -107,14 +104,14 @@ async def test_watch_direct_file(monitor: WatchfilesMonitor, temp_dir: Path) -> 
     event = asyncio.Event()
     file_changed = False
 
-    def on_change(events):
+    @watcher.signals.file_modified.connect
+    def on_change(path: str) -> None:
         nonlocal file_changed
-        for e in events:
-            if Path(normalize_path(e.path)).name == test_file.name:
-                file_changed = True
-                event.set()
+        if Path(normalize_path(path)).name == test_file.name:
+            file_changed = True
+            event.set()
 
-    monitor.add_watch(str(test_file), callback=on_change)
+    watcher.add_watch(str(test_file))
     await asyncio.sleep(0.1)
 
     test_file.write_text("modified")
@@ -126,7 +123,7 @@ async def test_watch_direct_file(monitor: WatchfilesMonitor, temp_dir: Path) -> 
         pytest.fail("Change not detected for direct file watch")
 
 
-async def test_path_resolution(monitor: WatchfilesMonitor, temp_dir: Path) -> None:
+async def test_path_resolution(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test different path formats are handled correctly."""
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
@@ -134,11 +131,12 @@ async def test_path_resolution(monitor: WatchfilesMonitor, temp_dir: Path) -> No
     events_received: list[str] = []
     event = asyncio.Event()
 
-    def on_change(events):
-        events_received.extend(normalize_path(e.path) for e in events)
+    @watcher.signals.file_modified.connect
+    def on_change(path: str) -> None:
+        events_received.append(normalize_path(path))
         event.set()
 
-    monitor.add_watch(test_file.absolute(), callback=on_change)
+    watcher.add_watch(test_file.absolute())
     await asyncio.sleep(0.1)
 
     test_file.write_text("modified")
@@ -149,3 +147,67 @@ async def test_path_resolution(monitor: WatchfilesMonitor, temp_dir: Path) -> No
         assert normalized_test_file in events_received, "File change not detected"
     except TimeoutError:
         pytest.fail("No events received")
+
+
+async def test_multiple_signals(watcher: FileWatcher, temp_dir: Path) -> None:
+    """Test that all signal types work."""
+    test_file = temp_dir / "test.txt"
+
+    events: dict[str, list[str]] = {
+        "added": [],
+        "modified": [],
+        "deleted": [],
+    }
+    event = asyncio.Event()
+
+    @watcher.signals.file_added.connect
+    def on_added(path: str) -> None:
+        events["added"].append(normalize_path(path))
+        event.set()
+
+    @watcher.signals.file_modified.connect
+    def on_modified(path: str) -> None:
+        events["modified"].append(normalize_path(path))
+        event.set()
+
+    @watcher.signals.file_deleted.connect
+    def on_deleted(path: str) -> None:
+        events["deleted"].append(normalize_path(path))
+        event.set()
+
+    watcher.add_watch(temp_dir)
+    await asyncio.sleep(0.1)
+
+    # Test creation
+    test_file.write_text("initial")
+    await asyncio.wait_for(event.wait(), timeout=1.0)
+    event.clear()
+    assert normalize_path(test_file) in events["added"]
+
+    # Test modification
+    test_file.write_text("modified")
+    await asyncio.wait_for(event.wait(), timeout=1.0)
+    event.clear()
+    assert normalize_path(test_file) in events["modified"]
+
+    # Test deletion
+    test_file.unlink()
+    await asyncio.wait_for(event.wait(), timeout=1.0)
+    assert normalize_path(test_file) in events["deleted"]
+
+
+async def test_watch_error_handling(watcher: FileWatcher, temp_dir: Path) -> None:
+    """Test error handling in watcher."""
+    errors: list[tuple[str, Exception]] = []
+
+    @watcher.signals.watch_error.connect
+    def on_error(path: str, exc: Exception) -> None:
+        errors.append((path, exc))
+
+    # Try to watch a non-existent directory
+    nonexistent = temp_dir / "nonexistent"
+    watcher.add_watch(nonexistent)
+
+    await asyncio.sleep(0.1)
+    assert errors, "No error reported for invalid watch"
+    assert str(nonexistent) in errors[0][0]

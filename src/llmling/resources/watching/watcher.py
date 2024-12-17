@@ -3,64 +3,40 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from llmling.core.log import get_logger
-from llmling.monitors.implementations.watchfiles_watcher import WatchfilesMonitor
 from llmling.monitors.utils import is_watchable_path
+from llmling.monitors.watcher import FileWatcher
 from llmling.resources.watching.utils import load_patterns
 
 
 if TYPE_CHECKING:
     from llmling.config.models import BaseResource
-    from llmling.monitors.files import FileEvent, FileMonitor
     from llmling.resources.registry import ResourceRegistry
-
 
 logger = get_logger(__name__)
 
 
 class ResourceWatcher:
-    """Manages file system watching for resources.
+    """Manages file system watching for resources."""
 
-    Coordinates file monitoring with resource management by:
-    1. Setting up file monitoring for resources that request it
-    2. Converting file changes to resource invalidations
-    3. Managing monitor lifecycle
-
-    The flow is:
-    1. Resources are registered with watch configs
-    2. File changes trigger callbacks
-    3. Callbacks invalidate affected resources
-    4. Registry handles reloading invalidated resources
-    """
-
-    def __init__(
-        self,
-        registry: ResourceRegistry,
-        *,
-        monitor: FileMonitor | None = None,
-    ) -> None:
-        """Initialize watcher.
-
-        Args:
-            registry: Registry to notify of changes
-            monitor: Optional file monitor (uses WatchfilesMonitor by default)
-        """
+    def __init__(self, registry: ResourceRegistry) -> None:
         self.registry = registry
-        self.monitor = monitor or WatchfilesMonitor()
-        self.handlers: dict[str, None] = {}  # For test compatibility
+        self.watcher = FileWatcher()
         self._loop: asyncio.AbstractEventLoop | None = None
 
-    async def start(self) -> None:
-        """Start the file system monitor.
+        # Debug log our signal connections
+        logger.debug("Setting up file watcher signals")
+        self.watcher.signals.file_modified.connect(self._on_file_changed)
+        self.watcher.signals.watch_error.connect(self._on_watch_error)
 
-        Raises:
-            Exception: If monitor fails to start
-        """
+    async def start(self) -> None:
+        """Start the file system monitor."""
         try:
             self._loop = asyncio.get_running_loop()
-            await self.monitor.start()
+            await self.watcher.start()
             logger.info("File system watcher started")
         except Exception:
             logger.exception("Failed to start file system watcher")
@@ -69,8 +45,7 @@ class ResourceWatcher:
     async def stop(self) -> None:
         """Stop the file system monitor."""
         try:
-            await self.monitor.stop()
-            self.handlers.clear()
+            await self.watcher.stop()
             self._loop = None
             logger.info("File system watcher stopped")
         except Exception:
@@ -83,7 +58,6 @@ class ResourceWatcher:
             raise RuntimeError(msg)
 
         try:
-            # Skip if resource doesn't provide a watch path
             if not (watch_path := resource.get_watch_path()):
                 return
 
@@ -91,21 +65,13 @@ class ResourceWatcher:
                 patterns=resource.watch.patterns if resource.watch else None,
                 ignore_file=None,
             )
-            logger.debug("Setting up watch for %s with patterns: %s", name, patterns)
 
-            def on_change(events: list[FileEvent]) -> None:
-                """Handle file change events."""
-                logger.debug("Received events for %s: %s", name, events)
-                if self._loop and not self._loop.is_closed():
-                    logger.debug("Invalidating resource: %s", name)
-                    self._loop.call_soon_threadsafe(
-                        self.registry.invalidate,
-                        name,
-                    )
+            logger.debug(
+                "Adding watch for %s -> %s with patterns %s", name, watch_path, patterns
+            )
 
             if is_watchable_path(watch_path):
-                self.monitor.add_watch(watch_path, patterns=patterns, callback=on_change)
-                self.handlers[name] = None
+                self.watcher.add_watch(watch_path, patterns=patterns)
                 logger.debug("Added watch for: %s -> %s", name, watch_path)
             else:
                 logger.debug(
@@ -118,13 +84,37 @@ class ResourceWatcher:
             logger.exception("Failed to add watch for: %s", name)
 
     def remove_watch(self, name: str) -> None:
-        """Remove a watch for a resource.
-
-        Args:
-            name: Resource name to unwatch
-        """
+        """Remove a watch for a resource."""
         try:
-            self.handlers.pop(name, None)
+            # We only need resource name for logging now
             logger.debug("Removed watch for: %s", name)
         except Exception:
             logger.exception("Error removing watch for: %s", name)
+
+    def _on_file_changed(self, path: str) -> None:
+        """Handle file change events."""
+        logger.debug("Received file change for: %s", path)
+        if self._loop and not self._loop.is_closed():
+            self._loop.call_soon_threadsafe(self._invalidate_resources_for_path, path)
+
+    def _on_watch_error(self, path: str, exc: Exception) -> None:
+        """Handle watch errors."""
+        logger.error("Error watching path %s: %s", path, exc)
+
+    def _invalidate_resources_for_path(self, path: str) -> None:
+        """Invalidate any resources watching the given path."""
+        path_obj = Path(path)
+        logger.debug("Checking resources for path: %s", path)
+
+        for name, resource in self.registry.items():
+            watch_path = Path(resource.get_watch_path() or "")
+            logger.debug("Checking resource %s with watch path %s", name, watch_path)
+            # If resource watches a directory, check if changed file is in it
+            if watch_path.is_dir():
+                if path_obj.is_relative_to(watch_path):
+                    logger.debug("Invalidating resource %s (file in watched dir)", name)
+                    self.registry.invalidate(name)
+            # If resource watches a specific file, compare paths
+            elif watch_path == path_obj:
+                logger.debug("Invalidating resource %s (direct file match)", name)
+                self.registry.invalidate(name)

@@ -2,18 +2,6 @@
 
 from __future__ import annotations
 
-from llmling.monitors.files import (
-    FileMonitor,
-    FileEvent,
-    FileEventType,
-    FileMonitorCallback,
-)
-from llmling.monitors.implementations.watchfiles_watcher import WatchfilesMonitor
+from llmling.monitors.watcher import FileWatcher
 
-__all__ = [
-    "FileEvent",
-    "FileEventType",
-    "FileMonitor",
-    "FileMonitorCallback",
-    "WatchfilesMonitor",
-]
+__all__ = ["FileWatcher"]

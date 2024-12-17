@@ -9,6 +9,7 @@ import warnings
 import pytest
 
 from llmling.config.models import PathResource, TextResource, WatchConfig
+from llmling.core.log import get_logger
 from llmling.processors.registry import ProcessorRegistry
 from llmling.resources import ResourceLoaderRegistry
 from llmling.resources.registry import ResourceRegistry
@@ -16,6 +17,8 @@ from llmling.resources.registry import ResourceRegistry
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Generator
+
+logger = get_logger(__name__)
 
 
 @pytest.fixture
@@ -48,7 +51,7 @@ async def test_watch_enabled(resource_registry: ResourceRegistry, temp_dir: Path
     # Create test file
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
-    test_file.touch()  # Ensure write is flushed
+    test_file.touch()
 
     # Create watched resource
     resource = PathResource(
@@ -56,32 +59,32 @@ async def test_watch_enabled(resource_registry: ResourceRegistry, temp_dir: Path
         watch=WatchConfig(enabled=True),
     )
 
-    # Register and verify watch is set up
+    # Track invalidations
+    event = asyncio.Event()
+    invalidated_resources: list[str] = []
+
+    def on_invalidate(name: str) -> None:
+        invalidated_resources.append(name)
+        event.set()
+
+    # Connect to invalidation via monkey patch
+    resource_registry.invalidate = on_invalidate  # type: ignore
+
+    # Register resource
     resource_registry.register("test", resource)
-    assert "test" in resource_registry.watcher.handlers
 
     # Small delay to ensure watch is set up
     await asyncio.sleep(0.1)
 
-    # Modify file and wait for notification
-    event = asyncio.Event()
-    original_invalidate = resource_registry.invalidate
-
-    def on_invalidate(name: str) -> None:
-        original_invalidate(name)
-        event.set()
-
-    resource_registry.invalidate = on_invalidate  # type: ignore
-
-    # Change file
+    # Modify file
     test_file.write_text("modified")
-    test_file.touch()  # Ensure write is flushed
+    test_file.touch()
 
-    # Wait for notification
     try:
         await asyncio.wait_for(event.wait(), timeout=2.0)
+        assert "test" in invalidated_resources
     except TimeoutError:
-        pytest.fail("Timeout waiting for file change notification")
+        pytest.fail("Timeout waiting for file change signal")
 
 
 async def test_watch_disabled(
@@ -97,51 +100,65 @@ async def test_watch_disabled(
         watch=WatchConfig(enabled=False),
     )
 
+    # Track invalidations
+    event = asyncio.Event()
+
+    def on_invalidate(name: str) -> None:
+        event.set()
+
+    resource_registry.invalidate = on_invalidate  # type: ignore
     resource_registry.register("test", resource)
-    assert "test" not in resource_registry.watcher.handlers
+
+    # Modify file
+    test_file.write_text("modified")
+    test_file.touch()
+
+    try:
+        await asyncio.wait_for(event.wait(), timeout=0.5)
+        pytest.fail("Received unexpected file change signal")
+    except TimeoutError:
+        pass  # Expected - no signal should be emitted
 
 
 async def test_watch_patterns(
     resource_registry: ResourceRegistry, temp_dir: Path
 ) -> None:
     """Test watch patterns are respected."""
-    # Create test files
     py_file = temp_dir / "test.py"
     txt_file = temp_dir / "test.txt"
+
     py_file.write_text("python")
     txt_file.write_text("text")
-    py_file.touch()  # Ensure writes are flushed
-    txt_file.touch()
 
     # Create watched resource with pattern
     cfg = WatchConfig(enabled=True, patterns=["*.py"])
     resource = PathResource(path=str(temp_dir), watch=cfg)
 
-    # Use an event to track changes
+    # Track invalidations
     event = asyncio.Event()
-    events: list[str] = []
+    invalidated_resources: list[str] = []
 
     def on_invalidate(name: str) -> None:
-        events.append(name)
+        logger.debug("Resource invalidated: %s", name)
+        invalidated_resources.append(name)
         event.set()
 
     resource_registry.invalidate = on_invalidate  # type: ignore
-
-    # Register after setting up tracking
     resource_registry.register("test", resource)
 
-    # Small delay to ensure watch is set up
-    await asyncio.sleep(0.1)
+    # Give watcher time to set up
+    await asyncio.sleep(0.5)  # Increased delay
 
-    # Modify python file first
+    # Modify python file with explicit sync
     py_file.write_text("python modified")
-    py_file.touch()
 
     try:
         await asyncio.wait_for(event.wait(), timeout=2.0)
+        assert "test" in invalidated_resources, "Python file change not detected"
         event.clear()
+        invalidated_resources.clear()
 
-        # Now modify txt file - should not trigger
+        # Modify txt file - should not trigger
         txt_file.write_text("text modified")
         txt_file.touch()
 
@@ -149,10 +166,10 @@ async def test_watch_patterns(
             await asyncio.wait_for(event.wait(), timeout=0.5)
             pytest.fail("Received unexpected notification for .txt file")
         except TimeoutError:
-            pass  # Expected timeout for txt file
+            pass  # Expected
 
     except TimeoutError:
-        pytest.fail("Timeout waiting for Python file change")
+        pytest.fail("Timeout waiting for Python file change signal")
 
 
 async def test_watch_cleanup(resource_registry: ResourceRegistry, temp_dir: Path) -> None:
@@ -160,52 +177,58 @@ async def test_watch_cleanup(resource_registry: ResourceRegistry, temp_dir: Path
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
 
-    # Create and register watched resource
     resource = PathResource(
         path=str(test_file),
         watch=WatchConfig(enabled=True),
     )
 
+    # Track events after cleanup
+    event = asyncio.Event()
+
+    def on_invalidate(name: str) -> None:
+        event.set()
+
+    resource_registry.invalidate = on_invalidate  # type: ignore
     resource_registry.register("test", resource)
-    assert "test" in resource_registry.watcher.handlers
 
-    # Delete resource and verify watch is removed
+    # Remove resource
     del resource_registry["test"]
-    assert "test" not in resource_registry.watcher.handlers
+
+    # Modify file - should not trigger event
+    test_file.write_text("modified")
+    test_file.touch()
+
+    try:
+        await asyncio.wait_for(event.wait(), timeout=0.5)
+        pytest.fail("Received event after cleanup")
+    except TimeoutError:
+        pass  # Expected
 
 
+# These tests don't need changes as they don't involve the watcher
 async def test_supports_watching(temp_dir: Path) -> None:
     """Test that supports_watching property works correctly."""
     test_file = temp_dir / "test.txt"
     test_file.write_text("test")
 
-    # Path resource should support watching for existing files
     path_resource = PathResource(path=str(test_file))
     assert path_resource.supports_watching
 
-    # Non-existent paths should not support watching
     nonexistent = PathResource(path="/nonexistent/path")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         assert not nonexistent.supports_watching
 
-    # Text resources never support watching
     text_resource = TextResource(content="some text")
     assert not text_resource.supports_watching
 
 
 async def test_watch_invalid_path(resource_registry: ResourceRegistry) -> None:
     """Test handling of invalid paths."""
-    # Create resource with non-existent path
     resource = PathResource(
         path="/nonexistent/path",
         watch=WatchConfig(enabled=True),
     )
 
-    # Should register but log warning about invalid path
     with pytest.warns(UserWarning, match="Cannot watch non-existent path"):
         resource_registry.register("test", resource)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
