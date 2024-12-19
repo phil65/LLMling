@@ -32,6 +32,8 @@ class FileWatcherSignals(psygnal.SignalGroup):
 class FileWatcher:
     """File system watcher using signals for change notification."""
 
+    signals = FileWatcherSignals()
+
     def __init__(
         self,
         *,
@@ -57,7 +59,6 @@ class FileWatcher:
         self._step_ms = step_ms
         self._polling = polling
         self._poll_delay_ms = poll_delay_ms
-        self.signals = FileWatcherSignals()
         self._max_retries = max_retries
 
     async def start(self) -> None:
