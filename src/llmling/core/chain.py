@@ -21,12 +21,6 @@ class ErrorStrategy(str, Enum):
     RETRY = "retry"  # Retry the step
 
 
-class ExecutionMode(str, Enum):
-    SEQUENTIAL = "sequential"  # Execute steps one after another
-    PARALLEL = "parallel"  # Execute steps in parallel
-    CONCURRENT = "concurrent"  # Execute steps as they become ready
-
-
 class StepCondition(BaseModel):
     """Condition for conditional execution."""
 
@@ -98,7 +92,7 @@ class Pipeline(BaseModel):
 
     input: str | dict[str, Any]
     steps: list[PipelineStep]
-    mode: ExecutionMode = ExecutionMode.SEQUENTIAL
+    mode: Literal["sequential", "parallel"] = "sequential"
     max_parallel: int = 5  # Max concurrent steps
     collect_metrics: bool = False  # Collect execution metrics
 
@@ -368,10 +362,7 @@ class ChainTool(LLMCallableTool):
         results: StepResults = {}
 
         match pipeline.mode:
-            case ExecutionMode.SEQUENTIAL:
+            case "sequential":
                 return await self._execute_sequential(pipeline, results)
-            case ExecutionMode.PARALLEL:
-                return await self._execute_parallel(pipeline, results)
-            case ExecutionMode.CONCURRENT:
-                # TODO: Implement dynamic scheduling based on dependencies
+            case "parallel":
                 return await self._execute_parallel(pipeline, results)

@@ -109,11 +109,8 @@ class Processor(BaseProcessor):
             content = str(result)
             is_async = calling.is_async_callable(self._callable)
             meta = {"function": self.config.import_path, "is_async": is_async}
-            return ProcessorResult(
-                content=content,
-                original_content=context.original_content,
-                metadata=meta,
-            )
+            orig = context.original_content
+            return ProcessorResult(content=content, original_content=orig, metadata=meta)
         except Exception as exc:
             msg = f"Processing failed: {exc}"
             raise exceptions.ProcessorError(msg) from exc

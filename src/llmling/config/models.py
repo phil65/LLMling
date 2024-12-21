@@ -658,8 +658,16 @@ class Config(ConfigModel):
             msg = f"Failed to validate configuration from {path}"
             raise exceptions.ConfigError(msg) from exc
         else:
-            msg = "Loaded raw configuration: version=%s, resources=%d"
-            logger.debug(msg, config.version, len(config.resources))
+            logger.debug("Loaded raw configuration:")
+            msg = "version=%s, resources=%d, tools=%d, toolsets=%d, prompts=%d"
+            logger.debug(
+                msg,
+                config.version,
+                len(config.resources),
+                len(config.tools),
+                len(config.toolsets),
+                len(config.prompts),
+            )
             return config
 
 

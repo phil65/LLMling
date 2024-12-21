@@ -45,10 +45,9 @@ class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
             case ProcessorConfig():
                 return Processor(item)  # Creates function-based processor
             case _ if callable(item):
-                config = ProcessorConfig(
-                    import_path=f"{item.__module__}.{item.__qualname__}",
-                    async_execution=asyncio.iscoroutinefunction(item),
-                )
+                path = f"{item.__module__}.{item.__qualname__}"
+                is_coro = asyncio.iscoroutinefunction(item)
+                config = ProcessorConfig(import_path=path, async_execution=is_coro)
                 return Processor(config)
             case _:
                 msg = f"Invalid processor type: {type(item)}"
