@@ -1366,7 +1366,7 @@
       "type": "object"
     }
   },
-  "additionalProperties": false,
+  "additionalProperties": true,
   "description": "Root configuration model.",
   "properties": {
     "version": {
