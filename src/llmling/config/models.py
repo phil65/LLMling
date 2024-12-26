@@ -575,7 +575,7 @@ class Config(ConfigModel):
     model_config = ConfigDict(
         frozen=True,
         arbitrary_types_allowed=True,
-        extra="forbid",
+        extra="allow",  # extra fields used by the server for example.
         use_attribute_docstrings=True,
     )
 
