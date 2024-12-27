@@ -100,19 +100,26 @@ class LLMCallableTool(ABC):
         if not module:
             msg = f"Could not find module for callable: {callable_obj}"
             raise ImportError(msg)
+        if hasattr(callable_obj, "__qualname__"):  # Regular function
+            callable_name = callable_obj.__name__
+            import_path = f"{module.__name__}.{callable_obj.__qualname__}"
+        else:  # Instance with __call__ method
+            callable_name = callable_obj.__class__.__name__
+            import_path = f"{module.__name__}.{callable_obj.__class__.__qualname__}"
 
         # Create dynamic subclass
         class DynamicTool(LLMCallableTool):
             # Store original callable for schema generation
             _original_callable = staticmethod(callable_obj)
-            _import_path = f"{module.__name__}.{callable_obj.__qualname__}"  # type: ignore
+
+            _import_path = import_path  # type: ignore
 
             # Use provided name/description or derive from callable
-            name = name_override or callable_obj.__name__
+            name = name_override or callable_name
             description = (
                 description_override
                 or inspect.getdoc(callable_obj)
-                or f"Tool from {callable_obj.__name__}"
+                or f"Tool from {callable_name}"
             )
 
             async def execute(self, **params: Any) -> Any:
