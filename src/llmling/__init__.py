@@ -5,7 +5,6 @@ from llmling.resources import (
     LoadedResource,
     default_registry as resource_registry,
 )
-from llmling.config.models import Config
 from llmling.config.runtime import RuntimeConfig
 from llmling.core.exceptions import (
     LLMLingError,
@@ -17,19 +16,32 @@ from llmling.core.exceptions import (
 )
 from llmling.processors.registry import ProcessorRegistry
 from llmling.tools import LLMCallableTool, ToolError
-from llmling.prompts import PromptMessage, PromptParameter, StaticPrompt
-from llmling.config.models import ConfigModel, GlobalSettings, LLMCapabilitiesConfig
+from llmling.prompts import (
+    PromptMessage,
+    PromptParameter,
+    StaticPrompt,
+    DynamicPrompt,
+    BasePrompt,
+)
+from llmling.config.models import (
+    ConfigModel,
+    GlobalSettings,
+    LLMCapabilitiesConfig,
+    Config,
+)
 from llmling.config.store import ConfigStore
 from llmling.core.baseregistry import BaseRegistry
 
 __version__ = "1.5.5"
 
 __all__ = [
+    "BasePrompt",
     "BaseRegistry",
     "Config",
     "ConfigError",
     "ConfigModel",
     "ConfigStore",
+    "DynamicPrompt",
     "GlobalSettings",
     "LLMCallableTool",
     "LLMCapabilitiesConfig",
