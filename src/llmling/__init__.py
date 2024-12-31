@@ -22,7 +22,7 @@ from llmling.config.models import ConfigModel, GlobalSettings, LLMCapabilitiesCo
 from llmling.config.store import ConfigStore
 from llmling.core.baseregistry import BaseRegistry
 
-__version__ = "1.5.4"
+__version__ = "1.5.5"
 
 __all__ = [
     "BaseRegistry",
