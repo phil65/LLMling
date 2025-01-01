@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
 
 if TYPE_CHECKING:
@@ -97,7 +97,7 @@ class Pipeline(BaseModel):
     collect_metrics: bool = False  # Collect execution metrics
 
 
-class ChainTool(LLMCallableTool):
+class ChainTool(BaseTool):
     """Tool for executing a sequence of operations.
 
     NOTE: This tool must be explicitly enabled via the 'chain_tools' capability.

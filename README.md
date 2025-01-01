@@ -570,9 +570,9 @@ Complex tools can be implemented as classes:
 # myapp/tools/browser.py
 from typing import Literal
 from playwright.async_api import Page
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
-class BrowserTool(LLMCallableTool):
+class BrowserTool(BaseTool):
     """Tool for web browser automation."""
 
     name = "browser"
@@ -618,9 +618,9 @@ tools = "llmling.testing:get_mcp_tools"
 Tools can report progress to the client:
 
 ```python
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
-class AnalysisTool(LLMCallableTool):
+class AnalysisTool(BaseTool):
     name = "analyze"
     description = "Analyze large codebase"
 
@@ -675,9 +675,9 @@ toolsets:
 # Tool implementation
 from typing import Any
 from pathlib import Path
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
-class AnalysisTool(LLMCallableTool):
+class AnalysisTool(BaseTool):
     """Tool for batch code analysis with progress reporting."""
 
     name = "batch_analysis"

@@ -75,9 +75,9 @@ The corresponding Python class:
 
 ```python
 from typing import Literal
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
-class BrowserTool(LLMCallableTool):
+class BrowserTool(BaseTool):
     """Tool for web browser automation."""
 
     name = "browser"  # Tool name
@@ -128,9 +128,9 @@ Class-based tools provide:
 Tools can report progress to clients:
 
 ```python
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
-class AnalysisTool(LLMCallableTool):
+class AnalysisTool(BaseTool):
     name = "analyze"
     description = "Analyze code repository"
 

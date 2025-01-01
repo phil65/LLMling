@@ -2,76 +2,40 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from collections.abc import Callable  # noqa: TC003
+from dataclasses import dataclass
 import inspect
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import Any, ClassVar, Protocol, runtime_checkable
 
 import py2openai
 
 from llmling.core.descriptors import classproperty
-from llmling.core.log import get_logger
-from llmling.utils import calling, importing
 
 
-T = TypeVar("T", bound="LLMCallableTool")
+@runtime_checkable
+class ToolProtocol(Protocol):
+    """Protocol defining the interface that all tools must implement."""
 
-logger = get_logger(__name__)
+    name: str
+    description: str
+    import_path: str
+    supported_mime_types: ClassVar[list[str]]
 
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
-
-class LLMCallableTool(ABC):
-    """Base class for implementing tools callable by an LLM via tool calling."""
-
-    # Class-level schema definition
-    name: ClassVar[str]
-    description: ClassVar[str]
-    _import_path: str | None = None  # For dynamic tools
-    _original_callable: Callable[..., Any] | None = None  # For dynamic tools
-
-    def __repr__(self) -> str:
-        """Show tool name and import path."""
-        return f"{self.__class__.__name__}(name={self.name!r}, path={self.import_path!r})"
+    def get_schema(self) -> py2openai.OpenAIFunctionTool: ...
 
     @property
-    def system_prompt(self) -> str:
-        """Get the system prompt for this tool.
+    def system_prompt(self) -> str: ...
 
-        Override this to provide tool-specific instructions.
-        """
-        return ""
+    async def execute(self, **params: Any) -> Any: ...
 
-    @classproperty  # type: ignore
-    def import_path(cls) -> str:  # noqa: N805
-        """Get the import path of the tool.
 
-        For class-based tools, returns the actual class import path.
-        For dynamic tools, returns the stored import path.
-        """
-        if cls._import_path is not None:
-            return cls._import_path
-        # For class-based tools, get the actual class import path
-        return f"{cls.__module__}.{cls.__qualname__}"  # type: ignore
-
-    @classmethod
-    def get_schema(cls) -> py2openai.OpenAIFunctionTool:
-        """Get the tool's schema for LLM function calling."""
-        # For dynamic tools, we want to use the original callable's schema
-        if cls._original_callable:
-            schema = py2openai.create_schema(cls._original_callable).model_dump_openai()
-            schema["function"]["name"] = cls.name
-            schema["function"]["description"] = cls.description
-            return schema
-
-        # For regular tools, use the execute method
-        schema = py2openai.create_schema(cls.execute).model_dump_openai()
-        schema["function"]["name"] = cls.name
-        return schema
-
-    @abstractmethod
-    async def execute(self, **params: Any) -> Any | Awaitable[Any]:
-        """Execute the tool with given parameters."""
+@dataclass
+class LLMCallableTool:
+    supported_mime_types: ClassVar[list[str]] = ["text/plain"]
+    callable: Callable[..., Any]
+    name: str
+    description: str = ""
+    import_path: str | None = None
 
     @classmethod
     def from_callable(
@@ -81,66 +45,74 @@ class LLMCallableTool(ABC):
         name_override: str | None = None,
         description_override: str | None = None,
     ) -> LLMCallableTool:
-        """Create a tool instance from a callable or import path.
+        """Create a tool from a callable or import path."""
+        if isinstance(fn, str):
+            import_path = fn
+            from llmling.utils import importing
 
-        Args:
-            fn: Function or import path to create tool from
-            name_override: Optional override for tool name
-            description_override: Optional override for tool description
+            callable_obj = importing.import_callable(fn)
+            name = callable_obj.__name__
+            import_path = fn
+        else:
+            callable_obj = fn
+            module = fn.__module__
+            if hasattr(fn, "__qualname__"):  # Regular function
+                name = fn.__name__
+                import_path = f"{module}.{fn.__qualname__}"
+            else:  # Instance with __call__ method
+                name = fn.__class__.__name__
+                import_path = f"{module}.{fn.__class__.__qualname__}"
 
-        Returns:
-            Tool instance
+        return cls(
+            callable=callable_obj,
+            name=name_override or name,
+            description=description_override or inspect.getdoc(callable_obj) or "",
+            import_path=import_path,
+        )
 
-        Raises:
-            ValueError: If callable cannot be imported or is invalid
-        """
-        # If string provided, import the callable
-        callable_obj = importing.import_callable(fn) if isinstance(fn, str) else fn
-        module = inspect.getmodule(callable_obj)
-        if not module:
-            msg = f"Could not find module for callable: {callable_obj}"
-            raise ImportError(msg)
-        if hasattr(callable_obj, "__qualname__"):  # Regular function
-            callable_name = callable_obj.__name__
-            import_path = f"{module.__name__}.{callable_obj.__qualname__}"
-        else:  # Instance with __call__ method
-            callable_name = callable_obj.__class__.__name__
-            import_path = f"{module.__name__}.{callable_obj.__class__.__qualname__}"
+    async def execute(self, **params: Any) -> Any:
+        """Execute the wrapped callable."""
+        if inspect.iscoroutinefunction(self.callable):
+            return await self.callable(**params)
+        return self.callable(**params)
 
-        # Create dynamic subclass
-        class DynamicTool(LLMCallableTool):
-            # Store original callable for schema generation
-            _original_callable = staticmethod(callable_obj)
+    def get_schema(self) -> py2openai.OpenAIFunctionTool:
+        """Get OpenAI function schema."""
+        schema = py2openai.create_schema(self.callable).model_dump_openai()
+        schema["function"]["name"] = self.name
+        schema["function"]["description"] = self.description
+        return schema
 
-            _import_path = import_path  # type: ignore
-
-            # Use provided name/description or derive from callable
-            name = name_override or callable_name
-            description = (
-                description_override
-                or inspect.getdoc(callable_obj)
-                or f"Tool from {callable_name}"
-            )
-
-            async def execute(self, **params: Any) -> Any:
-                """Execute the imported callable."""
-                if calling.is_async_callable(callable_obj):
-                    return await callable_obj(**params)
-                return callable_obj(**params)
-
-        return DynamicTool()
+    @property
+    def system_prompt(self) -> str:
+        """Tool-specific system prompt."""
+        return ""
 
 
-if __name__ == "__main__":
+class BaseTool(LLMCallableTool):
+    """Base class for complex tools requiring inheritance."""
 
-    def test(input_str: str, times: int = 2) -> str:
-        """Multiply input string.
+    name: ClassVar[str]
+    description: ClassVar[str]
+    supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
-        Args:
-            input_str: String to multiply
-            times: Number of times to multiply (default: 2)
-        """
-        return input_str * times
+    @classproperty  # type: ignore
+    def import_path(cls) -> str:  # noqa: N805
+        """Get the import path of the tool class."""
+        return f"{cls.__module__}.{cls.__qualname__}"  # type: ignore
 
-    tool = LLMCallableTool.from_callable(test, name_override="Example Tool")
-    print(tool.get_schema())
+    def get_schema(self) -> py2openai.OpenAIFunctionTool:
+        """Get OpenAI function schema."""
+        schema = py2openai.create_schema(self.execute).model_dump_openai()
+        schema["function"]["name"] = self.name
+        schema["function"]["description"] = self.description
+        return schema
+
+    @property
+    def system_prompt(self) -> str:
+        """Tool-specific system prompt."""
+        return ""
+
+    async def execute(self, **params: Any) -> Any:
+        """Execute the tool."""
+        raise NotImplementedError

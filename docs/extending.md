@@ -21,9 +21,9 @@ The most common extension point is adding custom tools:
 ```python
 # myapp/tools.py
 from typing import Any, Callable
-from llmling.tools.base import LLMCallableTool
+from llmling.tools.base import BaseTool
 
-class CustomTool(LLMCallableTool):
+class CustomTool(BaseTool):
     name = "custom_tool"
     description = "Custom tool description"
 

@@ -35,9 +35,6 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
         from llmling.config.models import ToolConfig
 
         match item:
-            # Keep existing behavior for these cases
-            case type() if issubclass(item, LLMCallableTool):
-                return item()
             case LLMCallableTool():
                 return item
             case ToolConfig():  # Handle Pydantic models
