@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from typing import TYPE_CHECKING, Any
 
 import logfire
@@ -30,7 +31,7 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
         """Error class to use for this registry."""
         return ToolError
 
-    def _validate_item(self, item: Any) -> LLMCallableTool:
+    def _validate_item(self, item: Any) -> LLMCallableTool:  # noqa: PLR0911
         """Validate and transform item into a LLMCallableTool."""
         from llmling.config.models import ToolConfig
 
@@ -38,6 +39,40 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             case LLMCallableTool():
                 return item
             case ToolConfig():  # Handle Pydantic models
+                obj_class = importing.import_class(item.import_path)
+
+                # Check for crewai tools
+                if importlib.util.find_spec("crewai"):
+                    from crewai.tools import BaseTool as CrewAiBaseTool
+
+                    if issubclass(obj_class, CrewAiBaseTool):
+                        return LLMCallableTool.from_crewai_tool(
+                            obj_class(
+                                name=obj_class.__name__,
+                                description=obj_class.description,  # type: ignore
+                            ),
+                            name_override=item.name,
+                            description_override=item.description,
+                        )
+
+                # Check for langchain tools
+                if importlib.util.find_spec("langchain_core"):
+                    from langchain_core.tools import BaseTool as LangChainBaseTool
+
+                    if issubclass(obj_class, LangChainBaseTool):
+                        return LLMCallableTool.from_langchain_tool(
+                            obj_class(),
+                            name_override=item.name,
+                            description_override=item.description,
+                        )
+
+                # Regular callable
+                return LLMCallableTool.from_callable(
+                    item.import_path,
+                    name_override=item.name,
+                    description_override=item.description,
+                )
+                # Either it wasn't a class or wasn't a crewai tool - treat as callable
                 return LLMCallableTool.from_callable(
                     item.import_path,
                     name_override=item.name,
@@ -55,6 +90,20 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             case _ if callable(item):
                 return LLMCallableTool.from_callable(item)
             case _:
+                # Check for crewai tool instances
+                if importlib.util.find_spec("crewai"):
+                    from crewai.tools import BaseTool as CrewAiBaseTool
+
+                    if isinstance(item, CrewAiBaseTool):
+                        return LLMCallableTool.from_crewai_tool(item)
+
+                # Check for langchain tool instances
+                if importlib.util.find_spec("langchain_core"):
+                    from langchain_core.tools import BaseTool as LangChainBaseTool
+
+                    if isinstance(item, LangChainBaseTool):
+                        return LLMCallableTool.from_langchain_tool(item)
+
                 msg = f"Invalid tool type: {type(item)}"
                 raise ToolError(msg)
 
