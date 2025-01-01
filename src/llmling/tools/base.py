@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass
 import inspect
-from typing import Any, ClassVar, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, Self, runtime_checkable
 
 import py2openai
 
@@ -44,7 +44,7 @@ class LLMCallableTool:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
-    ) -> LLMCallableTool:
+    ) -> Self:
         """Create a tool from a callable or import path."""
         if isinstance(fn, str):
             import_path = fn
@@ -68,6 +68,56 @@ class LLMCallableTool:
             name=name_override or name,
             description=description_override or inspect.getdoc(callable_obj) or "",
             import_path=import_path,
+        )
+
+    @classmethod
+    def from_crewai_tool(
+        cls,
+        tool: Any,
+        *,
+        name_override: str | None = None,
+        description_override: str | None = None,
+    ) -> Self:
+        """Allows importing crewai / langchain tools."""
+        try:
+            from crewai.tools import BaseTool as CrewAiBaseTool
+        except ImportError as e:
+            msg = "crewai package not found. Please install it with 'pip install crewai'"
+            raise ImportError(msg) from e
+
+        if not isinstance(tool, CrewAiBaseTool):
+            msg = f"Expected CrewAI BaseTool, got {type(tool)}"
+            raise TypeError(msg)
+
+        return cls.from_callable(
+            tool._run,
+            name_override=name_override or tool.__class__.__name__.removesuffix("Tool"),
+            description_override=description_override or tool.description,
+        )
+
+    @classmethod
+    def from_langchain_tool(
+        cls,
+        tool: Any,
+        *,
+        name_override: str | None = None,
+        description_override: str | None = None,
+    ) -> Self:
+        """Create a tool from a LangChain tool."""
+        try:
+            from langchain_core.tools import BaseTool as LangChainBaseTool
+        except ImportError as e:
+            msg = "langchain-core package not found."
+            raise ImportError(msg) from e
+
+        if not isinstance(tool, LangChainBaseTool):
+            msg = f"Expected LangChain BaseTool, got {type(tool)}"
+            raise TypeError(msg)
+
+        return cls.from_callable(
+            tool.invoke,
+            name_override=name_override or tool.name,
+            description_override=description_override or tool.description,
         )
 
     async def execute(self, **params: Any) -> Any:
@@ -116,3 +166,18 @@ class BaseTool(LLMCallableTool):
     async def execute(self, **params: Any) -> Any:
         """Execute the tool."""
         raise NotImplementedError
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        from crewai_tools import BraveSearchTool
+
+        crew_ai_tool = BraveSearchTool()
+        tool = LLMCallableTool.from_crewai_tool(crew_ai_tool)
+        print(tool.get_schema())
+        result = await tool.execute(query="What is the capital of France?")
+        print(result)
+
+    asyncio.run(main())
