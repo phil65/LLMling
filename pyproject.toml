@@ -205,7 +205,7 @@ select = [
     # "TD",   # flake8-todos
     "T10", # flake8-debugger
     # "T20",  # flake8-print
-    "TC",  # flake8-type-checking
+    "TC", # flake8-type-checking
     "TID", # flake8-tidy-imports
     "TRY", # tryceratops
     "UP",  # PyUpgrade
@@ -266,6 +266,8 @@ combine-as-imports = true
 "scripts/*" = ["INP001"]
 
 [tool.pyright]
+venvPath = "."
+venv = ".venv"
 pythonVersion = "3.12"
 pythonPlatform = "All"
 typeCheckingMode = "basic"
