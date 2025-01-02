@@ -39,45 +39,42 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             case LLMCallableTool():
                 return item
             case ToolConfig():  # Handle Pydantic models
-                obj_class = importing.import_class(item.import_path)
+                try:
+                    obj_class = importing.import_class(item.import_path)
 
-                # Check for crewai tools
-                if importlib.util.find_spec("crewai"):
-                    from crewai.tools import BaseTool as CrewAiBaseTool
+                    # Check for crewai tools
+                    if importlib.util.find_spec("crewai"):
+                        from crewai.tools import BaseTool as CrewAiBaseTool
 
-                    if issubclass(obj_class, CrewAiBaseTool):
-                        return LLMCallableTool.from_crewai_tool(
-                            obj_class(
-                                name=obj_class.__name__,
-                                description=obj_class.description,  # type: ignore
-                            ),
-                            name_override=item.name,
-                            description_override=item.description,
-                        )
+                        if issubclass(obj_class, CrewAiBaseTool):
+                            return LLMCallableTool.from_crewai_tool(
+                                obj_class(
+                                    name=obj_class.__name__,
+                                    description=obj_class.description,  # type: ignore
+                                ),
+                                name_override=item.name,
+                                description_override=item.description,
+                            )
 
-                # Check for langchain tools
-                if importlib.util.find_spec("langchain_core"):
-                    from langchain_core.tools import BaseTool as LangChainBaseTool
+                    # Check for langchain tools
+                    if importlib.util.find_spec("langchain_core"):
+                        from langchain_core.tools import BaseTool as LangChainBaseTool
 
-                    if issubclass(obj_class, LangChainBaseTool):
-                        return LLMCallableTool.from_langchain_tool(
-                            obj_class(),
-                            name_override=item.name,
-                            description_override=item.description,
-                        )
-
-                # Regular callable
-                return LLMCallableTool.from_callable(
-                    item.import_path,
-                    name_override=item.name,
-                    description_override=item.description,
-                )
-                # Either it wasn't a class or wasn't a crewai tool - treat as callable
-                return LLMCallableTool.from_callable(
-                    item.import_path,
-                    name_override=item.name,
-                    description_override=item.description,
-                )
+                        if issubclass(obj_class, LangChainBaseTool):
+                            return LLMCallableTool.from_langchain_tool(
+                                obj_class(),
+                                name_override=item.name,
+                                description_override=item.description,
+                            )
+                    # Either it wasn't a class or wasn't a crewai tool - treat as callable
+                    return LLMCallableTool.from_callable(
+                        item.import_path,
+                        name_override=item.name,
+                        description_override=item.description,
+                    )
+                except Exception:  # noqa: BLE001
+                    fn = importing.import_callable(item.import_path)
+                    return LLMCallableTool.from_callable(fn)
             case dict() if "import_path" in item:  # Config dict
                 return LLMCallableTool.from_callable(
                     item["import_path"],
