@@ -6,8 +6,9 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import upath
+
 from llmling.core.log import get_logger
-from llmling.monitors.utils import is_watchable_path
 from llmling.monitors.watcher import FileWatcher
 from llmling.resources.watching.utils import load_patterns
 
@@ -65,7 +66,8 @@ class ResourceWatcher:
                 patterns=resource.watch.patterns if resource.watch else None,
                 ignore_file=None,
             )
-            if is_watchable_path(watch_path):
+            # str(path).startswith(("/", "./", "../")) or ":" in str(path)
+            if upath.UPath(watch_path).protocol in ("file", ""):
                 self.watcher.add_watch(watch_path, patterns=patterns)
                 logger.debug("Added watch for: %s -> %s", name, watch_path)
             else:
