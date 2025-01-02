@@ -8,7 +8,6 @@ from llmling.testing.processors import (
     uppercase_text,
     multiply,
     append_text,
-    async_reverse,
     async_reverse_text,
     failing_processor,
 )
@@ -32,7 +31,6 @@ __all__ = [
     "TestStreamPair",
     "analyze_ast",
     "append_text",
-    "async_reverse",
     "async_reverse_text",
     "create_test_server_session",
     "example_tool",

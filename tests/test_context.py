@@ -51,31 +51,6 @@ ECHO_COMMAND = "echo test" if sys.platform == "win32" else ["echo", "test"]
 SLEEP_COMMAND = "timeout 2" if sys.platform == "win32" else ["sleep", "2"]
 
 
-# Test helpers
-async def async_function(**kwargs: Any) -> str:
-    """Test async function for callable loader."""
-    return f"Async result with {kwargs}"
-
-
-def sync_function(**kwargs: Any) -> str:
-    """Test sync function for callable loader."""
-    return f"Sync result with {kwargs}"
-
-
-def failing_function(**kwargs: Any) -> str:
-    """Test function that raises an exception."""
-    msg = "Test error"
-    raise ValueError(msg)
-
-
-def reverse_text(text: str) -> str:
-    """Helper function to reverse text."""
-    return text[::-1]
-
-
-# Fixtures
-
-
 @pytest.fixture
 def tmp_file(tmp_path: Path) -> Path:
     """Create a temporary test file."""
@@ -213,14 +188,14 @@ async def test_source_loader_invalid_module() -> None:
 async def test_callable_loader_sync() -> None:
     """Test loading from synchronous callable."""
     context = CallableResource(
-        import_path=f"{__name__}.sync_function",
+        import_path="llmling.testing.processors.multiply",
         description="Test sync callable",
-        keyword_args={"test": "value"},
+        keyword_args={"text": "test", "times": 2},
     )
     loader = CallableResourceLoader()
     result = await anext(loader.load(context, processor_registry=ProcessorRegistry()))
 
-    assert "Sync result with" in result.content
+    assert result.content == "test" * 2
     assert result.metadata.extra["import_path"] == context.import_path
 
 
@@ -228,14 +203,14 @@ async def test_callable_loader_sync() -> None:
 async def test_callable_loader_async() -> None:
     """Test loading from asynchronous callable."""
     context = CallableResource(
-        import_path=f"{__name__}.async_function",
+        import_path="llmling.testing.processors.async_reverse_text",
         description="Test async callable",
-        keyword_args={"test": "value"},
+        keyword_args={"text": "test"},
     )
     loader = CallableResourceLoader()
     result = await anext(loader.load(context, ProcessorRegistry()))
 
-    assert "Async result with" in result.content
+    assert result.content == "tset"
     assert result.metadata.extra["import_path"] == context.import_path
 
 

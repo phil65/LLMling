@@ -23,11 +23,6 @@ def append_text(text: str, suffix: str = "!") -> str:
     return f"{text}{suffix}"
 
 
-async def async_reverse(text: str) -> str:
-    """Reverse text asynchronously."""
-    return text[::-1]
-
-
 async def async_reverse_text(text: str) -> str:
     """Reverse text asynchronously."""
     await asyncio.sleep(0.1)  # Simulate async work
