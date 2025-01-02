@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,6 +15,7 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
     import os
 
 
@@ -104,46 +106,20 @@ class FileWatcher:
         self._watches.pop(path_str, None)
         logger.debug("Removed watch for: %s", path_str)
 
-    async def _watch_path(self, path: str, patterns: list[str]) -> None:
-        """Watch a path and emit signals for changes."""
+    @asynccontextmanager
+    async def _watch_with_retries(self, path: str) -> AsyncIterator[None]:
+        """Context manager for watching with retries."""
         retries = self._max_retries
         while retries and self._running:
             try:
-                logger.debug("Starting watch on %s with patterns %s", path, patterns)
-
-                async for changes in awatch(
-                    path,
-                    watch_filter=lambda _, p: any(
-                        fnmatch.fnmatch(Path(p).name, pattern) for pattern in patterns
-                    ),
-                    debounce=self._debounce_ms,
-                    step=self._step_ms,
-                    recursive=True,
-                    force_polling=self._polling,
-                    poll_delay_ms=self._poll_delay_ms,
-                ):
-                    if not self._running:
-                        break
-
-                    for change_type, changed_path in changes:
-                        logger.debug(
-                            "Detected change: %s -> %s", change_type, changed_path
-                        )
-                        match change_type:
-                            case Change.added:
-                                self.signals.file_added.emit(changed_path)
-                            case Change.modified:
-                                self.signals.file_modified.emit(changed_path)
-                            case Change.deleted:
-                                self.signals.file_deleted.emit(changed_path)
-
+                yield
+                break  # Success - exit retry loop
             except asyncio.CancelledError:
                 logger.debug("Watch cancelled for: %s", path)
                 break
             except Exception as exc:
-                logger.warning(
-                    "Watch error for %s: %s. Retries left: %d", path, exc, retries
-                )
+                msg = "Watch error for %s: %s. Retries left: %d"
+                logger.warning(msg, path, exc, retries)
                 retries -= 1
                 if retries:
                     await asyncio.sleep(1)
@@ -151,3 +127,29 @@ class FileWatcher:
                     logger.exception("Watch failed for: %s", path)
                     self.signals.watch_error.emit(path, exc)
                     break
+
+    async def _watch_path(self, path: str, patterns: list[str]) -> None:
+        """Watch a path and emit signals for changes."""
+        async with self._watch_with_retries(path):
+            async for changes in awatch(
+                path,
+                watch_filter=lambda _, p: any(
+                    fnmatch.fnmatch(Path(p).name, pattern) for pattern in patterns
+                ),
+                debounce=self._debounce_ms,
+                step=self._step_ms,
+                recursive=True,
+                force_polling=self._polling,
+                poll_delay_ms=self._poll_delay_ms,
+            ):
+                if not self._running:
+                    break
+                for change_type, changed_path in changes:
+                    logger.debug("Detected change: %s -> %s", change_type, changed_path)
+                    match change_type:
+                        case Change.added:
+                            self.signals.file_added.emit(changed_path)
+                        case Change.modified:
+                            self.signals.file_modified.emit(changed_path)
+                        case Change.deleted:
+                            self.signals.file_deleted.emit(changed_path)
