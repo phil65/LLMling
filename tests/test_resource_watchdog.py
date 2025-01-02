@@ -54,10 +54,7 @@ async def test_watch_enabled(resource_registry: ResourceRegistry, temp_dir: Path
     test_file.touch()
 
     # Create watched resource
-    resource = PathResource(
-        path=str(test_file),
-        watch=WatchConfig(enabled=True),
-    )
+    resource = PathResource(path=str(test_file), watch=WatchConfig(enabled=True))
 
     # Track invalidations
     event = asyncio.Event()
@@ -95,10 +92,7 @@ async def test_watch_disabled(
     test_file.write_text("initial")
 
     # Create unwatched resource
-    resource = PathResource(
-        path=str(test_file),
-        watch=WatchConfig(enabled=False),
-    )
+    resource = PathResource(path=str(test_file), watch=WatchConfig(enabled=False))
 
     # Track invalidations
     event = asyncio.Event()
@@ -177,10 +171,7 @@ async def test_watch_cleanup(resource_registry: ResourceRegistry, temp_dir: Path
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
 
-    resource = PathResource(
-        path=str(test_file),
-        watch=WatchConfig(enabled=True),
-    )
+    resource = PathResource(path=str(test_file), watch=WatchConfig(enabled=True))
 
     # Track events after cleanup
     event = asyncio.Event()
@@ -225,10 +216,7 @@ async def test_supports_watching(temp_dir: Path) -> None:
 
 async def test_watch_invalid_path(resource_registry: ResourceRegistry) -> None:
     """Test handling of invalid paths."""
-    resource = PathResource(
-        path="/nonexistent/path",
-        watch=WatchConfig(enabled=True),
-    )
+    resource = PathResource(path="/nonexistent/path", watch=WatchConfig(enabled=True))
 
     with pytest.warns(UserWarning, match="Cannot watch non-existent path"):
         resource_registry.register("test", resource)

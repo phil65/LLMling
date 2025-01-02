@@ -5,69 +5,67 @@ import pytest
 
 from llmling.config.models import Config
 from llmling.prompts.models import (
-    MessageContent,
     PromptMessage,
     PromptParameter,
     StaticPrompt,
 )
 
 
+CONFIG_WITH_PROMPTS = """\
+version: "1.0"
+resources: {}
+prompts:
+  analyze:
+    type: text
+    name: analyze
+    description: Analyze code
+    messages:
+      - role: user
+        content: "Analyze this code: {code}"
+    arguments:
+      - name: code
+        type: text
+        description: Code to analyze
+        required: true
+"""
+
+CONFIG_WITH_RESOURCE_PROMPTS = """
+version: "1.0"
+prompts:
+  review:
+    type: text
+    name: review
+    description: Review code and tests
+    messages:
+      - role: user
+        content: [
+                    {type: text, content: "Review this implementation:"},
+                    {type: resource, content: "source://code.py", alt_text: "Source code"}
+                ]
+"""
+
+INVALID_PROMPT_CONFIG = """\
+version: "1.0"
+prompts:
+  invalid:
+    type: text
+    name: invalid
+    messages:
+      - role: invalid_role  # Invalid role
+        content: test
+"""
+
+
 def test_config_with_prompts():
     """Test config with prompts section."""
-    config_data = {
-        "version": "1.0",
-        "resources": {},
-        "prompts": {
-            "analyze": {
-                "type": "text",
-                "name": "analyze",
-                "description": "Analyze code",
-                "messages": [{"role": "user", "content": "Analyze this code: {code}"}],
-                "arguments": [
-                    {
-                        "name": "code",
-                        "type": "text",
-                        "description": "Code to analyze",
-                        "required": True,
-                    }
-                ],
-            }
-        },
-    }
-    config = Config.model_validate(config_data)
+    config = Config.from_yaml(CONFIG_WITH_PROMPTS)
     assert "analyze" in config.prompts
     assert config.prompts["analyze"].name == "analyze"
 
 
 def test_config_with_resource_prompts():
     """Test config with prompts using resources."""
-    config_data = {
-        "version": "1.0",
-        "resources": {},
-        "prompts": {
-            "review": {
-                "type": "text",
-                "name": "review",
-                "description": "Review code and tests",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            MessageContent(
-                                type="text", content="Review this implementation:"
-                            ),
-                            MessageContent(
-                                type="resource",
-                                content="source://code.py",
-                                alt_text="Source code",
-                            ),
-                        ],
-                    }
-                ],
-            }
-        },
-    }
-    config = Config.model_validate(config_data)
+    config = Config.from_yaml(CONFIG_WITH_RESOURCE_PROMPTS)
     assert config.prompts["review"]
     msg = config.prompts["review"].messages[0]
     assert isinstance(msg.content, list)
@@ -80,21 +78,7 @@ def test_config_with_resource_prompts():
 def test_invalid_prompt_config():
     """Test invalid prompt configurations."""
     with pytest.raises(ValidationError):
-        Config.model_validate({
-            "version": "1.0",
-            "prompts": {
-                "invalid": {
-                    "type": "text",
-                    "name": "invalid",
-                    "messages": [
-                        {
-                            "role": "invalid_role",  # Invalid role
-                            "content": "test",
-                        }
-                    ],
-                }
-            },
-        })
+        Config.from_yaml(INVALID_PROMPT_CONFIG)
 
 
 @pytest.mark.asyncio

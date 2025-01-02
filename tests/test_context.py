@@ -235,29 +235,30 @@ async def test_all_loaders_with_processors(
 
     # Use the actual ECHO_COMMAND content
     echo_output = "test"  # 'echo test' command outputs just 'test'
+    text_resource = TextResource(
+        content=text_content,
+        description="Test text",
+        processors=processors,
+    )
 
+    path_resource = PathResource(
+        path=str(tmp_file),
+        description="Test file",
+        processors=processors,
+    )
+
+    cli_resource = CLIResource(
+        command=ECHO_COMMAND,
+        description="Test command",
+        shell=sys.platform == "win32",
+        processors=processors,
+    )
+
+    # Create list of resources with their expected original content
     resources: list[tuple[BaseResource, str]] = [
-        (
-            TextResource(
-                content=text_content, description="Test text", processors=processors
-            ),
-            text_content,
-        ),
-        (
-            PathResource(
-                path=str(tmp_file), description="Test file", processors=processors
-            ),
-            file_content,
-        ),
-        (
-            CLIResource(
-                command=ECHO_COMMAND,
-                description="Test command",
-                shell=sys.platform == "win32",
-                processors=processors,
-            ),
-            echo_output,
-        ),
+        (text_resource, text_content),
+        (path_resource, file_content),
+        (cli_resource, echo_output),
     ]
 
     loaders: dict[str, ResourceLoader[Any]] = {

@@ -18,38 +18,35 @@ if TYPE_CHECKING:
 
 VERSION = "1.0"
 
-VALID_CONFIG = {
-    "version": VERSION,
-    "context_processors": {
-        "test_processor": {
-            "import_path": "llmling.testing.processors.uppercase_text",
-        },
-    },
-    "resources": {
-        "test-resource": {
-            "type": "text",
-            "content": "Test content",
-            "description": "Test resource",
-        },
-    },
-    "resource_groups": {
-        "test-group": ["test-resource"],
-    },
-    "tools": {
-        "test-tool": {
-            "import_path": "llmling.testing.tools.example_tool",
-            "name": "test",
-            "description": "Test tool",
-        },
-    },
-    # "toolsets": ["llmling"],
-}
+VALID_CONFIG = """\
+version: "1.0"
+
+context_processors:
+  test_processor:
+    import_path: llmling.testing.processors.uppercase_text
+
+resources:
+  test-resource:
+    type: text
+    content: Test content
+    description: Test resource
+
+resource_groups:
+  test-group:
+    - test-resource
+
+tools:
+  test-tool:
+    import_path: llmling.testing.tools.example_tool
+    name: test
+    description: Test tool
+"""
 
 
 @pytest.fixture
 def valid_config() -> Config:
     """Create a valid configuration."""
-    return Config.model_validate(VALID_CONFIG)
+    return Config.from_yaml(VALID_CONFIG)
 
 
 @pytest.fixture

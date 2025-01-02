@@ -18,6 +18,21 @@ if TYPE_CHECKING:
     import os
 
 
+MINIMAL_CONFIG = """
+version: "1.0"
+global_settings:
+  timeout: 30
+  max_retries: 3
+resources:
+  test-context:
+    type: text
+    content: test content
+    description: test description
+context_processors: {}
+resource_groups: {}
+"""
+
+
 @pytest.fixture
 def valid_config_dict() -> dict[str, Any]:
     """Create a valid configuration dictionary for testing."""
@@ -27,22 +42,7 @@ def valid_config_dict() -> dict[str, Any]:
 @pytest.fixture
 def minimal_config_dict() -> dict[str, Any]:
     """Create a minimal valid configuration dictionary."""
-    return {
-        "version": "1.0",
-        "global_settings": {
-            "timeout": 30,
-            "max_retries": 3,
-        },
-        "resources": {
-            "test-context": {
-                "type": "text",
-                "content": "test content",
-                "description": "test description",
-            }
-        },
-        "context_processors": {},
-        "resource_groups": {},
-    }
+    return yamling.load_yaml(MINIMAL_CONFIG)
 
 
 def test_load_valid_config(valid_config_dict: dict[str, Any]) -> None:
@@ -112,21 +112,7 @@ def test_validate_callable_context() -> None:
 def test_load_config_from_file(tmp_path: os.PathLike[str]) -> None:
     """Test loading configuration from a file."""
     config_path = UPath(tmp_path) / "test_config.yml"
-    config_path.write_text(
-        """
-version: "1.0"
-global_settings:
-    timeout: 30
-    max_retries: 3
-context_processors: {}
-resources:
-    test-context:
-        type: text
-        content: test content
-        description: test description
-resource_groups: {}
-"""
-    )
+    config_path.write_text(MINIMAL_CONFIG)
 
     cfg = config.Config.from_file(config_path)
     assert isinstance(cfg, config.Config)
