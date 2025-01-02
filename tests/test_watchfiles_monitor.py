@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from llmling.monitors.watcher import FileWatcher
+from llmling.utils.watcher import FileWatcher
 
 
 if TYPE_CHECKING:

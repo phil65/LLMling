@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 import upath
 
 from llmling.core.log import get_logger
-from llmling.monitors.watcher import FileWatcher
 from llmling.resources.watching.utils import load_patterns
+from llmling.utils.watcher import FileWatcher
 
 
 if TYPE_CHECKING:
