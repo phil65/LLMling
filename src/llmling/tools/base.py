@@ -30,9 +30,9 @@ class ToolProtocol(Protocol):
 
 
 @dataclass
-class LLMCallableTool:
+class LLMCallableTool[TReturnType]:
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
-    callable: Callable[..., Any]
+    callable: Callable[..., TReturnType]
     name: str
     description: str = ""
     import_path: str | None = None
@@ -40,7 +40,7 @@ class LLMCallableTool:
     @classmethod
     def from_callable(
         cls,
-        fn: Callable[..., Any] | str,
+        fn: Callable[..., TReturnType] | str,
         *,
         name_override: str | None = None,
         description_override: str | None = None,
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         from crewai_tools import BraveSearchTool
 
         crew_ai_tool = BraveSearchTool()
-        tool = LLMCallableTool.from_crewai_tool(crew_ai_tool)
+        tool = LLMCallableTool[Any].from_crewai_tool(crew_ai_tool)
         print(tool.get_schema())
         result = await tool.execute(query="What is the capital of France?")
         print(result)

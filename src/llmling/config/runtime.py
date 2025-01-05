@@ -780,7 +780,7 @@ class RuntimeConfig:
                 msg = "No callable found in provided code"
                 raise ValueError(msg)  # noqa: TRY301
 
-            tool = LLMCallableTool.from_callable(
+            tool = LLMCallableTool[Any].from_callable(
                 func, name_override=name, description_override=description
             )
             self._tool_registry.register(name, tool)
