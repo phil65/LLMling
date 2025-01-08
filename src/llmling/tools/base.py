@@ -36,6 +36,7 @@ class LLMCallableTool[TReturnType]:
     name: str
     description: str = ""
     import_path: str | None = None
+    schema_override: py2openai.OpenAIFunctionDefinition | None = None
 
     @classmethod
     def from_callable(
@@ -44,6 +45,7 @@ class LLMCallableTool[TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
+        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
     ) -> Self:
         """Create a tool from a callable or import path."""
         if isinstance(fn, str):
@@ -68,6 +70,7 @@ class LLMCallableTool[TReturnType]:
             name=name_override or name,
             description=description_override or inspect.getdoc(callable_obj) or "",
             import_path=import_path,
+            schema_override=schema_override,
         )
 
     @classmethod
@@ -77,6 +80,7 @@ class LLMCallableTool[TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
+        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
     ) -> Self:
         """Allows importing crewai / langchain tools."""
         try:
@@ -93,6 +97,7 @@ class LLMCallableTool[TReturnType]:
             tool._run,
             name_override=name_override or tool.__class__.__name__.removesuffix("Tool"),
             description_override=description_override or tool.description,
+            schema_override=schema_override,
         )
 
     @classmethod
@@ -102,6 +107,7 @@ class LLMCallableTool[TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
+        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
     ) -> Self:
         """Create a tool from a LangChain tool."""
         try:
@@ -118,6 +124,7 @@ class LLMCallableTool[TReturnType]:
             tool.invoke,
             name_override=name_override or tool.name,
             description_override=description_override or tool.description,
+            schema_override=schema_override,
         )
 
     async def execute(self, **params: Any) -> Any:
@@ -131,6 +138,8 @@ class LLMCallableTool[TReturnType]:
         schema = py2openai.create_schema(self.callable).model_dump_openai()
         schema["function"]["name"] = self.name
         schema["function"]["description"] = self.description
+        if self.schema_override:
+            schema["function"] = self.schema_override
         return schema
 
     @property
