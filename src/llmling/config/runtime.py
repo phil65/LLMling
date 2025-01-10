@@ -123,10 +123,14 @@ class RuntimeConfig:
 
     async def __aenter__(self) -> Self:
         """Initialize dependencies and registries."""
-        await self._dep_manager.__aenter__()
-        if not self._initialized:
+        # Check and set initialized flag atomically before ANY async op
+        # This should allow caeses where same runtime gets initialized multiple times
+        needs_init = not self._initialized
+        self._initialized = True
+
+        if needs_init:
+            await self._dep_manager.__aenter__()
             await self._initialize_registries()
-            self._initialized = True
         return self
 
     async def __aexit__(
