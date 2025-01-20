@@ -35,9 +35,13 @@ class ConfigModel(BaseModel):
         return merge_models(self, other)
 
     @classmethod
-    def from_yaml(cls, content: str) -> Self:
+    def from_yaml(
+        cls,
+        content: str,
+        inherit_path: str | os.PathLike[str] | None = None,
+    ) -> Self:
         """Create from YAML string."""
-        data = yamling.load_yaml(content)
+        data = yamling.load_yaml(content, resolve_inherit=inherit_path or False)
         return cls.model_validate(data)
 
     def model_dump_yaml(self) -> str:
