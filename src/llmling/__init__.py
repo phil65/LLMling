@@ -32,7 +32,7 @@ from llmling.config.models import (
 from llmling.config.store import ConfigStore
 from llmling.core.baseregistry import BaseRegistry
 
-__version__ = "1.6.3"
+__version__ = "1.6.4"
 
 __all__ = [
     "BasePrompt",
