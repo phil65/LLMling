@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager, contextmanager
 import importlib
+import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 import depkit
@@ -36,7 +37,6 @@ from llmling.tools.registry import ToolRegistry
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Iterator, Sequence
-    import os
     import types
 
     from llmling.config.models import Config
@@ -322,7 +322,7 @@ class RuntimeConfig:
 
     @classmethod
     @logfire.instrument("Creating runtime configuration")
-    def from_config(cls, config: Config) -> Self:
+    def from_config(cls, config: Config | str | os.PathLike[str]) -> Self:
         """Create a fully initialized runtime config from static config.
 
         Args:
@@ -331,6 +331,8 @@ class RuntimeConfig:
         Returns:
             Initialized runtime configuration
         """
+        if isinstance(config, str | os.PathLike):
+            config = ConfigManager.load(config).config
         loader_registry = ResourceLoaderRegistry()
         processor_registry = ProcessorRegistry()
         resource_registry = ResourceRegistry(
