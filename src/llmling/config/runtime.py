@@ -11,7 +11,6 @@ import importlib
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
-import depkit
 import logfire
 from upath import UPath
 
@@ -77,6 +76,8 @@ class RuntimeConfig:
             prompt_registry: Registry for prompts
             tool_registry: Registry for tools
         """
+        import depkit
+
         super().__init__()
         self._config = config
         self._loader_registry = loader_registry

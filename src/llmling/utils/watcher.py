@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import psygnal
-from watchfiles import Change, awatch
 
 from llmling.core.log import get_logger
 
@@ -130,6 +128,10 @@ class FileWatcher:
 
     async def _watch_path(self, path: str, patterns: list[str]) -> None:
         """Watch a path and emit signals for changes."""
+        import fnmatch
+
+        from watchfiles import Change, awatch
+
         async with self._watch_with_retries(path):
             async for changes in awatch(
                 path,

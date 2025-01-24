@@ -5,17 +5,12 @@ from typing import TYPE_CHECKING, Any
 
 from py2openai import OpenAIFunctionTool  # noqa: TC002
 from pydantic import BaseModel
-from rich.console import Console
-import yamling
 
 from llmling.config.store import config_store
 
 
 if TYPE_CHECKING:
     import os
-
-
-console = Console()
 
 
 NO_CONFIG_MESSAGE = """
@@ -79,7 +74,9 @@ def format_output(result: Any, output_format: str = "text") -> None:
         output_format: One of: text, json, yaml
     """
     data = prepare_for_output(result)
+    from rich.console import Console
 
+    console = Console()
     match output_format:
         case "json":
             if isinstance(data, BaseModel):
@@ -87,6 +84,8 @@ def format_output(result: Any, output_format: str = "text") -> None:
             else:
                 print(json.dumps(data, indent=2))
         case "yaml":
+            import yamling
+
             if isinstance(data, BaseModel):
                 print(yamling.dump_yaml(data.model_dump()))
             else:

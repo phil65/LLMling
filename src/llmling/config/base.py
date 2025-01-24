@@ -10,7 +10,6 @@ from pydantic import (
     ConfigDict,
 )
 import upath
-import yamling
 
 
 class ConfigModel(BaseModel):
@@ -41,6 +40,8 @@ class ConfigModel(BaseModel):
         inherit_path: str | os.PathLike[str] | None = None,
     ) -> Self:
         """Create from YAML string."""
+        import yamling
+
         data = yamling.load_yaml(content, resolve_inherit=inherit_path or False)
         return cls.model_validate(data)
 

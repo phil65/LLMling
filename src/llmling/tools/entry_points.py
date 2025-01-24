@@ -5,8 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from epregistry import EntryPointRegistry
-
 from llmling.core.log import get_logger
 from llmling.tools.toolsets import ToolSet
 
@@ -23,6 +21,8 @@ class EntryPointTools(ToolSet):
         Args:
             module: Module name to load tools from
         """
+        from epregistry import EntryPointRegistry
+
         self.module = module
         self._tools: list[Callable[..., Any]] = []
         self.registry = EntryPointRegistry[Callable[..., Any]]("llmling")

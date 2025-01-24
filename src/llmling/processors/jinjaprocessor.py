@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import jinja2
-
 from llmling.config.models import Jinja2Config
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -23,6 +21,8 @@ class Jinja2Processor(BaseProcessor):
     """Processor that renders content using Jinja2."""
 
     def __init__(self, jinja_settings: Jinja2Config | None = None) -> None:
+        import jinja2
+
         super().__init__()
         settings = jinja_settings or Jinja2Config()
         jinja_kwargs = settings.create_environment_kwargs()

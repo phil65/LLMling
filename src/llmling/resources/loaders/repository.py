@@ -6,7 +6,6 @@ import tempfile
 from time import time
 from typing import TYPE_CHECKING, ClassVar
 
-import git
 import upath
 
 from llmling.config.models import RepositoryResource
@@ -90,6 +89,8 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
     ) -> AsyncIterator[LoadedResource]:
         """Load git content."""
         try:
+            import git
+
             repo = self._get_cached_repo(resource.repo_url)
             if not repo:
                 with tempfile.TemporaryDirectory() as tmp_dir:
