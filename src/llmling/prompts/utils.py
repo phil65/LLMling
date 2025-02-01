@@ -6,7 +6,6 @@ from collections.abc import Iterator, Sequence
 import inspect
 import sys
 from typing import TYPE_CHECKING, Any, get_type_hints, ForwardRef  # noqa: F401
-from docstring_parser import parse as parse_docstring
 from types import UnionType
 from llmling.core import exceptions
 from llmling.prompts.models import (
@@ -45,6 +44,8 @@ def extract_function_info(
     Raises:
         ValueError: If function cannot be imported or analyzed
     """
+    from docstring_parser import parse as parse_docstring
+
     try:
         # Import if needed
         fn = (

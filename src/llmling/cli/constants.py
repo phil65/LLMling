@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import click
 import typer as t
 
 from llmling.config.store import config_store
@@ -11,6 +10,7 @@ from llmling.core.log import setup_logging
 
 
 if TYPE_CHECKING:
+    import click
     import click.shell_completion
 
 

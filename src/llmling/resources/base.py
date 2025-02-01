@@ -8,7 +8,6 @@ from datetime import datetime
 import os
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
-import urllib.parse
 
 from llmling.completions.protocols import CompletionProvider
 from llmling.config.models import BaseResource
@@ -146,6 +145,8 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         Raises:
             LoaderError: If URI format is invalid
         """
+        import urllib.parse
+
         try:
             if not cls.supports_uri(uri):
                 msg = f"Unsupported URI: {uri}"
@@ -192,6 +193,8 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         Returns:
             Dictionary of parameters
         """
+        import urllib.parse
+
         parsed = urllib.parse.urlparse(uri)
         return dict(urllib.parse.parse_qsl(parsed.query))
 
@@ -205,6 +208,8 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
         Returns:
             URI in format "{scheme}://{name}[?param1=value1&...]"
         """
+        import urllib.parse
+
         # Remove any existing scheme
         if "://" in name:
             name = name.split("://", 1)[1]
