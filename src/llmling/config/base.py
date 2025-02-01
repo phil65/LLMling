@@ -9,7 +9,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
 )
-import upath
 
 
 class ConfigModel(BaseModel):
@@ -62,6 +61,8 @@ class ConfigModel(BaseModel):
             OSError: If file cannot be written
             ValueError: If path is invalid
         """
+        import upath
+
         try:
             yaml_str = self.model_dump_yaml()
             file_path = upath.UPath(path)

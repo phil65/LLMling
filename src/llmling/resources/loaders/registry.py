@@ -5,8 +5,6 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
-import upath
-
 from llmling.config.models import PathResource, TextResource
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
@@ -91,6 +89,8 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
 
     def _validate_item(self, item: Any) -> ResourceLoader[Any]:
         """Validate and possibly transform item before registration."""
+        import upath
+
         match item:
             case str() if "\n" in item:
                 resource = TextResource(content=item)

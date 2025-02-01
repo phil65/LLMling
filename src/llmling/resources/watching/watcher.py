@@ -6,8 +6,6 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import upath
-
 from llmling.core.log import get_logger
 from llmling.resources.watching.utils import load_patterns
 from llmling.utils.watcher import FileWatcher
@@ -54,6 +52,8 @@ class ResourceWatcher:
 
     def add_watch(self, name: str, resource: BaseResource) -> None:
         """Add a watch for a resource."""
+        import upath
+
         if not self._loop:
             msg = "Watcher not started"
             raise RuntimeError(msg)

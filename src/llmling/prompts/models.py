@@ -6,9 +6,7 @@ import inspect
 import os  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
-from docstring_parser import parse as parse_docstring
 from pydantic import BaseModel, ConfigDict, Field, ImportString
-import upath
 
 from llmling.completions import CompletionFunction  # noqa: TC001
 from llmling.core.log import get_logger
@@ -271,6 +269,8 @@ class DynamicPrompt(BasePrompt):
         Raises:
             ValueError: If callable cannot be imported or is invalid
         """
+        from docstring_parser import parse as parse_docstring
+
         completions = completions or {}
         # Import if string path provided
         if isinstance(fn, str):
@@ -350,6 +350,8 @@ class FilePrompt(BasePrompt):
     @property
     def messages(self) -> list[PromptMessage]:
         """Get messages from file content."""
+        import upath
+
         content = upath.UPath(self.path).read_text("utf-8")
 
         match self.fmt:
@@ -371,6 +373,8 @@ class FilePrompt(BasePrompt):
         self, arguments: dict[str, Any] | None = None
     ) -> list[PromptMessage]:
         """Format the file content with arguments."""
+        import upath
+
         args = arguments or {}
         self.validate_arguments(args)
 

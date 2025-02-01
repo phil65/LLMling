@@ -6,10 +6,6 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 from uuid import UUID
 
-import httpx
-import upath
-import yaml
-
 from llmling.core.log import get_logger
 from llmling.tools.toolsets import ToolSet
 
@@ -89,6 +85,8 @@ class OpenAPITools(ToolSet):
         base_url: str = "",
         headers: dict[str, str] | None = None,
     ) -> None:
+        import httpx
+
         self.spec_url = spec
         self.base_url = base_url
         self.headers = headers or {}
@@ -115,6 +113,10 @@ class OpenAPITools(ToolSet):
 
     def _load_spec(self) -> Schema:
         """Load OpenAPI specification."""
+        import httpx
+        import upath
+        import yaml
+
         try:
             if self.spec_url.startswith(("http://", "https://")):
                 headers = {"Accept": "application/json"}

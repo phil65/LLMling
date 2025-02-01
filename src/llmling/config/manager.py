@@ -6,8 +6,6 @@ import importlib
 import re
 from typing import TYPE_CHECKING, Self
 
-from upath import UPath
-
 from llmling.config.models import Config
 from llmling.core import exceptions
 from llmling.core.log import get_logger, setup_logging
@@ -172,7 +170,8 @@ class ConfigManager:
 
     def _validate_requirements(self, config: Config) -> list[str]:
         """Validate requirement specifications."""
-        # Validate requirement format
+        from upath import UPath
+
         warnings = [
             f"Invalid requirement format: {req}"
             for req in config.global_settings.requirements

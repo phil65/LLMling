@@ -17,8 +17,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-import upath
-import yamling
 
 from llmling import config_resources
 from llmling.config.base import ConfigModel
@@ -269,6 +267,8 @@ class PathResource(BaseResource):
 
     def validate_resource(self) -> list[str]:
         """Check if path exists for local files."""
+        import upath
+
         warnings = []
         path = upath.UPath(self.path)
         prefixes = ("http://", "https://")
@@ -281,6 +281,8 @@ class PathResource(BaseResource):
     @property
     def supports_watching(self) -> bool:
         """Whether this resource instance supports watching."""
+        import upath
+
         path = upath.UPath(self.path)
         if not path.exists():
             msg = f"Cannot watch non-existent path: {self.path}"
@@ -639,6 +641,8 @@ class Config(ConfigModel):
         Raises:
             ConfigError: If loading fails
         """
+        import yamling
+
         logger.debug("Loading configuration from %s", path)
 
         try:

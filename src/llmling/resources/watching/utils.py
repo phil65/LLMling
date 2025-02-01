@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from upath import UPath
-
 from llmling.core.log import get_logger
 
 
@@ -30,6 +28,8 @@ def load_patterns(
     Returns:
         Combined list of patterns
     """
+    from upath import UPath
+
     result: list[str] = []
 
     # Add configured patterns

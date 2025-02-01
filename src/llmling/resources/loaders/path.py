@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-import upath
-from upath import UPath
-
 from llmling.config.models import PathResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -46,12 +43,14 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
     def create_uri(self, *, name: str, params: dict[str, str] | None = None) -> str:
         """Create a URI based on resource path basename or explicit URI."""
+        from upath import UPath
+
         try:
             if self.context and self.context.resource:
                 if self.context.resource.uri:
                     return paths.path_to_uri(self.context.resource.uri)
                 # Use basename of the configured path
-                path = upath.UPath(self.context.resource.path)
+                path = UPath(self.context.resource.path)
                 return paths.path_to_uri(path.name)
             # Fallback to name if no context
             return paths.path_to_uri(name)
@@ -66,6 +65,8 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         **options: Any,
     ) -> list[str]:
         """Get path completions."""
+        from upath import UPath
+
         try:
             # Handle both absolute and relative paths
             path = UPath(current_value) if current_value else UPath()
@@ -88,6 +89,8 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         processor_registry: ProcessorRegistry | None,
     ) -> AsyncIterator[LoadedResource]:
         """Load content from file(s)."""
+        from upath import UPath
+
         try:
             path = UPath(resource.path)
 

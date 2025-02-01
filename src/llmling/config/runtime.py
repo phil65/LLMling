@@ -12,7 +12,6 @@ import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 import logfire
-from upath import UPath
 
 from llmling.config.manager import ConfigManager
 from llmling.config.models import BaseResource, PathResource
@@ -930,6 +929,8 @@ class RuntimeConfig:
             ...     format="markdown"
             ... )
         """
+        from upath import UPath
+
         try:
             if not UPath(path).exists():
                 msg = f"Prompt file not found: {path}"

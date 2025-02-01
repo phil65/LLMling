@@ -5,12 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 import sys
 from typing import TYPE_CHECKING
 
 import logfire
 import platformdirs
-from upath import UPath
 
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ LEVEL_MAP: dict[int, LoggingLevel] = {
 }
 
 # Get platform-specific log directory
-LOG_DIR = UPath(platformdirs.user_log_dir("llmling", "llmling"))
+LOG_DIR = Path(platformdirs.user_log_dir("llmling", "llmling"))
 TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 LOG_FILE = LOG_DIR / f"llmling_{TIMESTAMP}.log"
 

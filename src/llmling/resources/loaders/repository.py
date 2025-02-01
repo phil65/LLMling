@@ -6,8 +6,6 @@ import tempfile
 from time import time
 from typing import TYPE_CHECKING, ClassVar
 
-import upath
-
 from llmling.config.models import RepositoryResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -17,6 +15,7 @@ from llmling.utils.paths import guess_mime_type
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    import os
 
     from git.repo import Repo
 
@@ -56,20 +55,23 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
 
     def _create_resource(
         self,
-        path: upath.UPath,
+        path: str | os.PathLike[str],
         name: str,
         resource: RepositoryResource,
     ) -> LoadedResource:
         """Create LoadedResource from file."""
+        import upath
+
+        path_obj = upath.UPath(path)
         try:
-            content = path.read_text("utf-8")
+            content = path_obj.read_text("utf-8")
             description = f"Repository content from {resource.repo_url} ({resource.ref})"
             return create_loaded_resource(
                 content=content,
                 source_type="repository",
                 uri=self.create_uri(name=name),
                 mime_type=guess_mime_type(path),
-                name=resource.description or str(path.name),
+                name=resource.description or path_obj.name,
                 description=description,
                 additional_metadata={
                     "repo": resource.repo_url,
@@ -88,9 +90,10 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
         processor_registry: ProcessorRegistry | None,
     ) -> AsyncIterator[LoadedResource]:
         """Load git content."""
-        try:
-            import git
+        import git
+        import upath
 
+        try:
             repo = self._get_cached_repo(resource.repo_url)
             if not repo:
                 with tempfile.TemporaryDirectory() as tmp_dir:

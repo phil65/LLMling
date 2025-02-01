@@ -6,9 +6,6 @@ from dataclasses import dataclass
 import json
 from typing import TYPE_CHECKING, TypedDict
 
-import platformdirs
-from upath import UPath
-
 from llmling.core.log import get_logger
 
 
@@ -43,6 +40,9 @@ class ConfigStore:
 
     def __init__(self, filename: str | None = None) -> None:
         """Initialize store with default paths."""
+        import platformdirs
+        from upath import UPath
+
         llmling_dir = platformdirs.user_config_dir("llmling")
         self.config_dir = UPath(llmling_dir)
         name = filename or "configs.json"
@@ -91,6 +91,8 @@ class ConfigStore:
             IsADirectoryError: If path points to a directory
         """
         # Basic validation
+        from upath import UPath
+
         if not name.isidentifier():
             msg = f"Invalid config name: {name} (must be a valid Python identifier)"
             raise ValueError(msg)
