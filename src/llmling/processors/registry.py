@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-import logfire
-
 from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
@@ -53,7 +51,6 @@ class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
                 msg = f"Invalid processor type: {type(item)}"
                 raise exceptions.ProcessorError(msg)
 
-    @logfire.instrument("Processing content through steps")
     async def process(
         self,
         content: str,

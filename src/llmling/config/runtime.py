@@ -11,8 +11,6 @@ import importlib
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
-import logfire
-
 from llmling.config.manager import ConfigManager
 from llmling.config.models import BaseResource, PathResource
 from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
@@ -321,7 +319,6 @@ class RuntimeConfig:
         return cls.from_config(manager.config)
 
     @classmethod
-    @logfire.instrument("Creating runtime configuration")
     def from_config(cls, config: Config | str | os.PathLike[str]) -> Self:
         """Create a fully initialized runtime config from static config.
 

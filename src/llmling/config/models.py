@@ -8,7 +8,6 @@ import os  # noqa: TC003
 from typing import Annotated, Any, Literal, Self
 import warnings
 
-import logfire
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -625,7 +624,6 @@ class Config(ConfigModel):
                     raise ValueError(msg)
 
     @classmethod
-    @logfire.instrument("Loading configuration from {path}")
     def from_file(cls, path: str | os.PathLike[str]) -> Self:
         """Load configuration from YAML file.
 

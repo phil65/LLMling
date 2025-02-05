@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-import logfire
-
 from llmling.config.models import (
     BaseResource,
     CallableResource,
@@ -193,7 +191,6 @@ class ResourceRegistry(BaseRegistry[str, BaseResource]):
             msg = f"Failed to load resource {name}: {exc}"
             raise exceptions.ResourceError(msg) from exc
 
-    @logfire.instrument("Loading resource {name}")
     async def load(self, name: str, *, force_reload: bool = False) -> LoadedResource:
         """Load first/single resource (backward compatibility)."""
         async for resource in self.load_all(name, force_reload=force_reload):

@@ -9,7 +9,6 @@ from pathlib import Path
 import sys
 from typing import TYPE_CHECKING
 
-import logfire
 import platformdirs
 
 
@@ -54,7 +53,6 @@ def setup_logging(
         format_string: Optional custom format string
         log_to_file: Whether to log to file in addition to stdout
     """
-    logfire.configure()
     logger = logging.getLogger("llmling")
     logger.setLevel(logging.DEBUG)
 
