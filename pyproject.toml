@@ -48,8 +48,6 @@ dependencies = [
     "platformdirs>=4.3.6",
     "depkit>=0.3.5",
     "typing-extensions>=4.12.2",
-    "watchfiles>=1.0.0",
-    "openapi-spec-validator>=0.7.1",
     "httpx",
     "typer",
     "promptantic>=0.4.3",
@@ -65,7 +63,8 @@ tools = "llmling.testing:get_mcp_tools"
 [project.optional-dependencies]
 server = ["mcp-server-llmling"]
 agent = ["llmling-agent"]
-all = ["llmling-agent[ui]", "mcp-server-llmling"]
+watch_files = ["watchfiles"]
+all = ["llmling-agent", "mcp-server-llmling", "watchfiles"]
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
@@ -78,6 +77,7 @@ dev = [
     "devtools",
     # Only add below (Copier)
     "pytest-asyncio>=0.24.0",
+    "openapi-spec-validator>=0.7.1",
     # "llmling-provider-llm",
 ]
 benchmark = ["pyinstrument"]
