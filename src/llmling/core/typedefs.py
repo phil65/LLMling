@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal, Protocol, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -16,15 +16,6 @@ MessageContentType = Literal["text", "resource", "image_url", "image_base64"]
 
 # Our internal role type (could include more roles)
 MessageRole = Literal["system", "user", "assistant", "tool"]
-
-
-class SupportsStr(Protocol):
-    """Protocol for objects that can be converted to string."""
-
-    def __str__(self) -> str: ...
-
-
-ContentType = str | SupportsStr
 
 
 class ProcessingStep(BaseModel):  # type: ignore[no-redef]
