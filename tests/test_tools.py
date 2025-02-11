@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from llmling.tools.base import LLMCallableTool
@@ -73,7 +75,7 @@ async def test_failing_tool():
 class TestDynamicTool:
     def test_init(self) -> None:
         """Test tool initialization."""
-        tool = LLMCallableTool.from_callable(
+        tool = LLMCallableTool[Any].from_callable(
             EXAMPLE_IMPORT, name_override="name", description_override="desc"
         )
         assert tool.name == "name"
@@ -82,17 +84,17 @@ class TestDynamicTool:
 
     def test_default_name(self) -> None:
         """Test default name from import path."""
-        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
         assert tool.name == "example_tool"
 
     def test_default_description(self) -> None:
         """Test default description from docstring."""
-        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
         assert "repeats text" in tool.description.lower()
 
     def test_schema_generation(self) -> None:
         """Test schema generation from function signature."""
-        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
         schema = tool.get_schema()
 
         assert schema["function"]["name"] == "example_tool"
@@ -103,14 +105,14 @@ class TestDynamicTool:
     @pytest.mark.asyncio
     async def test_execution(self) -> None:
         """Test tool execution."""
-        tool = LLMCallableTool.from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
         result = await tool.execute(text="test", repeat=2)
         assert result == "testtest"
 
     @pytest.mark.asyncio
     async def test_execution_failure(self) -> None:
         """Test tool execution failure."""
-        tool = LLMCallableTool.from_callable(FAILING_IMPORT)
+        tool = LLMCallableTool[Any].from_callable(FAILING_IMPORT)
         with pytest.raises(Exception, match="Intentional"):
             await tool.execute(text="test")
 
@@ -166,10 +168,10 @@ class TestToolRegistry:
     def test_schema_generation(self, registry: ToolRegistry) -> None:
         """Test schema generation for registered tools."""
         registry["analyze_ast"] = ANALYZE_IMPORT
-        schema = registry.get_schema("analyze_ast")
+        schema = registry["analyze_ast"].get_schema()
 
         assert "code" in schema["function"]["parameters"]["properties"]
-        assert schema["function"]["parameters"]["required"] == ["code"]
+        assert schema["function"]["parameters"]["required"] == ["code"]  # type: ignore
         assert "Analyze Python code AST" in schema["function"]["description"]
 
 
@@ -182,7 +184,7 @@ async def test_tool_integration() -> None:
     registry["analyze"] = ANALYZE_IMPORT
 
     # Get schema
-    schema = registry.get_schema("analyze")
+    schema = registry["analyze"].get_schema()
     assert schema["function"]["name"] == "analyze_ast"
     # Execute tool
     code = """

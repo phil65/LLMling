@@ -123,32 +123,13 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             self.register(f"{prefix}{name}", func)
             logger.debug("Registered callable %s as %s", name, f"{prefix}{name}")
 
-    def get_schema(self, name: str) -> py2openai.OpenAIFunctionTool:
-        """Get OpenAI function schema for a registered function.
-
-        Args:
-            name: Name of the registered function
-
-        Returns:
-            OpenAI function schema
-
-        Raises:
-            ToolError: If function not found
-        """
-        try:
-            tool = self.get(name)
-            return tool.get_schema()
-        except KeyError as exc:
-            msg = f"Function {name} not found"
-            raise ToolError(msg) from exc
-
     def get_schemas(self) -> list[py2openai.OpenAIFunctionTool]:
         """Get schemas for all registered functions.
 
         Returns:
             List of OpenAI function schemas
         """
-        return [self.get_schema(name) for name in self._items]
+        return [tool.get_schema() for tool in self._items.values()]
 
     async def execute(self, _name: str, **params: Any) -> Any:
         """Execute a registered function.
