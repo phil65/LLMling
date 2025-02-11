@@ -142,11 +142,6 @@ class LLMCallableTool[TReturnType]:
             schema["function"] = self.schema_override
         return schema
 
-    @property
-    def system_prompt(self) -> str:
-        """Tool-specific system prompt."""
-        return ""
-
 
 class BaseTool(LLMCallableTool):
     """Base class for complex tools requiring inheritance."""
@@ -166,11 +161,6 @@ class BaseTool(LLMCallableTool):
         schema["function"]["name"] = self.name
         schema["function"]["description"] = self.description
         return schema
-
-    @property
-    def system_prompt(self) -> str:
-        """Tool-specific system prompt."""
-        return ""
 
     async def execute(self, **params: Any) -> Any:
         """Execute the tool."""
