@@ -5,28 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass
 import inspect
-from typing import Any, ClassVar, Protocol, Self, runtime_checkable
+from typing import Any, ClassVar, Self
 
 import py2openai
 
 from llmling.core.descriptors import classproperty
-
-
-@runtime_checkable
-class ToolProtocol(Protocol):
-    """Protocol defining the interface that all tools must implement."""
-
-    name: str
-    description: str
-    import_path: str
-    supported_mime_types: ClassVar[list[str]]
-
-    def get_schema(self) -> py2openai.OpenAIFunctionTool: ...
-
-    @property
-    def system_prompt(self) -> str: ...
-
-    async def execute(self, **params: Any) -> Any: ...
 
 
 @dataclass
