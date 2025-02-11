@@ -126,17 +126,10 @@ async def test_openapi_toolset_remote(mock_openapi_spec, caplog, monkeypatch):
 
     # Load spec
     spec = toolset._load_spec()
-    print(f"\nLoaded spec: {spec}")
     validate(spec)
-    print("Spec validation passed")
-
     # Store spec explicitly
     toolset._spec = spec
     toolset._operations = toolset._parse_operations()
-    print(f"\nOperations: {toolset._operations}")
-
     # Get tools
     tools = toolset.get_llm_callable_tools()
-    print(f"\nGenerated tools: {tools}")
-
     assert len(tools) == 1, f"Expected 1 tool, got {len(tools)}: {tools}"
