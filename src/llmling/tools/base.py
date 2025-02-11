@@ -127,11 +127,11 @@ class LLMCallableTool[TReturnType]:
             schema_override=schema_override,
         )
 
-    async def execute(self, **params: Any) -> Any:
+    async def execute(self, *args, **params: Any) -> Any:
         """Execute the wrapped callable."""
         if inspect.iscoroutinefunction(self.callable):
-            return await self.callable(**params)
-        return self.callable(**params)
+            return await self.callable(*args, **params)
+        return self.callable(*args, **params)
 
     def get_schema(self) -> py2openai.OpenAIFunctionTool:
         """Get OpenAI function schema."""
