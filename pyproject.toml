@@ -37,8 +37,7 @@ license = { file = "LICENSE" }
 dependencies = [
     "pydantic",
     # Only add below (Copier)
-    "fsspec[github,http,git]",
-    "GitPython",
+    "fsspec[http,github]",
     "universal-pathlib>=0.2.5",
     "yamling>=1.5.0",
     "jinja2>=3.1.4",
@@ -64,7 +63,14 @@ tools = "llmling.testing:get_mcp_tools"
 server = ["mcp-server-llmling"]
 agent = ["llmling-agent"]
 watch_files = ["watchfiles"]
-all = ["llmling-agent", "mcp-server-llmling", "watchfiles"]
+git = ["pygit2", "GitPython"]
+all = [
+    "llmling-agent",
+    "mcp-server-llmling",
+    "watchfiles",
+    "pygit2",
+    "GitPython",
+]
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
