@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from fsspec_httpx import HTTPFileSystem
-import fsspec
+from fsspec_httpx import register
 
-fsspec.register_implementation("http", HTTPFileSystem, clobber=True)
+register()
 
 from llmling.resources import (
     ResourceLoader,
