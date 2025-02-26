@@ -178,7 +178,7 @@ class BaseTool(LLMCallableTool):
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
     @classproperty  # type: ignore
-    def import_path(cls) -> str:  # noqa: N805
+    def import_path(cls) -> str:  # type: ignore  # noqa: N805
         """Get the import path of the tool class."""
         return f"{cls.__module__}.{cls.__qualname__}"  # type: ignore
 
