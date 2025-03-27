@@ -51,7 +51,7 @@ dependencies = [
     "typer",
     "promptantic>=0.4.3",
     "psygnal>=0.11.1",
-    "fsspec-httpx",
+    "upathtools[httpx]",
 ]
 
 [project.scripts]

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from fsspec_httpx import register
+from upathtools import register_http_filesystems
 
-register()
+register_http_filesystems()
 
 from llmling.resources import (
     ResourceLoader,
