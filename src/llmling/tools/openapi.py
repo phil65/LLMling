@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 from datetime import date, datetime
+import shutil
+import subprocess
+import tempfile
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 from uuid import UUID
+
+from upath import UPath
 
 from llmling.core.log import get_logger
 from llmling.tools.toolsets import ToolSet
@@ -33,6 +39,79 @@ FORMAT_MAP = {
     "binary": bytes,
     "password": str,
 }
+
+
+def dereference_openapi(
+    input_path: str | UPath,
+    redocly_path: str = "redocly",
+    dereferenced: bool = True,
+    remove_unused_components: bool = False,
+    keep_url_references: bool = False,
+    ext: str | None = None,
+    config: str | None = None,
+    extra_args: list[str] | None = None,
+    error_on_missing: bool = False,
+) -> str:
+    """Bundle and dereference an OpenAPI spec using Redocly CLI.
+
+    Args:
+        input_path: Path or URL to the OpenAPI spec (YAML or JSON).
+        redocly_path: Path to the Redocly CLI executable (default: 'redocly' from PATH).
+        dereferenced: Produce a fully dereferenced bundle.
+        remove_unused_components: Remove unused components.
+        keep_url_references: Keep absolute URL references.
+        ext: Output file extension (json, yaml, yml).
+        config: Path to Redocly config file.
+        extra_args: Additional CLI args as a list.
+        error_on_missing: If True, raise if Redocly CLI is not found. If False,
+                          return the input spec unchanged.
+
+    Returns:
+        The bundled OpenAPI spec as a string, or the original spec
+        if Redocly is missing and error_on_missing is False.
+
+    Raises:
+        FileNotFoundError: If the Redocly CLI is not in PATH and error_on_missing is set.
+        subprocess.CalledProcessError: If the Redocly CLI fails.
+    """
+    upath_input = UPath(input_path)
+    exe = shutil.which(redocly_path)
+    if exe is None:
+        if error_on_missing:
+            msg = (
+                f"Redocly CLI executable {redocly_path!r} not found in PATH. "
+                "Install it with 'npm install -g @redocly/cli' or specify the full path."
+            )
+            raise FileNotFoundError(msg)
+        return upath_input.read_text(encoding="utf-8")
+
+    with tempfile.NamedTemporaryFile(suffix=f".{ext or 'yaml'}", delete=False) as tmp:
+        output_path = tmp.name
+
+    cmd = [exe, "bundle", str(input_path)]
+    if dereferenced:
+        cmd.append("--dereferenced")
+    if remove_unused_components:
+        cmd.append("--remove-unused-components")
+    if keep_url_references:
+        cmd.append("--keep-url-references")
+    if ext:
+        cmd.extend(["--ext", ext])
+    if config:
+        cmd.extend(["--config", config])
+    if extra_args:
+        cmd.extend(extra_args)
+    cmd.extend(["--output", output_path])
+
+    try:
+        subprocess.run(cmd, check=True)
+        with UPath(output_path).open(encoding="utf-8") as f:
+            spec = f.read()
+    finally:
+        with contextlib.suppress(Exception):
+            UPath(output_path).unlink()
+
+    return spec
 
 
 def parse_operations(paths: dict) -> dict[str, dict[str, Any]]:
