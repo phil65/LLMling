@@ -9,13 +9,13 @@ from typing import Annotated, Any, Literal, Self
 import warnings
 
 from pydantic import (
-    BaseModel,
     ConfigDict,
     Field,
     SecretStr,
     field_validator,
     model_validator,
 )
+from schemez import Schema
 
 from llmling import config_resources
 from llmling.config.base import ConfigModel
@@ -186,7 +186,7 @@ class GlobalSettings(ConfigModel):
     """Control which system capabilities are exposed to LLMs."""
 
 
-class BaseResource(BaseModel):
+class BaseResource(Schema):
     """Base class for all resource types."""
 
     type: str = Field(init=False)
@@ -208,7 +208,7 @@ class BaseResource(BaseModel):
     """Technical identifier (automatically set from config key during registration)."""
 
     # TODO: proper extra="forbid" for all subclasses.
-    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
+    model_config = ConfigDict(frozen=True)
 
     def validate_resource(self) -> list[str]:
         """Validate resource at runtime.
@@ -577,7 +577,6 @@ class Config(ConfigModel):
         frozen=True,
         arbitrary_types_allowed=True,
         extra="allow",  # extra fields used by the server for example.
-        use_attribute_docstrings=True,
     )
 
     # @model_validator(mode="before")

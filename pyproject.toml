@@ -52,6 +52,7 @@ dependencies = [
     "promptantic>=0.4.3",
     "psygnal>=0.11.1",
     "upathtools[httpx]",
+    "schemez>=0.2.2",
 ]
 
 [project.scripts]

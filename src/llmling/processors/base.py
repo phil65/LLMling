@@ -5,7 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+from schemez import Schema
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class ProcessorConfig(BaseModel):
+class ProcessorConfig(Schema):
     """Configuration for content processors."""
 
     name: str | None = None
@@ -30,10 +31,8 @@ class ProcessorConfig(BaseModel):
     cache_results: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    model_config = ConfigDict(extra="forbid")
 
-
-class ProcessorResult(BaseModel):
+class ProcessorResult(Schema):
     """Result of processing content."""
 
     content: str

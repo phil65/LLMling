@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+from schemez import Schema
 
 from llmling.tools.base import BaseTool
 
@@ -21,7 +22,7 @@ class ErrorStrategy(str, Enum):
     RETRY = "retry"  # Retry the step
 
 
-class StepCondition(BaseModel):
+class StepCondition(Schema):
     """Condition for conditional execution."""
 
     field: str  # Field to check in result
@@ -70,7 +71,7 @@ class StepResult:
 type StepResults = dict[str, StepResult]
 
 
-class PipelineStep(BaseModel):
+class PipelineStep(Schema):
     """Single step in a tool pipeline."""
 
     tool: str
@@ -87,7 +88,7 @@ class PipelineStep(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class Pipeline(BaseModel):
+class Pipeline(Schema):
     """A pipeline of tool operations."""
 
     input: str | dict[str, Any]

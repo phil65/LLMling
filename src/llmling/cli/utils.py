@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from py2openai import OpenAIFunctionTool  # noqa: TC002
 from pydantic import BaseModel
+from schemez import Schema
 
 from llmling.config.store import config_store
 
@@ -28,7 +29,7 @@ No configuration specified. To fix this:
 """.strip()
 
 
-class ToolDisplay(BaseModel):
+class ToolDisplay(Schema):
     """Display representation of a LLMCallableTool."""
 
     name: str
@@ -52,7 +53,7 @@ def prepare_for_output(obj: Any) -> BaseModel | dict[str, Any] | list[Any]:
                 name=obj.name,
                 description=obj.description,
                 function_schema=obj.get_schema(),
-                system_prompt=obj.system_prompt,
+                # system_prompt=obj.system_prompt,
                 import_path=obj.import_path,
             )
         case list() | tuple():

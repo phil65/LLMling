@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
+from schemez import Schema
 
 from llmling.core.typedefs import MessageContent
 
 
-class ProcessingContext(BaseModel):  # type: ignore[no-redef]
+class ProcessingContext(Schema):  # type: ignore[no-redef]
     """Context for processor execution."""
 
     original_content: str
@@ -20,7 +21,7 @@ class ProcessingContext(BaseModel):  # type: ignore[no-redef]
     model_config = ConfigDict(frozen=True)
 
 
-class ResourceMetadata(BaseModel):
+class ResourceMetadata(Schema):
     """MCP resource metadata."""
 
     uri: str
@@ -34,7 +35,7 @@ class ResourceMetadata(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class LoadedResource(BaseModel):
+class LoadedResource(Schema):
     """Result of loading and processing a context."""
 
     content: str = ""  # Keep for backward compatibility

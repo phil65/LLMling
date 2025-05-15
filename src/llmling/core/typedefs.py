@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
+from schemez import Schema
 
 
 T = TypeVar("T")
@@ -18,7 +19,7 @@ MessageContentType = Literal["text", "resource", "image_url", "image_base64"]
 MessageRole = Literal["system", "user", "assistant", "tool"]
 
 
-class ProcessingStep(BaseModel):  # type: ignore[no-redef]
+class ProcessingStep(Schema):  # type: ignore[no-redef]
     """Configuration for a processing step."""
 
     name: str
@@ -29,7 +30,7 @@ class ProcessingStep(BaseModel):  # type: ignore[no-redef]
     model_config = ConfigDict(frozen=True)
 
 
-class MessageContent(BaseModel):
+class MessageContent(Schema):
     """Content item in a message."""
 
     type: MessageContentType
@@ -61,7 +62,7 @@ class MessageContent(BaseModel):
         return cls(type=type_, content=url_or_data, alt_text=alt_text)
 
 
-class ToolCall(BaseModel):
+class ToolCall(Schema):
     """A tool call request from the LLM."""
 
     id: str  # Required by OpenAI
@@ -71,7 +72,7 @@ class ToolCall(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class Message(BaseModel):
+class Message(Schema):
     """A chat message."""
 
     role: MessageRole
