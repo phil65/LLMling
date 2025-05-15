@@ -20,7 +20,6 @@ toolsets:
   random:
     type: openapi
     spec: "https://random-data-api.com/api-docs/v2/openapi.json"
-    namespace: "random"
 
   abc:
     type: entry_points

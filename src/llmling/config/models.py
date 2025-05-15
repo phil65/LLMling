@@ -488,9 +488,6 @@ class ToolConfig(ConfigModel):
 class BaseToolsetConfig(ConfigModel):
     """Base configuration for toolsets."""
 
-    namespace: str | None = Field(default=None)
-    """Optional namespace prefix for tool names"""
-
 
 class OpenAPIToolsetConfig(BaseToolsetConfig):
     """Configuration for OpenAPI toolsets."""

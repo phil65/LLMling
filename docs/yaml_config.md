@@ -132,20 +132,17 @@ toolsets:
   core_tools:
     type: entry_points
     module: llmling
-    namespace: core  # Optional prefix for tool names
 
   # OpenAPI toolsets (tools from API specs)
   petstore:
     type: openapi
     spec: "https://petstore.swagger.io/v2/swagger.json"
     base_url: "https://api.example.com"  # Optional API base URL
-    namespace: pet  # Optional prefix for tool names
 
   # Custom toolsets (your own tool collections)
   custom:
     type: custom
     import_path: "myapp.tools.CustomToolSet"
-    namespace: my  # Optional prefix for tool names
 ```
 
 ### Entry Point Toolsets
@@ -157,7 +154,6 @@ toolsets:
   llmling:
     type: entry_points
     module: llmling       # Package name
-    namespace: core       # Optional namespace
 ```
 
 ### OpenAPI Toolsets
@@ -170,7 +166,6 @@ toolsets:
     type: openapi
     spec: "https://api.example.com/openapi.json"  # URL or local path
     base_url: "https://api.example.com"           # Optional base URL
-    namespace: api                                # Optional namespace
 ```
 
 ### Custom Toolsets
@@ -182,14 +177,8 @@ toolsets:
   custom:
     type: custom
     import_path: "myapp.tools.DatabaseTools"  # Your toolset class
-    namespace: db                             # Optional namespace
 ```
 
-### Namespacing
-
-Each toolset can have an optional `namespace` that prefixes its tool names to avoid conflicts. For example:
-- Without namespace: `get_user`, `create_user`
-- With namespace "db": `db.get_user`, `db.create_user`
 
 ## File Watching
 

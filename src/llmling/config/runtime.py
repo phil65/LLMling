@@ -178,12 +178,9 @@ class RuntimeConfig:
         for name, config in self._config.toolsets.items():
             try:
                 toolset = toolset_config_to_toolset(config)
-                # Get tool prefix
-                prefix = f"{config.namespace}." if config.namespace else f"{name}."
-
-                # Register all tools
                 for tool in toolset.get_llm_callable_tools():
-                    tool_name = f"{prefix}{tool.name}"
+                    # tool_name = f"{name}.{tool.name}"
+                    tool_name = tool.name
                     if tool_name in self._tool_registry:
                         msg = "Tool %s from toolset %s overlaps with existing tool"
                         logger.warning(msg, tool.name, name)
