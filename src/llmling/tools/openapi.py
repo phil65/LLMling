@@ -7,7 +7,7 @@ from datetime import date, datetime
 import shutil
 import subprocess
 import tempfile
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Union
 from uuid import UUID
 
 from upath import UPath
@@ -23,9 +23,7 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-T = TypeVar("T")
 
-# Map OpenAPI formats to Python types
 FORMAT_MAP = {
     "date": date,
     "date-time": datetime,
@@ -418,3 +416,4 @@ if __name__ == "__main__":
     url = "https://bird.ecb.europa.eu/documentation/api/v2/bird/bird-API-V2-documentation-Swagger-OpenAPI.yml"
     oapi = OpenAPITools(url)
     tools = oapi.get_tools()
+    print([t.__name__ for t in tools])
