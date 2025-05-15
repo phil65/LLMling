@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import tempfile
 from typing import TYPE_CHECKING, Any, Literal, Union
+from urllib.parse import urljoin
 from uuid import UUID
 
 from upath import UPath
@@ -330,6 +331,8 @@ class OpenAPITools(ToolSet):
                             request_body[name] = kwargs[name]
 
             # Send request
+            if not path.startswith("http"):
+                path = urljoin(self.base_url.rstrip("/") + "/", path.lstrip("/"))
             response = await self._client.request(
                 method=config["method"],
                 url=path,
@@ -413,7 +416,17 @@ class OpenAPITools(ToolSet):
 
 
 if __name__ == "__main__":
-    url = "https://bird.ecb.europa.eu/documentation/api/v2/bird/bird-API-V2-documentation-Swagger-OpenAPI.yml"
-    oapi = OpenAPITools(url)
-    tools = oapi.get_tools()
-    print([t.__name__ for t in tools])
+
+    async def main():
+        url = "https://bird.ecb.europa.eu/documentation/api/v2/bird/bird-API-V2-documentation-Swagger-OpenAPI.yml"
+        oapi = OpenAPITools(url)
+        tools = oapi.get_tools()
+        # print([t.__name__ for t in tools])
+        t = tools[0]
+
+        result = await t(codes="ANCRDT_INSTRMNT_C")
+        print(result)
+
+    import asyncio
+
+    asyncio.run(main())
