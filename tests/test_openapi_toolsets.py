@@ -57,18 +57,6 @@ PETSTORE_SPEC: Schema = {
 }
 
 
-# Create mock httpx response
-class MockResponse:
-    status_code = 200
-
-    @property
-    def text(self):
-        return json.dumps(PETSTORE_SPEC)
-
-    def raise_for_status(self):
-        pass
-
-
 @pytest.fixture
 def mock_openapi_spec(tmp_path):
     """Set up OpenAPI spec mocking and local file."""
@@ -117,10 +105,10 @@ async def test_openapi_toolset_remote(mock_openapi_spec, caplog, monkeypatch):
 
     # Mock httpx.get
     def mock_get(*args, **kwargs):
-        return MockResponse()
+        return json.dumps(PETSTORE_SPEC)
 
     # Patch httpx.get
-    monkeypatch.setattr("httpx.get", mock_get)
+    monkeypatch.setattr("llmling.tools.openapi.dereference_openapi", mock_get)
 
     toolset = OpenAPITools(spec=url, base_url=BASE_URL)
 

@@ -192,21 +192,11 @@ class OpenAPITools(ToolSet):
 
     def _load_spec(self) -> Schema:
         """Load OpenAPI specification."""
-        import httpx
-        import upath
         import yaml
 
         try:
-            if self.spec_url.startswith(("http://", "https://")):
-                headers = {"Accept": "application/json"}
-                response = httpx.get(self.spec_url, headers=headers)
-                response.raise_for_status()
-                content = response.text
-            else:
-                with upath.UPath(self.spec_url).open() as f:
-                    content = f.read()
-
-            return yaml.safe_load(content)
+            content = dereference_openapi(self.spec_url, ext="yaml")
+            return yaml.full_load(content)
         except Exception as exc:
             msg = f"Failed to load OpenAPI spec from {self.spec_url}"
             raise ValueError(msg) from exc
@@ -422,3 +412,9 @@ class OpenAPITools(ToolSet):
             self._create_operation_method(op_id, config)
             for op_id, config in self._operations.items()  # type: ignore
         ]
+
+
+if __name__ == "__main__":
+    url = "https://bird.ecb.europa.eu/documentation/api/v2/bird/bird-API-V2-documentation-Swagger-OpenAPI.yml"
+    oapi = OpenAPITools(url)
+    tools = oapi.get_tools()
