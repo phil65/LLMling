@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 
     from jsonschema_path.typing import Schema
 
+OperationsDict = dict[str, dict[str, Any]]
+"""Dictionary mapping operation name to an info dictionary."""
+
 
 logger = get_logger(__name__)
 
@@ -113,7 +116,7 @@ def dereference_openapi(
     return spec
 
 
-def parse_operations(paths: dict) -> dict[str, dict[str, Any]]:
+def parse_operations(paths: dict) -> OperationsDict:
     operations = {}
     for path, path_item in paths.items():
         for method, operation in path_item.items():
@@ -162,7 +165,7 @@ class OpenAPITools(ToolSet):
         spec: str,
         base_url: str = "",
         headers: dict[str, str] | None = None,
-    ) -> None:
+    ):
         import httpx
 
         self.spec_url = spec
@@ -171,9 +174,9 @@ class OpenAPITools(ToolSet):
         self._client = httpx.AsyncClient(base_url=self.base_url, headers=self.headers)
         self._spec: Schema = {}
         self._schemas: dict[str, Any] = {}
-        self._operations: dict[str, Any] = {}
+        self._operations: OperationsDict = {}
 
-    def _store_spec(self, spec_data: Schema) -> None:
+    def _store_spec(self, spec_data: Schema):
         """Helper to store and parse spec data."""
         self._spec = spec_data
         self._schemas = self._spec.get("components", {}).get("schemas", {})
@@ -183,7 +186,7 @@ class OpenAPITools(ToolSet):
         logger.debug("Stored spec: %s", self._spec)
         logger.debug("Parsed operations: %s", self._operations)
 
-    def _ensure_loaded(self) -> None:
+    def _ensure_loaded(self):
         """Ensure spec is loaded."""
         if not self._spec:
             spec_data = self._load_spec()
@@ -200,7 +203,7 @@ class OpenAPITools(ToolSet):
             msg = f"Failed to load OpenAPI spec from {self.spec_url}"
             raise ValueError(msg) from exc
 
-    def _parse_operations(self) -> dict[str, dict[str, Any]]:
+    def _parse_operations(self) -> OperationsDict:
         """Parse OpenAPI spec into operation configurations."""
         # Get server URL if not overridden
         if not self.base_url and "servers" in self._spec:
@@ -245,8 +248,6 @@ class OpenAPITools(ToolSet):
                 if additional_props := schema.get("additionalProperties"):
                     # Dictionary with specified value type
                     value_type = self._get_type_for_schema(additional_props)
-                    # Create type alias for the dict type
-
                     type DictType = dict[str, value_type]  # type: ignore
                     return DictType
                 if _properties := schema.get("properties"):
@@ -274,11 +275,7 @@ class OpenAPITools(ToolSet):
 
                 return AnyType
 
-    def _create_operation_method(
-        self,
-        op_id: str,
-        config: dict[str, Any],
-    ) -> Any:
+    def _create_operation_method(self, op_id: str, config: dict[str, Any]) -> Any:
         """Create a method for an operation with proper type hints."""
         # Create parameter annotations
         annotations: dict[str, Any] = {}
