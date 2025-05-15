@@ -371,10 +371,8 @@ class OpenAPITools(ToolSet):
         if responses := config["responses"]:
             lines.append("")
             lines.append("Returns:")
-            for code, response in responses.items():
-                if code.startswith("2"):  # Success responses
-                    desc = response.get("description", "")
-                    lines.append(f"    {desc}")
+            resps = [r for code, r in responses.items() if code.startswith("2")]
+            lines.extend(f"    {r.get('description', '')}" for r in resps)
 
         return "\n".join(lines)
 
