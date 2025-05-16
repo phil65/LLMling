@@ -157,6 +157,7 @@ class RuntimeConfig:
                 tool_config.import_path,
                 name_override=tool_config.name,
                 description_override=tool_config.description,
+                hints=tool_config.hints,
             )
 
         self._initialize_toolsets()

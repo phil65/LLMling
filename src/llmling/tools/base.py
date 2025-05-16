@@ -9,6 +9,7 @@ from typing import Any, ClassVar, Self
 
 import py2openai
 
+from llmling.config.models import ToolHints  # noqa: TC001
 from llmling.core.descriptors import classproperty
 
 
@@ -20,6 +21,7 @@ class LLMCallableTool[TReturnType]:
     description: str = ""
     import_path: str | None = None
     schema_override: py2openai.OpenAIFunctionDefinition | None = None
+    hints: ToolHints | None = None
 
     @classmethod
     def from_callable(
@@ -29,6 +31,7 @@ class LLMCallableTool[TReturnType]:
         name_override: str | None = None,
         description_override: str | None = None,
         schema_override: py2openai.OpenAIFunctionDefinition | None = None,
+        hints: ToolHints | None = None,
     ) -> Self:
         """Create a tool from a callable or import path."""
         if isinstance(fn, str):
@@ -54,6 +57,7 @@ class LLMCallableTool[TReturnType]:
             description=description_override or inspect.getdoc(callable_obj) or "",
             import_path=import_path,
             schema_override=schema_override,
+            hints=hints,
         )
 
     @classmethod

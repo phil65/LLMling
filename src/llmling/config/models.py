@@ -24,7 +24,6 @@ from llmling.core.log import get_logger
 from llmling.core.typedefs import ProcessingStep  # noqa: TC001
 from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import PromptType  # noqa: TC001
-from llmling.tools.toolsets import ToolSet
 from llmling.utils.importing import import_callable, import_class
 from llmling.utils.paths import guess_mime_type
 
@@ -472,6 +471,23 @@ class WatchConfig(ConfigModel):
     """Path to .gitignore-style file"""
 
 
+class ToolHints(ConfigModel):
+    """Configuration for tool execution hints."""
+
+    read_only: bool | None = None
+    """Hints that this tool only reads data without modifying anything"""
+
+    destructive: bool | None = None
+    """Hints that this tool performs destructive operations that cannot be undone"""
+
+    idempotent: bool | None = None
+    """Hints that this tool has idempotent behaviour"""
+
+    open_world: bool | None = None
+    """Hints that this tool can access / interact with external resources beyond the
+    current system"""
+
+
 class ToolConfig(ConfigModel):
     """Configuration for a tool."""
 
@@ -483,6 +499,9 @@ class ToolConfig(ConfigModel):
 
     description: str | None = None
     """Optional override for the tool's description"""
+
+    hints: ToolHints = ToolHints()
+    """Hints about the tool's behavior and execution characteristics"""
 
 
 class BaseToolsetConfig(ConfigModel):
@@ -524,6 +543,8 @@ class CustomToolsetConfig(BaseToolsetConfig):
     @field_validator("import_path", mode="after")
     @classmethod
     def validate_import_path(cls, v: str) -> str:
+        from llmling.tools.toolsets import ToolSet
+
         # v is already confirmed to be a str here
         try:
             cls = import_class(v)
