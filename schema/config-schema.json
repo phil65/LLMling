@@ -1,6 +1,7 @@
 {
   "$defs": {
     "CLIResource": {
+      "additionalProperties": false,
       "description": "Resource from CLI command execution.",
       "properties": {
         "type": {
@@ -117,6 +118,7 @@
       "type": "object"
     },
     "CallableResource": {
+      "additionalProperties": false,
       "description": "Resource from executing a Python callable.",
       "properties": {
         "type": {
@@ -184,6 +186,7 @@
           "type": "string"
         },
         "keyword_args": {
+          "additionalProperties": true,
           "description": "Keyword arguments to pass to the callable.",
           "title": "Keyword Args",
           "type": "object"
@@ -199,19 +202,6 @@
       "additionalProperties": false,
       "description": "Configuration for custom toolsets.",
       "properties": {
-        "namespace": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Optional namespace prefix for tool names",
-          "title": "Namespace"
-        },
         "type": {
           "const": "custom",
           "default": "custom",
@@ -262,6 +252,7 @@
           "type": "array"
         },
         "metadata": {
+          "additionalProperties": true,
           "description": "Additional metadata for storing custom prompt information.",
           "title": "Metadata",
           "type": "object"
@@ -319,19 +310,6 @@
       "additionalProperties": false,
       "description": "Configuration for entry point toolsets.",
       "properties": {
-        "namespace": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Optional namespace prefix for tool names",
-          "title": "Namespace"
-        },
         "type": {
           "const": "entry_points",
           "default": "entry_points",
@@ -382,6 +360,7 @@
           "type": "array"
         },
         "metadata": {
+          "additionalProperties": true,
           "description": "Additional metadata for storing custom prompt information.",
           "title": "Metadata",
           "type": "object"
@@ -647,6 +626,7 @@
           "type": "object"
         },
         "globals": {
+          "additionalProperties": true,
           "description": "Global variables available to all templates.",
           "title": "Globals",
           "type": "object"
@@ -700,6 +680,7 @@
       "type": "object"
     },
     "MessageContent": {
+      "additionalProperties": false,
       "description": "Content item in a message.",
       "properties": {
         "type": {
@@ -740,19 +721,6 @@
       "additionalProperties": false,
       "description": "Configuration for OpenAPI toolsets.",
       "properties": {
-        "namespace": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Optional namespace prefix for tool names",
-          "title": "Namespace"
-        },
         "type": {
           "const": "openapi",
           "default": "openapi",
@@ -786,6 +754,7 @@
       "type": "object"
     },
     "PathResource": {
+      "additionalProperties": false,
       "description": "Resource loaded from a file or URL.",
       "properties": {
         "type": {
@@ -868,6 +837,7 @@
       "type": "object"
     },
     "ProcessingStep": {
+      "additionalProperties": false,
       "description": "Configuration for a processing step.",
       "properties": {
         "name": {
@@ -885,6 +855,7 @@
           "type": "boolean"
         },
         "kwargs": {
+          "additionalProperties": true,
           "title": "Kwargs",
           "type": "object"
         }
@@ -950,6 +921,7 @@
           "type": "boolean"
         },
         "metadata": {
+          "additionalProperties": true,
           "title": "Metadata",
           "type": "object"
         }
@@ -1063,6 +1035,7 @@
       "type": "object"
     },
     "SourceResource": {
+      "additionalProperties": false,
       "description": "Resource from Python source code.",
       "properties": {
         "type": {
@@ -1179,6 +1152,7 @@
           "type": "array"
         },
         "metadata": {
+          "additionalProperties": true,
           "description": "Additional metadata for storing custom prompt information.",
           "title": "Metadata",
           "type": "object"
@@ -1207,6 +1181,7 @@
       "type": "object"
     },
     "TextResource": {
+      "additionalProperties": false,
       "description": "Raw text resource.",
       "properties": {
         "type": {
@@ -1314,12 +1289,82 @@
           "default": null,
           "description": "Optional override for the tool's description",
           "title": "Description"
+        },
+        "hints": {
+          "$ref": "#/$defs/ToolHints",
+          "default": {
+            "read_only": null,
+            "destructive": null,
+            "idempotent": null,
+            "open_world": null
+          },
+          "description": "Hints about the tool's behavior and execution characteristics"
         }
       },
       "required": [
         "import_path"
       ],
       "title": "ToolConfig",
+      "type": "object"
+    },
+    "ToolHints": {
+      "additionalProperties": false,
+      "description": "Configuration for tool execution hints.",
+      "properties": {
+        "read_only": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hints that this tool only reads data without modifying anything",
+          "title": "Read Only"
+        },
+        "destructive": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hints that this tool performs destructive operations that cannot be undone",
+          "title": "Destructive"
+        },
+        "idempotent": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hints that this tool has idempotent behaviour",
+          "title": "Idempotent"
+        },
+        "open_world": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hints that this tool can access / interact with external resources beyond the\ncurrent system",
+          "title": "Open World"
+        }
+      },
+      "title": "ToolHints",
       "type": "object"
     },
     "WatchConfig": {
