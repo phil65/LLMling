@@ -57,11 +57,8 @@ def _get_sources(
 
 def _should_include_file(path: Path, include_tests: bool) -> bool:
     """Check if a file should be included in the source."""
-    if not include_tests:
-        # Skip test files and directories
-        parts = path.parts
-        if any(p.startswith("test") for p in parts):
-            return False
+    if not include_tests and any(p.startswith("test") for p in path.parts):
+        return False
     return path.suffix == ".py"
 
 
@@ -126,7 +123,6 @@ def import_callable(path: str) -> Callable[..., Any]:
     raise ValueError(msg)
 
 
-# llmling/utils/importing.py
 def import_class(path: str) -> type:
     """Import a class from a dotted path.
 
