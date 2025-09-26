@@ -2,8 +2,6 @@
 
 [![PyPI License](https://img.shields.io/pypi/l/llmling.svg)](https://pypi.org/project/llmling/)
 [![Package status](https://img.shields.io/pypi/status/llmling.svg)](https://pypi.org/project/llmling/)
-[![Daily downloads](https://img.shields.io/pypi/dd/llmling.svg)](https://pypi.org/project/llmling/)
-[![Weekly downloads](https://img.shields.io/pypi/dw/llmling.svg)](https://pypi.org/project/llmling/)
 [![Monthly downloads](https://img.shields.io/pypi/dm/llmling.svg)](https://pypi.org/project/llmling/)
 [![Distribution format](https://img.shields.io/pypi/format/llmling.svg)](https://pypi.org/project/llmling/)
 [![Wheel availability](https://img.shields.io/pypi/wheel/llmling.svg)](https://pypi.org/project/llmling/)
@@ -21,11 +19,8 @@
 [![Github last commit](https://img.shields.io/github/last-commit/phil65/llmling)](https://github.com/phil65/llmling/commits)
 [![Github release date](https://img.shields.io/github/release-date/phil65/llmling)](https://github.com/phil65/llmling/releases)
 [![Github language count](https://img.shields.io/github/languages/count/phil65/llmling)](https://github.com/phil65/llmling)
-[![Github commits this week](https://img.shields.io/github/commit-activity/w/phil65/llmling)](https://github.com/phil65/llmling)
 [![Github commits this month](https://img.shields.io/github/commit-activity/m/phil65/llmling)](https://github.com/phil65/llmling)
-[![Github commits this year](https://img.shields.io/github/commit-activity/y/phil65/llmling)](https://github.com/phil65/llmling)
 [![Package status](https://codecov.io/gh/phil65/llmling/branch/main/graph/badge.svg)](https://codecov.io/gh/phil65/llmling/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyUp](https://pyup.io/repos/github/phil65/llmling/shield.svg)](https://pyup.io/repos/github/phil65/llmling/)
 
 A framework for declarative LLM application development focused on resource management, prompt templates, and tool execution.
