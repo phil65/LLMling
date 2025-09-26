@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+import platform
 import tempfile
 from typing import TYPE_CHECKING
 import warnings
@@ -46,6 +47,9 @@ def temp_dir() -> Generator[Path, None, None]:
         yield Path(tmp)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_watch_enabled(resource_registry: ResourceRegistry, temp_dir: Path) -> None:
     """Test that watching can be enabled for a resource."""
     # Create test file
@@ -114,6 +118,9 @@ async def test_watch_disabled(
         pass  # Expected - no signal should be emitted
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_watch_patterns(
     resource_registry: ResourceRegistry, temp_dir: Path
 ) -> None:

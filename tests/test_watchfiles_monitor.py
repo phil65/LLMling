@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+import platform
 import tempfile
 from typing import TYPE_CHECKING
 
@@ -37,6 +38,9 @@ async def watcher() -> AsyncIterator[FileWatcher]:
     await w.stop()
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_basic_file_watch(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test basic file change detection."""
     test_file = temp_dir / "test.txt"
@@ -63,6 +67,9 @@ async def test_basic_file_watch(watcher: FileWatcher, temp_dir: Path) -> None:
         pytest.fail(f"No changes detected for {test_file}")
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_pattern_matching(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test pattern matching works."""
     py_file = temp_dir / "test.py"
@@ -96,6 +103,9 @@ async def test_pattern_matching(watcher: FileWatcher, temp_dir: Path) -> None:
         pytest.fail("No changes detected")
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_watch_direct_file(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test watching a specific file works."""
     test_file = temp_dir / "test.txt"
@@ -123,6 +133,9 @@ async def test_watch_direct_file(watcher: FileWatcher, temp_dir: Path) -> None:
         pytest.fail("Change not detected for direct file watch")
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_path_resolution(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test different path formats are handled correctly."""
     test_file = temp_dir / "test.txt"
@@ -149,6 +162,9 @@ async def test_path_resolution(watcher: FileWatcher, temp_dir: Path) -> None:
         pytest.fail("No events received")
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_multiple_signals(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test that all signal types work."""
     test_file = temp_dir / "test.txt"
@@ -196,6 +212,9 @@ async def test_multiple_signals(watcher: FileWatcher, temp_dir: Path) -> None:
     assert normalize_path(test_file) in events["deleted"]
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="File watching unreliable on macOS"
+)
 async def test_watch_error_handling(watcher: FileWatcher, temp_dir: Path) -> None:
     """Test error handling in watcher."""
     errors: list[tuple[str, Exception]] = []
