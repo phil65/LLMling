@@ -39,7 +39,7 @@ class LLMCallableTool[TReturnType]:
             from llmling.utils import importing
 
             callable_obj = importing.import_callable(fn)
-            name = callable_obj.__name__
+            name = getattr(callable_obj, "__name__", "unknown")
             import_path = fn
         else:
             callable_obj = fn

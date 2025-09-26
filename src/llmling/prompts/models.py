@@ -277,7 +277,7 @@ class DynamicPrompt(BasePrompt):
             fn = importing.import_callable(fn)
 
         # Get function metadata
-        name = name_override or fn.__name__
+        name = name_override or getattr(fn, "__name__", "unknown")
         sig = inspect.signature(fn)
         hints = get_type_hints(fn, include_extras=True, localns=locals())
 

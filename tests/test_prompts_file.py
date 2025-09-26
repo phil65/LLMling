@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError
 import pytest
 
-from llmling.prompts.models import FilePrompt
+from llmling.prompts.models import FilePrompt, PromptParameter
 
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ def test_create_file_prompt(temp_prompt_file: pathlib.Path) -> None:
         description="Test prompt",
         path=temp_prompt_file,
         format="text",
-        arguments=[{"name": "name", "required": True}],
+        arguments=[PromptParameter(name="name", required=True)],
     )
     assert prompt.type == "file"
     assert prompt.path == temp_prompt_file
@@ -67,7 +67,7 @@ async def test_format_text_prompt(temp_prompt_file: pathlib.Path) -> None:
         description="Test prompt",
         path=temp_prompt_file,
         format="text",
-        arguments=[{"name": "name", "required": True}],
+        arguments=[PromptParameter(name="name", required=True)],
     )
     messages = await prompt.format({"name": "World"})
     assert len(messages) == 1
@@ -86,8 +86,8 @@ async def test_jinja_prompt(tmp_path: pathlib.Path) -> None:
         path=prompt_file,
         format="jinja2",
         arguments=[
-            {"name": "name", "required": True},
-            {"name": "excited", "required": False},
+            PromptParameter(name="name", required=True),
+            PromptParameter(name="excited", required=False),
         ],
     )
 
@@ -106,7 +106,7 @@ async def test_missing_arguments(temp_prompt_file: pathlib.Path) -> None:
         description="Test prompt",
         path=temp_prompt_file,
         format="text",
-        arguments=[{"name": "name", "required": True}],
+        arguments=[PromptParameter(name="name", required=True)],
     )
     with pytest.raises(ValueError, match="Missing required arguments"):
         await prompt.format({})
@@ -123,7 +123,7 @@ async def test_undefined_argument_in_template(tmp_path: pathlib.Path) -> None:
         description="Test prompt",
         path=prompt_file,
         format="text",
-        arguments=[{"name": "name", "required": True}],
+        arguments=[PromptParameter(name="name", required=True)],
     )
     with pytest.raises(ValueError, match="Missing argument in template"):
         await prompt.format({"name": "World"})
