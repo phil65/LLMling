@@ -1,6 +1,6 @@
 # Changes here will be overwritten by Copier
 _commit: v1.8.3
-_src_path: .\copier-phil65\
+_src_path: https://github.com/phil65/copier-phil65.git
 author_email: philipptemminghoff@googlemail.com
 author_fullname: Philipp Temminghoff
 author_username: phil65
