@@ -14,7 +14,7 @@ from llmling.config.models import BaseResource
 from llmling.core import exceptions
 from llmling.core.descriptors import classproperty
 from llmling.core.log import get_logger
-from llmling.core.typedefs import MessageContent, MessageContentType
+from llmling.core.typedefs import MessageContent
 from llmling.resources.models import LoadedResource, ResourceMetadata
 from llmling.utils import paths
 
@@ -22,6 +22,7 @@ from llmling.utils import paths
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from llmling.core.typedefs import MessageContentType
     from llmling.processors.registry import ProcessorRegistry
 
 
@@ -254,7 +255,7 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
 
     async def load(
         self,
-        context: LoaderContext[TResource] | None = None,
+        context: LoaderContext[TResource] | TResource | None = None,
         processor_registry: ProcessorRegistry | None = None,
     ) -> AsyncIterator[LoadedResource]:
         """Load and process content.
@@ -274,19 +275,23 @@ class ResourceLoader[TResource](ABC, CompletionProvider):
             case LoaderContext():
                 resource = context.resource
                 name = context.name
-            case self.context_class():
-                resource = context
-                name = "unnamed"  # fallback
             case None if self.context:
                 resource = self.context.resource
                 name = self.context.name
             case None:
                 msg = "No context provided"
                 raise exceptions.LoaderError(msg)
+            case _ if isinstance(context, self.context_class):
+                resource = context
+                name = "unnamed"  # fallback
             case _:
                 msg = f"Invalid context type: {type(context)}"
                 raise exceptions.LoaderError(msg)
 
+        # Type assertion to ensure resource is of correct type
+        assert isinstance(resource, self.context_class), (
+            f"Expected {self.context_class}, got {type(resource)}"
+        )
         generator = self._load_impl(resource, name, processor_registry)
         # Then yield from the generator
         async for result in generator:

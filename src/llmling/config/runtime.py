@@ -12,7 +12,7 @@ import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 from llmling.config.manager import ConfigManager
-from llmling.config.models import BaseResource, PathResource
+from llmling.config.models import PathResource
 from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
 from llmling.core import exceptions
 from llmling.core.chain import ChainTool
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Iterator, Sequence
     import types
 
-    from llmling.config.models import Config
+    from llmling.config.models import BaseResource, Config
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt
     from llmling.resources.models import LoadedResource

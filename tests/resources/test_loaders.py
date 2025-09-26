@@ -24,7 +24,7 @@ from llmling.resources import (
     SourceResourceLoader,
     TextResourceLoader,
 )
-from llmling.resources.base import LoaderContext, ResourceLoader, create_loaded_resource
+from llmling.resources.base import LoaderContext, create_loaded_resource
 from llmling.resources.loaders.repository import RepositoryResourceLoader
 
 
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.base import ResourceLoader
     from llmling.resources.loaders.registry import ResourceLoaderRegistry
 
 

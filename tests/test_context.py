@@ -9,7 +9,6 @@ import pytest
 import upath
 
 from llmling.config.models import (
-    BaseResource,
     CallableResource,
     CLIResource,
     PathResource,
@@ -33,6 +32,7 @@ from llmling.resources.models import LoadedResource
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from llmling.config.models import BaseResource
     from llmling.resources.base import ResourceLoader
 
 # Constants for test data

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-import os  # noqa: TC003
+import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, ImportString

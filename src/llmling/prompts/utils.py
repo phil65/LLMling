@@ -17,10 +17,12 @@ from llmling.prompts.models import (
 from llmling.core.log import get_logger
 from llmling.prompts.models import PromptParameter
 from llmling.utils import importing
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from llmling.completions.types import CompletionFunction
 
 

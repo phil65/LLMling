@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, MutableMapping
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from psygnal.containers import EventedDict
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from llmling.core import exceptions
 

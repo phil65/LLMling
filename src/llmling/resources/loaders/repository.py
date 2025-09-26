@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar
 from llmling.config.models import RepositoryResource
 from llmling.core import exceptions
 from llmling.core.log import get_logger
-from llmling.resources.base import LoaderContext, ResourceLoader, create_loaded_resource
+from llmling.resources.base import ResourceLoader, create_loaded_resource
 from llmling.utils.paths import guess_mime_type
 
 
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from git.repo import Repo
 
     from llmling.processors.registry import ProcessorRegistry
+    from llmling.resources.base import LoaderContext
     from llmling.resources.models import LoadedResource
 
 

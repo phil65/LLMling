@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from py2openai import OpenAIFunctionTool  # noqa: TC002
+from py2openai import OpenAIFunctionTool
 from pydantic import BaseModel
 from schemez import Schema
 
