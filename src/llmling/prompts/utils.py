@@ -75,7 +75,7 @@ def extract_function_info(
 
         hints = get_type_hints(fn, include_extras=True, globalns=globalns)
         # Parse docstring
-        desc = f"Prompt from {fn.__name__}"
+        desc = f"Prompt from {getattr(fn, '__name__', 'unknown')}"
         arg_docs = {}
         if docstring := inspect.getdoc(fn):
             parsed = parse_docstring(docstring)
