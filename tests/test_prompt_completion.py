@@ -170,7 +170,7 @@ def test_create_prompt_with_completions() -> None:
 
     # Check type hint preservation
     assert args["mode"].type_hint == Literal["simple", "detailed"]
-    assert args["tags"].type_hint == Optional[Literal["news", "tech", "science"]]
+    assert args["tags"].type_hint == Optional[Literal["news", "tech", "science"]]  # noqa: UP045
     assert args["active"].type_hint is bool
 
 
