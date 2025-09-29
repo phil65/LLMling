@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass
 import inspect
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, ParamSpec, Self, TypeVar
 
 import py2openai
 
@@ -13,10 +13,14 @@ from llmling.config.models import ToolHints  # noqa: TC001
 from llmling.core.descriptors import classproperty
 
 
+P = ParamSpec("P")
+TReturnType = TypeVar("TReturnType")
+
+
 @dataclass
-class LLMCallableTool[TReturnType]:
+class LLMCallableTool[**P, TReturnType]:
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
-    callable: Callable[..., TReturnType]
+    callable: Callable[P, TReturnType]
     name: str
     description: str = ""
     import_path: str | None = None
@@ -26,7 +30,7 @@ class LLMCallableTool[TReturnType]:
     @classmethod
     def from_callable(
         cls,
-        fn: Callable[..., TReturnType] | str,
+        fn: Callable[P, TReturnType] | str,
         *,
         name_override: str | None = None,
         description_override: str | None = None,
@@ -158,11 +162,11 @@ class LLMCallableTool[TReturnType]:
             schema_override=schema_override,
         )
 
-    async def execute(self, *args, **params: Any) -> Any:
+    async def execute(self, *args: P.args, **kwargs: P.kwargs) -> TReturnType:
         """Execute the wrapped callable."""
         if inspect.iscoroutinefunction(self.callable):
-            return await self.callable(*args, **params)
-        return self.callable(*args, **params)
+            return await self.callable(*args, **kwargs)
+        return self.callable(*args, **kwargs)
 
     def get_schema(self) -> py2openai.OpenAIFunctionTool:
         """Get OpenAI function schema."""
@@ -205,7 +209,7 @@ if __name__ == "__main__":
         from crewai_tools import BraveSearchTool
 
         crew_ai_tool = BraveSearchTool()
-        tool = LLMCallableTool[Any].from_crewai_tool(crew_ai_tool)
+        tool = LLMCallableTool[Any, Any].from_crewai_tool(crew_ai_tool)
         print(tool.get_schema())
         result = await tool.execute(query="What is the capital of France?")
         print(result)

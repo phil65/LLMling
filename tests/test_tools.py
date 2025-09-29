@@ -75,7 +75,7 @@ async def test_failing_tool():
 class TestDynamicTool:
     def test_init(self) -> None:
         """Test tool initialization."""
-        tool = LLMCallableTool[Any].from_callable(
+        tool = LLMCallableTool[Any, Any].from_callable(
             EXAMPLE_IMPORT, name_override="name", description_override="desc"
         )
         assert tool.name == "name"
@@ -84,17 +84,17 @@ class TestDynamicTool:
 
     def test_default_name(self) -> None:
         """Test default name from import path."""
-        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any, Any].from_callable(EXAMPLE_IMPORT)
         assert tool.name == "example_tool"
 
     def test_default_description(self) -> None:
         """Test default description from docstring."""
-        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any, Any].from_callable(EXAMPLE_IMPORT)
         assert "repeats text" in tool.description.lower()
 
     def test_schema_generation(self) -> None:
         """Test schema generation from function signature."""
-        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any, Any].from_callable(EXAMPLE_IMPORT)
         schema = tool.get_schema()
 
         assert schema["function"]["name"] == "example_tool"
@@ -105,14 +105,14 @@ class TestDynamicTool:
     @pytest.mark.asyncio
     async def test_execution(self) -> None:
         """Test tool execution."""
-        tool = LLMCallableTool[Any].from_callable(EXAMPLE_IMPORT)
+        tool = LLMCallableTool[Any, Any].from_callable(EXAMPLE_IMPORT)
         result = await tool.execute(text="test", repeat=2)
         assert result == "testtest"
 
     @pytest.mark.asyncio
     async def test_execution_failure(self) -> None:
         """Test tool execution failure."""
-        tool = LLMCallableTool[Any].from_callable(FAILING_IMPORT)
+        tool = LLMCallableTool[Any, Any].from_callable(FAILING_IMPORT)
         with pytest.raises(Exception, match="Intentional"):
             await tool.execute(text="test")
 
