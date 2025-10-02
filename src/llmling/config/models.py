@@ -267,14 +267,13 @@ class PathResource(BaseResource):
         """Check if path exists for local files."""
         from upathtools import to_upath
 
-        warnings = []
         path = to_upath(self.path)
         prefixes = ("http://", "https://")
-
-        if not path.exists() and not path.as_uri().startswith(prefixes):
-            warnings.append(f"Resource path not found: {path}")
-
-        return warnings
+        return [
+            f"Resource path not found: {path}"
+            for path in [path]
+            if not path.exists() and not path.as_uri().startswith(prefixes)
+        ]
 
     @property
     def supports_watching(self) -> bool:
@@ -395,10 +394,11 @@ class RepositoryResource(BaseResource):
     """Optional password for authentication."""
 
     def validate_resource(self) -> list[str]:
-        warnings = []
-        if self.user and not self.password:
-            warnings.append(f"Repository {self.repo_url} has user but no password")
-        return warnings
+        return [
+            f"Repository {self.repo_url} has user but no password"
+            for _ in [None]
+            if self.user and not self.password
+        ]
 
 
 class SourceResource(BaseResource):
