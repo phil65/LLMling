@@ -6,7 +6,7 @@ import functools
 import inspect
 import string
 import sys
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING
 
 from llmling.core.log import get_logger
 
@@ -15,13 +15,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-P = ParamSpec("P")
-R = TypeVar("R")
-
 logger = get_logger(__name__)
 
 
-def error_handler(
+def error_handler[R, **P](
     log_template: str,
     catch_exception: type[Exception],
     *,

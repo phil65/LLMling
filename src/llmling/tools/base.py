@@ -5,16 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass
 import inspect
-from typing import Any, ClassVar, ParamSpec, Self, TypeVar
+from typing import Any, ClassVar, Self
 
 import py2openai
 
 from llmling.config.models import ToolHints  # noqa: TC001
 from llmling.core.descriptors import classproperty
-
-
-P = ParamSpec("P")
-TReturnType = TypeVar("TReturnType")
 
 
 @dataclass

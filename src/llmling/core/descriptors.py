@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-ReturnT = TypeVar("ReturnT")  # More specific name and usage
 
 
 class classproperty[ReturnT]:  # noqa: N801

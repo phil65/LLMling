@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal
 
 from pydantic import ConfigDict, Field, model_validator
 from schemez import Schema
 
 
-T = TypeVar("T")
 ProcessorCallable = Callable[[str, Any], str | Awaitable[str]]
 MetadataDict = dict[str, Any]
 
