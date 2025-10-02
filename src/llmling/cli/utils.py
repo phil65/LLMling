@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from py2openai import OpenAIFunctionTool
 from pydantic import BaseModel
@@ -13,6 +13,7 @@ from llmling.config.store import config_store
 if TYPE_CHECKING:
     import os
 
+OutputFormat = Literal["text", "json", "yaml"]
 
 NO_CONFIG_MESSAGE = """
 No configuration specified. To fix this:
@@ -67,7 +68,10 @@ def prepare_for_output(obj: Any) -> BaseModel | dict[str, Any] | list[Any]:
             raise TypeError(msg)
 
 
-def format_output(result: Any, output_format: str = "text") -> None:
+def format_output(
+    result: Any,
+    output_format: OutputFormat = "text",
+) -> None:
     """Format and print data in the requested format.
 
     Args:

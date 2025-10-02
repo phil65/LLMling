@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer as t
 
 from llmling.cli.constants import output_format_opt
-from llmling.cli.utils import format_output, get_command_help
+from llmling.cli.utils import OutputFormat, format_output, get_command_help  # noqa: TC001
 from llmling.config.store import config_store
 
 
@@ -56,7 +56,7 @@ def set_active(
 
 @config_cli.command("list")
 def list_configs(
-    output_format: str = output_format_opt,
+    output_format: OutputFormat = output_format_opt,
 ) -> None:
     """List all registered configs."""
     try:
@@ -122,7 +122,7 @@ def show_config(
         None,
         help="Name of config to show (shows active if not provided)",
     ),
-    output_format: str = output_format_opt,
+    output_format: OutputFormat = output_format_opt,
     resolve: bool = t.Option(
         False,
         "--resolve/--no-resolve",
