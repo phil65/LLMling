@@ -112,7 +112,7 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
 
     # Use UPath to create the proper file:// URL
     path = upath.UPath(test_file)
-    file_url = str(path.as_uri())  # This will create the correct file:// URL format
+    file_url = path.as_uri()  # This will create the correct file:// URL format
 
     context = PathResource(path=file_url, description="Test file URL")
 
@@ -140,9 +140,7 @@ async def test_path_loader_error() -> None:
 async def test_cli_loader_basic() -> None:
     """Test basic CLI command execution."""
     is_shell = sys.platform == "win32"
-    context = CLIResource(
-        command=ECHO_COMMAND, description="Test command", shell=is_shell
-    )
+    context = CLIResource(command=ECHO_COMMAND, shell=is_shell)
     loader = CLIResourceLoader()
     result = await anext(loader.load(context, ProcessorRegistry()))
 
