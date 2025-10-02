@@ -43,14 +43,14 @@ class PathResourceLoader(ResourceLoader[PathResource]):
 
     def create_uri(self, *, name: str, params: dict[str, str] | None = None) -> str:
         """Create a URI based on resource path basename or explicit URI."""
-        from upath import UPath
+        from upathtools import to_upath
 
         try:
             if self.context and self.context.resource:
                 if self.context.resource.uri:
                     return paths.path_to_uri(self.context.resource.uri)
                 # Use basename of the configured path
-                path = UPath(self.context.resource.path)
+                path = to_upath(self.context.resource.path)
                 return paths.path_to_uri(path.name)
             # Fallback to name if no context
             return paths.path_to_uri(name)
@@ -89,10 +89,10 @@ class PathResourceLoader(ResourceLoader[PathResource]):
         processor_registry: ProcessorRegistry | None,
     ) -> AsyncIterator[LoadedResource]:
         """Load content from file(s)."""
-        from upath import UPath
+        from upathtools import to_upath
 
         try:
-            path = UPath(resource.path)
+            path = to_upath(resource.path)
 
             if path.is_dir():
                 # Handle directory recursively

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     import os
 
     from git.repo import Repo
+    from upath.types import JoinablePath
 
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.base import LoaderContext
@@ -56,14 +57,14 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
 
     def _create_resource(
         self,
-        path: str | os.PathLike[str],
+        path: str | os.PathLike[str] | JoinablePath,
         name: str,
         resource: RepositoryResource,
     ) -> LoadedResource:
         """Create LoadedResource from file."""
-        import upath
+        from upathtools import to_upath
 
-        path_obj = upath.UPath(path)
+        path_obj = to_upath(path)
         try:
             content = path_obj.read_text("utf-8")
             description = f"Repository content from {resource.repo_url} ({resource.ref})"
@@ -92,7 +93,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
     ) -> AsyncIterator[LoadedResource]:
         """Load git content."""
         import git
-        import upath
+        from upathtools import to_upath
 
         try:
             repo = self._get_cached_repo(resource.repo_url)
@@ -112,7 +113,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
             # Switch to requested ref
             repo.git.checkout(resource.ref)
 
-            base_path = upath.UPath(repo.working_dir) / resource.path.lstrip("/")
+            base_path = to_upath(repo.working_dir) / resource.path.lstrip("/")
             if base_path.is_file():
                 loaded = self._create_resource(base_path, name, resource)
                 if processor_registry and resource.processors:

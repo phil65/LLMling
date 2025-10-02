@@ -28,7 +28,7 @@ def load_patterns(
     Returns:
         Combined list of patterns
     """
-    from upath import UPath
+    from upathtools import to_upath
 
     result: list[str] = []
 
@@ -39,7 +39,7 @@ def load_patterns(
     # Add patterns from file
     if ignore_file:
         try:
-            if (path := UPath(ignore_file)).exists():
+            if (path := to_upath(ignore_file)).exists():
                 # Filter empty lines and comments
                 file_patterns = [
                     line.strip()

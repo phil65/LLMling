@@ -924,10 +924,10 @@ class RuntimeConfig:
             ...     format="markdown"
             ... )
         """
-        from upath import UPath
+        from upathtools import to_upath
 
         try:
-            if not UPath(path).exists():
+            if not to_upath(path).exists():
                 msg = f"Prompt file not found: {path}"
                 raise FileNotFoundError(msg)  # noqa: TRY301
 

@@ -89,15 +89,15 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
 
     def _validate_item(self, item: Any) -> ResourceLoader[Any]:
         """Validate and possibly transform item before registration."""
-        import upath
+        from upathtools import to_upath
 
         match item:
             case str() if "\n" in item:
                 resource = TextResource(content=item)
                 return TextResourceLoader.create(resource=resource, name="inline-text")
-            case str() | os.PathLike() if upath.UPath(item).exists():
+            case str() | os.PathLike() if to_upath(item).exists():
                 path_resource = PathResource(path=str(item))
-                name = upath.UPath(item).name
+                name = to_upath(item).name
                 return PathResourceLoader.create(resource=path_resource, name=name)
             case type() if issubclass(item, ResourceLoader):
                 return item()

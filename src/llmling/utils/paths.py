@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     import os
 
+    from upath.types import JoinablePath
+
 
 INVALID_CHARS_PATTERN = re.compile(r'[\x00-\x1F<>:"|?*\\]')
 
@@ -80,7 +82,7 @@ def path_to_uri(path: str) -> str:
     return f"file:///{'/'.join(encoded)}"
 
 
-def guess_mime_type(path: str | os.PathLike[str]) -> str:
+def guess_mime_type(path: str | os.PathLike[str] | JoinablePath) -> str:
     """Guess MIME type from file path using stdlib.
 
     Args:

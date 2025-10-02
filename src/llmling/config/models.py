@@ -265,10 +265,10 @@ class PathResource(BaseResource):
 
     def validate_resource(self) -> list[str]:
         """Check if path exists for local files."""
-        import upath
+        from upathtools import to_upath
 
         warnings = []
-        path = upath.UPath(self.path)
+        path = to_upath(self.path)
         prefixes = ("http://", "https://")
 
         if not path.exists() and not path.as_uri().startswith(prefixes):
@@ -279,9 +279,9 @@ class PathResource(BaseResource):
     @property
     def supports_watching(self) -> bool:
         """Whether this resource instance supports watching."""
-        import upath
+        from upathtools import to_upath
 
-        path = upath.UPath(self.path)
+        path = to_upath(self.path)
         if not path.exists():
             msg = f"Cannot watch non-existent path: {self.path}"
             warnings.warn(msg, UserWarning, stacklevel=2)
