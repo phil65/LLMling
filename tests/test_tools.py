@@ -100,7 +100,7 @@ class TestDynamicTool:
         assert schema["function"]["name"] == "example_tool"
         assert "text" in schema["function"]["parameters"]["properties"]
         assert "repeat" in schema["function"]["parameters"]["properties"]
-        assert schema["function"]["parameters"]["required"] == ["text"]
+        assert schema["function"]["parameters"].get("required") == ["text"]
 
     @pytest.mark.asyncio
     async def test_execution(self) -> None:
