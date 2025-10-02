@@ -11,7 +11,7 @@ from llmling.cli.constants import (
     output_format_opt,
     verbose_opt,
 )
-from llmling.cli.utils import format_output, get_command_help
+from llmling.cli.utils import OutputFormat, format_output, get_command_help  # noqa: TC001
 
 
 help_cmd = get_command_help("Tool management commands.")
@@ -21,7 +21,7 @@ tools_cli = t.Typer(help=help_cmd, no_args_is_help=True)
 @tools_cli.command("list")
 def list_tools(
     config_path: str = config_file_opt,
-    output_format: str = output_format_opt,
+    output_format: OutputFormat = output_format_opt,
     verbose: bool = verbose_opt,
 ):
     """List available tools."""
@@ -35,7 +35,7 @@ def list_tools(
 def show_tool(
     config_path: str = config_file_opt,
     name: str = t.Argument(help=TOOL_NAME_HELP),
-    output_format: str = output_format_opt,
+    output_format: OutputFormat = output_format_opt,
     verbose: bool = verbose_opt,
 ):
     """Show tool documentation and schema."""

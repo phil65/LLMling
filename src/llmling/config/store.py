@@ -91,13 +91,13 @@ class ConfigStore:
             IsADirectoryError: If path points to a directory
         """
         # Basic validation
-        from upath import UPath
+        from upathtools import to_upath
 
         if not name.isidentifier():
             msg = f"Invalid config name: {name} (must be a valid Python identifier)"
             raise ValueError(msg)
 
-        path_obj = UPath(path).resolve()
+        path_obj = to_upath(path).resolve()
         if not path_obj.exists():
             msg = f"Config file not found: {path}"
             raise FileNotFoundError(msg)
