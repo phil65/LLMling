@@ -28,7 +28,6 @@ def registry() -> ProcessorRegistry:
     return ProcessorRegistry()
 
 
-@pytest.mark.asyncio
 async def test_processor_pipeline(registry: ProcessorRegistry) -> None:
     """Test complete processor pipeline."""
     # Register processors
@@ -53,7 +52,6 @@ async def test_processor_pipeline(registry: ProcessorRegistry) -> None:
         await registry.shutdown()
 
 
-@pytest.mark.asyncio
 async def test_single_processor() -> None:
     """Test single processor execution."""
     processor = Processor(ProcessorConfig(import_path=REVERSE_IMPORT))
@@ -70,7 +68,6 @@ async def test_single_processor() -> None:
         await processor.shutdown()
 
 
-@pytest.mark.asyncio
 async def test_processor_async() -> None:
     """Test asynchronous processor."""
     processor = Processor(
@@ -88,7 +85,6 @@ async def test_processor_async() -> None:
         await processor.shutdown()
 
 
-@pytest.mark.asyncio
 async def test_processor_error() -> None:
     """Test processor error handling."""
     processor = Processor(ProcessorConfig(import_path=FAILING_IMPORT))
@@ -99,7 +95,6 @@ async def test_processor_error() -> None:
         await processor.process(ctx)
 
 
-@pytest.mark.asyncio
 async def test_registry_sequential_processing(registry: ProcessorRegistry) -> None:
     """Test sequential processing."""
     registry.register("reverse", ProcessorConfig(import_path=REVERSE_IMPORT))
@@ -113,7 +108,6 @@ async def test_registry_sequential_processing(registry: ProcessorRegistry) -> No
         await registry.shutdown()
 
 
-@pytest.mark.asyncio
 async def test_registry_optional_step(registry: ProcessorRegistry) -> None:
     """Test optional step handling."""
     registry.register("fail", ProcessorConfig(import_path=FAILING_IMPORT))
@@ -128,7 +122,6 @@ async def test_registry_optional_step(registry: ProcessorRegistry) -> None:
     assert result.content == REVERSED_TEXT
 
 
-@pytest.mark.asyncio
 async def test_registry_error_handling(registry: ProcessorRegistry) -> None:
     """Test registry error handling."""
     registry.register(

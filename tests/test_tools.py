@@ -102,14 +102,12 @@ class TestDynamicTool:
         assert "repeat" in schema["function"]["parameters"]["properties"]
         assert schema["function"]["parameters"].get("required") == ["text"]
 
-    @pytest.mark.asyncio
     async def test_execution(self) -> None:
         """Test tool execution."""
         tool = LLMCallableTool[Any, Any].from_callable(EXAMPLE_IMPORT)
         result = await tool.execute(text="test", repeat=2)
         assert result == "testtest"
 
-    @pytest.mark.asyncio
     async def test_execution_failure(self) -> None:
         """Test tool execution failure."""
         tool = LLMCallableTool[Any, Any].from_callable(FAILING_IMPORT)
@@ -144,14 +142,12 @@ class TestToolRegistry:
         assert "tool1" in tools
         assert "tool2" in tools
 
-    @pytest.mark.asyncio
     async def test_execute(self, registry: ToolRegistry) -> None:
         """Test executing a registered tool."""
         registry["example_tool"] = EXAMPLE_IMPORT
         result = await registry.execute("example_tool", text="test", repeat=3)
         assert result == "testtesttest"
 
-    @pytest.mark.asyncio
     async def test_execute_with_validation(self, registry: ToolRegistry) -> None:
         """Test tool execution with invalid parameters."""
         registry["analyze_ast"] = ANALYZE_IMPORT
@@ -176,7 +172,6 @@ class TestToolRegistry:
 
 
 # Integration tests
-@pytest.mark.asyncio
 async def test_tool_integration() -> None:
     """Test full tool workflow."""
     # Setup

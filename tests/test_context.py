@@ -60,7 +60,6 @@ def tmp_file(tmp_path: Path) -> Path:
 
 
 # Text Loader Tests
-@pytest.mark.asyncio
 async def test_text_loader_basic() -> None:
     """Test basic text loading functionality."""
     context = TextResource(content=SAMPLE_TEXT, description="Test text")
@@ -72,7 +71,6 @@ async def test_text_loader_basic() -> None:
     assert result.metadata.extra["type"] == "text"
 
 
-@pytest.mark.asyncio
 async def test_text_loader_with_processors(processor_registry: ProcessorRegistry) -> None:
     """Test text loading with processors."""
     await processor_registry.startup()
@@ -90,7 +88,6 @@ async def test_text_loader_with_processors(processor_registry: ProcessorRegistry
 
 
 # Path Loader Tests
-@pytest.mark.asyncio
 async def test_path_loader_file(tmp_file: Path) -> None:
     """Test loading from a file."""
     context = PathResource(path=str(tmp_file), description="Test file")
@@ -103,7 +100,6 @@ async def test_path_loader_file(tmp_file: Path) -> None:
     assert result.metadata.extra["path"] == str(tmp_file)
 
 
-@pytest.mark.asyncio
 async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
     """Test loading from a path with file:// protocol."""
     # Create a test file
@@ -125,7 +121,6 @@ async def test_path_loader_with_file_protocol(tmp_path: Path) -> None:
     assert result.metadata.size == len(TEST_FILE_CONTENT)
 
 
-@pytest.mark.asyncio
 async def test_path_loader_error() -> None:
     """Test loading from a non-existent path."""
     context = PathResource(path="/nonexistent/file.txt", description="Test missing file")
@@ -136,7 +131,6 @@ async def test_path_loader_error() -> None:
 
 
 # CLI Loader Tests
-@pytest.mark.asyncio
 async def test_cli_loader_basic() -> None:
     """Test basic CLI command execution."""
     is_shell = sys.platform == "win32"
@@ -148,7 +142,6 @@ async def test_cli_loader_basic() -> None:
     assert result.metadata.extra["exit_code"] == 0
 
 
-@pytest.mark.asyncio
 async def test_cli_loader_timeout() -> None:
     """Test CLI command timeout."""
     context = CLIResource(command=SLEEP_COMMAND, timeout=0.1, description="test")
@@ -159,7 +152,6 @@ async def test_cli_loader_timeout() -> None:
 
 
 # Source Loader Tests
-@pytest.mark.asyncio
 async def test_source_loader_basic() -> None:
     """Test basic source code loading."""
     path = "llmling.resources.loaders.text"
@@ -171,7 +163,6 @@ async def test_source_loader_basic() -> None:
     assert result.metadata.extra["import_path"] == context.import_path
 
 
-@pytest.mark.asyncio
 async def test_source_loader_invalid_module() -> None:
     """Test loading from non-existent module."""
     ctx = SourceResource(import_path=INVALID_MODULE, description="Test invalid module")
@@ -182,7 +173,6 @@ async def test_source_loader_invalid_module() -> None:
 
 
 # Callable Loader Tests
-@pytest.mark.asyncio
 async def test_callable_loader_sync() -> None:
     """Test loading from synchronous callable."""
     context = CallableResource(
@@ -197,7 +187,6 @@ async def test_callable_loader_sync() -> None:
     assert result.metadata.extra["import_path"] == context.import_path
 
 
-@pytest.mark.asyncio
 async def test_callable_loader_async() -> None:
     """Test loading from asynchronous callable."""
     context = CallableResource(
@@ -213,7 +202,6 @@ async def test_callable_loader_async() -> None:
 
 
 # Integration Tests
-@pytest.mark.asyncio
 async def test_all_loaders_with_processors(
     processor_registry: ProcessorRegistry,
     tmp_file: Path,

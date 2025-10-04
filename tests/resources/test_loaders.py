@@ -137,7 +137,6 @@ def test_get_loader(
     assert isinstance(loader, expected_type)
 
 
-@pytest.mark.asyncio
 async def test_text_loader(processor_registry: ProcessorRegistry) -> None:
     """Test TextResourceLoader functionality."""
     content = "Test content"
@@ -150,7 +149,6 @@ async def test_text_loader(processor_registry: ProcessorRegistry) -> None:
     assert result.source_type == "text"
 
 
-@pytest.mark.asyncio
 async def test_path_loader(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
@@ -169,7 +167,6 @@ async def test_path_loader(
     assert result.source_type == "path"
 
 
-@pytest.mark.asyncio
 async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
     """Test CLIResourceLoader functionality."""
     # Use a simple echo command
@@ -181,7 +178,6 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
     assert result.source_type == "cli"
 
 
-@pytest.mark.asyncio
 @pytest.mark.skipif(
     os.environ.get("CI") == "true",
     reason="Git branch tests are unreliable in CI environment",
@@ -231,7 +227,6 @@ async def test_repository_loader(
         break
 
 
-@pytest.mark.asyncio
 async def test_source_loader(processor_registry: ProcessorRegistry) -> None:
     """Test SourceResourceLoader functionality."""
     resource = SourceResource(import_path="llmling.core.log")
@@ -320,7 +315,6 @@ def test_registry_uri_templates(loader_registry: ResourceLoaderRegistry) -> None
     assert all("scheme" in t and "template" in t and "mimeTypes" in t for t in templates)
 
 
-@pytest.mark.asyncio
 async def test_path_loader_directory(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
@@ -351,7 +345,6 @@ async def test_path_loader_directory(
     assert str(tmp_path) == files[0].metadata.extra["relative_to"]
 
 
-@pytest.mark.asyncio
 async def test_path_loader_empty_directory(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
@@ -367,7 +360,6 @@ async def test_path_loader_empty_directory(
     assert len(files) == 0
 
 
-@pytest.mark.asyncio
 async def test_path_loader_directory_with_processors(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,

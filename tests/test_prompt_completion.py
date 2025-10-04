@@ -49,7 +49,6 @@ def registry() -> PromptRegistry:
     return registry
 
 
-@pytest.mark.asyncio
 async def test_custom_completion(registry: PromptRegistry) -> None:
     """Test custom completion function."""
     completions = await registry.get_completions(
@@ -60,7 +59,6 @@ async def test_custom_completion(registry: PromptRegistry) -> None:
     assert completions == ["django"]
 
 
-@pytest.mark.asyncio
 async def test_literal_completion(registry: PromptRegistry) -> None:
     """Test completion for Literal type."""
     completions = await registry.get_completions(
@@ -71,7 +69,6 @@ async def test_literal_completion(registry: PromptRegistry) -> None:
     assert sorted(completions) == ["simple"]
 
 
-@pytest.mark.asyncio
 async def test_optional_literal_completion(registry: PromptRegistry) -> None:
     """Test completion for Optional[Literal] type."""
     completions = await registry.get_completions(
@@ -82,7 +79,6 @@ async def test_optional_literal_completion(registry: PromptRegistry) -> None:
     assert sorted(completions) == ["tech"]
 
 
-@pytest.mark.asyncio
 async def test_bool_completion(registry: PromptRegistry) -> None:
     """Test completion for bool type."""
     completions = await registry.get_completions(
@@ -100,7 +96,6 @@ async def test_bool_completion(registry: PromptRegistry) -> None:
     assert completions == ["false"]
 
 
-@pytest.mark.asyncio
 async def test_default_value_completion(registry: PromptRegistry) -> None:
     """Test completion includes default value."""
     completions = await registry.get_completions(
@@ -111,7 +106,6 @@ async def test_default_value_completion(registry: PromptRegistry) -> None:
     assert "simple" in completions
 
 
-@pytest.mark.asyncio
 async def test_description_based_completion(registry: PromptRegistry) -> None:
     """Test completion from 'one of:' in description."""
     completions = await registry.get_completions(
@@ -123,7 +117,6 @@ async def test_description_based_completion(registry: PromptRegistry) -> None:
     assert all(str(x) in completions for x in (1, 2, 3))  # From description
 
 
-@pytest.mark.asyncio
 async def test_completion_with_no_matches(registry: PromptRegistry) -> None:
     """Test completion with no matching values."""
     completions = await registry.get_completions(
@@ -134,7 +127,6 @@ async def test_completion_with_no_matches(registry: PromptRegistry) -> None:
     assert completions == []
 
 
-@pytest.mark.asyncio
 async def test_completion_for_unknown_argument(registry: PromptRegistry) -> None:
     """Test completion for non-existent argument."""
     completions = await registry.get_completions(
@@ -145,7 +137,6 @@ async def test_completion_for_unknown_argument(registry: PromptRegistry) -> None
     assert completions == []
 
 
-@pytest.mark.asyncio
 async def test_completion_for_unknown_prompt(registry: PromptRegistry) -> None:
     """Test completion for non-existent prompt."""
     completions = await registry.get_completions(
@@ -174,7 +165,6 @@ def test_create_prompt_with_completions() -> None:
     assert args["active"].type_hint is bool
 
 
-@pytest.mark.asyncio
 async def test_combined_completions(registry: PromptRegistry) -> None:
     """Test multiple completion sources combined."""
 
@@ -206,7 +196,6 @@ async def test_combined_completions(registry: PromptRegistry) -> None:
     assert set(completions) == {"md", "txt", "rst", "html"}
 
 
-@pytest.mark.asyncio
 async def test_completion_order_priority(registry: PromptRegistry) -> None:
     """Test that completion sources have correct priority."""
 

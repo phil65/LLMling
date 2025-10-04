@@ -59,7 +59,6 @@ def test_invalid_format() -> None:
         })
 
 
-@pytest.mark.asyncio
 async def test_format_text_prompt(temp_prompt_file: pathlib.Path) -> None:
     """Test formatting a text prompt."""
     prompt = FilePrompt(
@@ -74,7 +73,6 @@ async def test_format_text_prompt(temp_prompt_file: pathlib.Path) -> None:
     assert messages[0].get_text_content() == "Hello World!"
 
 
-@pytest.mark.asyncio
 async def test_jinja_prompt(tmp_path: pathlib.Path) -> None:
     """Test Jinja2 template prompt."""
     prompt_file = tmp_path / "test_prompt.j2"
@@ -98,7 +96,6 @@ async def test_jinja_prompt(tmp_path: pathlib.Path) -> None:
     assert messages[0].get_text_content() == "Hello World"
 
 
-@pytest.mark.asyncio
 async def test_missing_arguments(temp_prompt_file: pathlib.Path) -> None:
     """Test formatting with missing required arguments."""
     prompt = FilePrompt(
@@ -112,7 +109,6 @@ async def test_missing_arguments(temp_prompt_file: pathlib.Path) -> None:
         await prompt.format({})
 
 
-@pytest.mark.asyncio
 async def test_undefined_argument_in_template(tmp_path: pathlib.Path) -> None:
     """Test using undefined argument in template."""
     prompt_file = tmp_path / "test_prompt.txt"

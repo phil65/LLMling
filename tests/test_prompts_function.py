@@ -102,7 +102,6 @@ def test_create_prompt_async():
     assert "Content to process" in description
 
 
-@pytest.mark.asyncio
 async def test_prompt_formatting():
     """Test that created prompts format with function results."""
     prompt = DynamicPrompt.from_callable(example_function)
@@ -135,7 +134,6 @@ def test_create_prompt_overrides():
     assert prompt.messages[1].content.content == "Result: {result}"  # type: ignore
 
 
-@pytest.mark.asyncio
 async def test_create_prompt_from_import_path():
     """Test prompt creation from import path."""
     prompt = DynamicPrompt.from_callable("llmling.testing.processors.uppercase_text")
@@ -154,7 +152,6 @@ def test_create_prompt_invalid_import():
         DynamicPrompt.from_callable("nonexistent.module.function")
 
 
-@pytest.mark.asyncio
 async def test_argument_validation():
     """Test argument validation in created prompts."""
     prompt = DynamicPrompt.from_callable(example_function)
@@ -197,7 +194,6 @@ def test_prompt_with_completions():
     assert args["other"].completion_function("py") == ["python"]
 
 
-@pytest.mark.asyncio
 async def test_async_function_execution():
     """Test that async functions are properly executed."""
     prompt = DynamicPrompt.from_callable(async_function)

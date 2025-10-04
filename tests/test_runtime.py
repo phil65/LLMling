@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.asyncio
 async def test_render_prompt(runtime_config):
     """Test prompt rendering through runtime config."""
     msgs = [PromptMessage(role="user", content="Hello {name}")]
@@ -35,7 +34,6 @@ async def test_render_prompt_not_found(runtime_config):
         await runtime_config.render_prompt("nonexistent")
 
 
-@pytest.mark.asyncio
 async def test_render_prompt_validation_error(runtime_config):
     """Test error handling for invalid arguments."""
     msgs = [PromptMessage(role="user", content="Hello {name}")]
@@ -49,7 +47,6 @@ async def test_render_prompt_validation_error(runtime_config):
         await runtime_config.render_prompt("test", {})
 
 
-@pytest.mark.asyncio
 async def test_dynamic_prompt_arguments():
     """Test that DynamicPrompt properly extracts function arguments."""
     config = Config.model_validate({
@@ -86,7 +83,6 @@ async def test_dynamic_prompt_arguments():
         assert messages[1].get_text_content() == "hellohellohello"
 
 
-@pytest.mark.asyncio
 async def test_prompt_registration_methods(runtime_config: RuntimeConfig, tmp_path: Path):
     """Test all prompt registration methods."""
     # Register a static prompt

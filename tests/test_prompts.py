@@ -81,7 +81,6 @@ def test_invalid_prompt_config():
         Config.from_yaml(INVALID_PROMPT_CONFIG)
 
 
-@pytest.mark.asyncio
 async def test_prompt_format():
     """Test prompt message formatting."""
     prompt = StaticPrompt(
@@ -109,7 +108,6 @@ async def test_prompt_format():
     assert messages[1].get_text_content() == "Age: "
 
 
-@pytest.mark.asyncio
 async def test_prompt_validation():
     """Test prompt argument validation."""
     prompt = StaticPrompt(
