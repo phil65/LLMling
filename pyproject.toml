@@ -266,6 +266,7 @@ docstring-quotes = "double"
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlalchemy.orm.DeclarativeBase", "schemez.Schema"]
+runtime-evaluated-decorators = ["pydantic.validate_call", "attrs.define", "fastapi.FastAPI.get", "fastapi.FastAPI.post", "fastmcp.FastMCP.tool"]
 
 [tool.ruff.format]
 # Enable preview style formatting.
