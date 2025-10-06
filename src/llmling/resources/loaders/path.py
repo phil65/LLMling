@@ -104,7 +104,7 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                         content = processed.content
                     # Preserve original format - if input was file URL, use file URL
                     path_for_meta = (
-                        file_path.as_uri()
+                        str(resource.path)
                         if str(resource.path).startswith("file://")
                         else str(file_path)
                     )
@@ -131,7 +131,7 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                     content = processed.content
                 # Preserve original format - if input was file URL, use file URL
                 path_for_meta = (
-                    path.as_uri()
+                    str(resource.path)
                     if str(resource.path).startswith("file://")
                     else str(path)
                 )
