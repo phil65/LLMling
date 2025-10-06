@@ -1,6 +1,6 @@
 [project]
 name = "llmling"
-version = "1.7.0"
+version = "1.7.1"
 description = "A backend for pydantic-AI agents and MCP servers."
 readme = "README.md"
 requires-python = ">=3.12"
