@@ -102,9 +102,15 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                     if processor_registry and (procs := resource.processors):
                         processed = await processor_registry.process(content, procs)
                         content = processed.content
+                    # Preserve original format - if input was file URL, use file URL
+                    path_for_meta = (
+                        file_path.as_uri()
+                        if str(resource.path).startswith("file://")
+                        else str(file_path)
+                    )
                     meta = {
                         "type": "path",
-                        "path": str(file_path),
+                        "path": path_for_meta,
                         "scheme": file_path.protocol,
                         "relative_to": str(path),
                     }
@@ -123,7 +129,13 @@ class PathResourceLoader(ResourceLoader[PathResource]):
                 if processor_registry and (procs := resource.processors):
                     processed = await processor_registry.process(content, procs)
                     content = processed.content
-                meta = {"type": "path", "path": str(path), "scheme": path.protocol}
+                # Preserve original format - if input was file URL, use file URL
+                path_for_meta = (
+                    path.as_uri()
+                    if str(resource.path).startswith("file://")
+                    else str(path)
+                )
+                meta = {"type": "path", "path": path_for_meta, "scheme": path.protocol}
                 yield create_loaded_resource(
                     content=content,
                     source_type="path",
