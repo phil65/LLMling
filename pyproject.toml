@@ -1,61 +1,58 @@
-[tool.hatch.version]
-source = "regex_commit"
-commit_extra_args = ["-e"]
-path = "src/llmling/__init__.py"
-
-[build-system]
-requires = ["hatchling", "hatch-regex-commit"]
-build-backend = "hatchling.build"
-
 [project]
 name = "llmling"
 description = "A backend for pydantic-AI agents and MCP servers."
-authors = [
-    { name = "Philipp Temminghoff", email = "philipptemminghoff@googlemail.com" },
-]
 readme = "README.md"
-dynamic = ["version"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Topic :: Documentation",
-    "Topic :: Software Development",
-    "Topic :: Utilities",
-    "Typing :: Typed",
-    "Framework :: Pydantic",
-    "Framework :: Pydantic :: 2",
-
-]
-keywords = []
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
-dependencies = [
-"pydantic",
-    "schemez",
-    # Only add below (Copier)
-    "fsspec",
-    "universal-pathlib>=0.2.5",
-    "yamling>=1.5.0",
-    "jinja2>=3.1.4",
-    "py2openai",
-    "epregistry>=1.2.0",
-    "pathspec",
-    "platformdirs>=4.3.6",
-    "depkit>=0.3.5",
-    "typing-extensions>=4.12.2",
-    "httpx",
-    "typer",
-    "promptantic>=0.4.3",
-    "psygnal>=0.11.1",
-    "upathtools[httpx]",
-    "schemez>=0.2.2",
+authors = [
+  { name = "Philipp Temminghoff", email = "philipptemminghoff@googlemail.com" },
 ]
+keywords = []
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: Pydantic",
+  "Framework :: Pydantic :: 2",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Documentation",
+  "Topic :: Software Development",
+  "Topic :: Utilities",
+  "Typing :: Typed",
+]
+dependencies = [
+  "depkit>=0.3.5",
+  "epregistry>=1.2.0",
+  # Only add below (Copier)
+  "fsspec",
+  "httpx",
+  "jinja2>=3.1.4",
+  "pathspec",
+  "platformdirs>=4.3.6",
+  "promptantic>=0.4.3",
+  "psygnal>=0.11.1",
+  "py2openai",
+  "pydantic",
+  "schemez",
+  "schemez>=0.2.2",
+  "typer",
+  "typing-extensions>=4.12.2",
+  "universal-pathlib>=0.2.5",
+  "upathtools[httpx]",
+  "yamling>=1.5.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+"Code coverage" = "https://app.codecov.io/gh/phil65/llmling"
+Discussions = "https://github.com/phil65/llmling/discussions"
+Documentation = "https://phil65.github.io/llmling/"
+Issues = "https://github.com/phil65/llmling/issues"
+Source = "https://github.com/phil65/llmling"
 
 [project.scripts]
 llmling = "llmling.__main__:cli"
@@ -64,227 +61,86 @@ llmling = "llmling.__main__:cli"
 tools = "llmling.testing:get_mcp_tools"
 
 [project.optional-dependencies]
-server = ["mcp-server-llmling"]
-fsspec_extras = ["fsspec[http,github]"]
 agent = ["llmling-agent"]
-watch_files = ["watchfiles"]
-git = ["pygit2", "GitPython"]
 all = [
-    "llmling-agent",
-    "mcp-server-llmling",
-    "watchfiles",
-    "pygit2",
-    "GitPython",
-    "fsspec[http,github]",
+  "llmling-agent",
+  "mcp-server-llmling",
+  "watchfiles",
+  "pygit2",
+  "GitPython",
+  "fsspec[http,github]",
 ]
-
-[tool.uv]
-default-groups = ["dev", "lint", "docs"]
+fsspec_extras = ["fsspec[http,github]"]
+git = ["pygit2", "GitPython"]
+server = ["mcp-server-llmling"]
+watch_files = ["watchfiles"]
 
 [dependency-groups]
 dev = [
-    "pytest",
-    "pytest-cov",
-    "pyreadline3",
-    "devtools",
-    # Only add below (Copier)
-    "pytest-asyncio>=0.24.0",
-    "openapi-spec-validator>=0.7.1",
-    # "llmling-provider-llm",
+  "devtools",
+  "openapi-spec-validator>=0.7.1",
+  "pyreadline3",
+  "pytest",
+  # Only add below (Copier)
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov",
+  # "llmling-provider-llm",
 ]
 benchmark = ["pyinstrument"]
-lint = [
-    "ruff",
-    "mypy[faster-cache]; python_version < '3.14'",
-    "mypy; python_version >= '3.14'",
-    # Only add below (Copier)
-]
 docs = [
-    "mkdocs-mknodes",
-    "mkdocs-material",
-    # Only add below (Copier)
+  "mkdocs-material",
+  "mkdocs-mknodes",
+  # Only add below (Copier)
+]
+lint = [
+  "mypy; python_version >= '3.14'",
+  "mypy[faster-cache]; python_version < '3.14'",
+  "ruff",
+  # Only add below (Copier)
 ]
 
-[project.urls]
-Documentation = "https://phil65.github.io/llmling/"
-Source = "https://github.com/phil65/llmling"
-Issues = "https://github.com/phil65/llmling/issues"
-Discussions = "https://github.com/phil65/llmling/discussions"
-"Code coverage" = "https://app.codecov.io/gh/phil65/llmling"
+[build-system]
+requires = ["hatch-regex-commit", "hatchling"]
+build-backend = "hatchling.build"
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "@overload",
+  "except ImportError",
+  'if __name__ == "__main__":',
+]
+
+[tool.hatch.version]
+source = "regex_commit"
+commit_extra_args = ["-e"]
+path = "src/llmling/__init__.py"
 
 [tool.logfire]
 ignore_no_config = true
 console = false
 show_project_link = false
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-log_cli = true
-python_files = ["test_*.py"]
-pythonpath = ["src"]
-log_level = "ERROR"
-asyncio_default_fixture_loop_scope = "function"
-log_format = "%(asctime)s %(levelname)s %(message)s"
-log_date_format = "%Y-%m-%d %H:%M:%S"
-asyncio_mode = "auto"
-addopts = "-m 'not slow'"
-markers = [
-    "asyncio: mark test as async",
-    "slow: marks tests as slow",
-    "unit: marks tests as unit tests",
-    "integration: marks tests as integration tests",
+[tool.mknodes]
+allowed-commit-types = [
+  "fix",
+  "feat",
+  "refactor",
+  "docs",
+  "test",
+  "build",
+  "chore",
 ]
-filterwarnings = [
-    "ignore::DeprecationWarning:pydantic.*:",
-    "ignore::DeprecationWarning:litellm.*:",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "@overload",
-    "except ImportError",
-    'if __name__ == "__main__":',
-]
+docstring-style = "google"
 
 [tool.mypy]
 python_version = "3.12"
 disable_error_code = ["misc", "import"]
 pretty = true
 check_untyped_defs = true
-exclude = ['venv/', '.venv/', 'tests/']
+exclude = ["venv/", ".venv/", "tests/"]
 plugins = ["pydantic.mypy"]
-
-[tool.ruff]
-line-length = 90
-extend-exclude = ['docs']
-target-version = "py312"
-
-[tool.ruff.lint]
-future-annotations = true
-select = [
-    "A", # Flake8-builtins
-    # "ANN",  # Flake8-Annotations
-    # "ASYNC",  # Flake8-Async
-    # "ARG",  # # Flake8-Unused-Arguments
-    "B",   # flake8-bugbear
-    "BLE", # Flake8-blind-except
-    "C",
-    "C4",  # flake8-comprehensions
-    # "C90",  # MCCabe
-    "COM", #  Flake8-commas
-    # "CPY",  #  Copyright-related rules
-    "D", # PyDocStyle
-    # "DTZ",  # Flake8- Datetimez
-    "E",  # PyCodeStyle Error
-    "EM", # flake8-errmsg
-    # "ERA",  #  Eradicate
-    "EXE", # flake8-executable
-    "F",   # PyFlakes
-    "FA",  # flake8-future-annotations
-    # "FBT",  # flake8-boolean-trap
-    # "FIX",  # flake8-fixme
-    "FLY", # flynt
-    "G",   #  flake8-logging-format
-    "I",   # ISort
-    "ICN", # Flake8-import-conventions
-    "INP", # flake8-no-pep420
-    "INT", # flake8-gettext
-    "ISC", # flake8-implicit-str-concat
-    "N",   # pep8-naming
-    # "NPY",  # numpy-specific rules
-    # "PD",   # pandas-vet
-    "PERF", # perflint
-    # "PGH",  # pygrep-hooks
-    "PIE", # flake8-pie
-    "PLE", # PyLint Error
-    "PLC", # PyLint convention
-    # "PLW",  # PyLint Warning
-    "PLR", # PyLint refactor
-    "PT",  # flake8-pytest-style
-    "PTH", # flake8-use-pathlib
-    "PYI", # flake8-pyi
-    "Q",   # flake8-quotes
-    "RET", # flake8-return
-    "RSE", # flake8-raise
-    "RUF", # ruff-specific rules
-    # "S",    # flake8-bandit
-    "SIM",  # flake8-simplify
-    "SLF",  # flake8-self
-    "SLOT", # flake8-slots
-    # "T",
-    # "TD",   # flake8-todos
-    "T10", # flake8-debugger
-    # "T20",  # flake8-print
-    "TC",  # flake8-type-checking
-    "TID", # flake8-tidy-imports
-    "TRY", # tryceratops
-    "UP",  # PyUpgrade
-    "W",   # PyCodeStyle warning
-    "YTT", # flake8-2020
-]
-ignore = [
-    "C408",   # Unnecessary {obj_type} call (rewrite as a literal)
-    "B905",   # zip() without an explicit strict= parameter
-    "C901",   # {name} is too complex ({complexity} > {max_complexity})
-    "COM812",
-    # "CPY001", # Missing copyright notice at top of file
-    "D100",    # Missing docstring in public module
-    "D101",    # Missing docstring in public class
-    "D102",    # Missing docstring in public method
-    "D103",    # Missing docstring in public function
-    "D104",    # Missing docstring in public package
-    "D105",    # Missing docstring in magic method
-    "D106",    # Missing docstring in public nested class
-    "D107",    # Missing docstring in __init__
-    "D203",    # 1 blank line required before class docstring
-    "D204",    # 1 blank line required after class docstring
-    "D213",    # Multi-line docstring summary should start at the second line
-    "D215",    # Section underline is over-indented ("{name}")
-    "D400",    # First line should end with a period
-    "D401",    # First line of docstring should be in imperative mood: "{first_line}"
-    "D404",    # First word of the docstring should not be "This"
-    "D406",    # Section name should end with a newline ("{name}")
-    "D407",    # Missing dashed underline after section ("{name}")
-    "D408",    # Section underline should be in the line following the section's name ("{name}")
-    "D409",    # Section underline should match the length of its name ("{name}")
-    "D413",    # Missing blank line after last section ("{name}")
-    "ISC001",
-    "PLC0415",
-    "PLR0912", # Too many branches
-    "PLR0913", # Too many arguments to function call
-    "PLR0915", # Too many statements
-    # "PLR2004", # Magic values instead of named consts
-    "SLF001", # Private member accessed
-    "TRY003", # Avoid specifying long messages outside the exception class
-    "TC006", # runtime-cast-value
-]
-
-[tool.ruff.lint.flake8-quotes]
-docstring-quotes = "double"
-
-[tool.ruff.lint.flake8-type-checking]
-runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlalchemy.orm.DeclarativeBase", "schemez.Schema"]
-runtime-evaluated-decorators = ["pydantic.validate_call", "attrs.define", "fastapi.FastAPI.get", "fastapi.FastAPI.post", "fastmcp.FastMCP.tool"]
-
-[tool.ruff.format]
-# Enable preview style formatting.
-preview = true
-
-[tool.ruff.lint.isort]
-lines-after-imports = 2
-# lines-between-types = 1
-# atomic = true
-force-sort-within-sections = true
-combine-as-imports = true
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["E402", "I001"]
-"scripts/*" = ["INP001"]
-
-[tool.ty.environment]
-python-version = "3.12"
 
 [tool.pyright]
 venvPath = "."
@@ -305,14 +161,167 @@ reportUnannotatedClassAttribute = false
 reportSelfClsParameterName = false
 reportPrivateImportUsage = false
 
-[tool.mknodes]
-allowed-commit-types = [
-    "fix",
-    "feat",
-    "refactor",
-    "docs",
-    "test",
-    "build",
-    "chore",
+[tool.pytest.ini_options]
+addopts = "-m 'not slow'"
+filterwarnings = [
+  "ignore::DeprecationWarning:pydantic.*:",
+  "ignore::DeprecationWarning:litellm.*:",
 ]
-docstring-style = "google"
+log_cli = true
+log_date_format = "%Y-%m-%d %H:%M:%S"
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_level = "ERROR"
+markers = [
+  "asyncio: mark test as async",
+  "slow: marks tests as slow",
+  "unit: marks tests as unit tests",
+  "integration: marks tests as integration tests",
+]
+python_files = ["test_*.py"]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 90
+extend-exclude = ["docs"]
+target-version = "py312"
+
+[tool.ruff.lint]
+future-annotations = true
+select = [
+  "A",  # Flake8-builtins
+  # "ANN",  # Flake8-Annotations
+  # "ASYNC",  # Flake8-Async
+  # "ARG",  # # Flake8-Unused-Arguments
+  "B",  # flake8-bugbear
+  "BLE",  # Flake8-blind-except
+  "C",
+  "C4",  # flake8-comprehensions
+  # "C90",  # MCCabe
+  "COM",  # Flake8-commas
+  # "CPY",  #  Copyright-related rules
+  "D",  # PyDocStyle
+  # "DTZ",  # Flake8- Datetimez
+  "E",  # PyCodeStyle Error
+  "EM",  # flake8-errmsg
+  # "ERA",  #  Eradicate
+  "EXE",  # flake8-executable
+  "F",  # PyFlakes
+  "FA",  # flake8-future-annotations
+  # "FBT",  # flake8-boolean-trap
+  # "FIX",  # flake8-fixme
+  "FLY",  # flynt
+  "G",  # flake8-logging-format
+  "I",  # ISort
+  "ICN",  # Flake8-import-conventions
+  "INP",  # flake8-no-pep420
+  "INT",  # flake8-gettext
+  "ISC",  # flake8-implicit-str-concat
+  "N",  # pep8-naming
+  # "NPY",  # numpy-specific rules
+  # "PD",   # pandas-vet
+  "PERF",  # perflint
+  # "PGH",  # pygrep-hooks
+  "PIE",  # flake8-pie
+  "PLE",  # PyLint Error
+  "PLC",  # PyLint convention
+  # "PLW",  # PyLint Warning
+  "PLR",  # PyLint refactor
+  "PT",  # flake8-pytest-style
+  "PTH",  # flake8-use-pathlib
+  "PYI",  # flake8-pyi
+  "Q",  # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "RUF",  # ruff-specific rules
+  # "S",    # flake8-bandit
+  "SIM",  # flake8-simplify
+  "SLF",  # flake8-self
+  "SLOT",  # flake8-slots
+  # "T",
+  # "TD",   # flake8-todos
+  "T10",  # flake8-debugger
+  # "T20",  # flake8-print
+  "TC",  # flake8-type-checking
+  "TID",  # flake8-tidy-imports
+  "TRY",  # tryceratops
+  "UP",  # PyUpgrade
+  "W",  # PyCodeStyle warning
+  "YTT",  # flake8-2020
+]
+ignore = [
+  "C408",  # Unnecessary {obj_type} call (rewrite as a literal)
+  "B905",  # zip() without an explicit strict= parameter
+  "C901",  # {name} is too complex ({complexity} > {max_complexity})
+  "COM812",
+  # "CPY001", # Missing copyright notice at top of file
+  "D100",  # Missing docstring in public module
+  "D101",  # Missing docstring in public class
+  "D102",  # Missing docstring in public method
+  "D103",  # Missing docstring in public function
+  "D104",  # Missing docstring in public package
+  "D105",  # Missing docstring in magic method
+  "D106",  # Missing docstring in public nested class
+  "D107",  # Missing docstring in __init__
+  "D203",  # 1 blank line required before class docstring
+  "D204",  # 1 blank line required after class docstring
+  "D213",  # Multi-line docstring summary should start at the second line
+  "D215",  # Section underline is over-indented ("{name}")
+  "D400",  # First line should end with a period
+  "D401",  # First line of docstring should be in imperative mood: "{first_line}"
+  "D404",  # First word of the docstring should not be "This"
+  "D406",  # Section name should end with a newline ("{name}")
+  "D407",  # Missing dashed underline after section ("{name}")
+  "D408",  # Section underline should be in the line following the section's name ("{name}")
+  "D409",  # Section underline should match the length of its name ("{name}")
+  "D413",  # Missing blank line after last section ("{name}")
+  "ISC001",
+  "PLC0415",
+  "PLR0912",  # Too many branches
+  "PLR0913",  # Too many arguments to function call
+  "PLR0915",  # Too many statements
+  # "PLR2004", # Magic values instead of named consts
+  "SLF001",  # Private member accessed
+  "TRY003",  # Avoid specifying long messages outside the exception class
+  "TC006",  # runtime-cast-value
+]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+  "pydantic.BaseModel",
+  "sqlalchemy.orm.DeclarativeBase",
+  "schemez.Schema",
+]
+runtime-evaluated-decorators = [
+  "pydantic.validate_call",
+  "attrs.define",
+  "fastapi.FastAPI.get",
+  "fastapi.FastAPI.post",
+  "fastmcp.FastMCP.tool",
+]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+# lines-between-types = 1
+# atomic = true
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "I001"]
+"scripts/*" = ["INP001"]
+
+[tool.ruff.format]
+# Enable preview style formatting.
+preview = true
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.uv]
+default-groups = ["dev", "lint", "docs"]
