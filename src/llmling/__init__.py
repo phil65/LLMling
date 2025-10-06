@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from importlib.metadata import version
+
+__version__ = version("llmling")
+
 from upathtools import register_http_filesystems
 
 register_http_filesystems()
@@ -36,9 +40,10 @@ from llmling.config.models import (
 from llmling.config.store import ConfigStore
 from llmling.core.baseregistry import BaseRegistry
 
-__version__ = "1.6.22"
+
 
 __all__ = [
+    "__version__",
     "BasePrompt",
     "BaseRegistry",
     "Config",
