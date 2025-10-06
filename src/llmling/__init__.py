@@ -41,9 +41,7 @@ from llmling.config.store import ConfigStore
 from llmling.core.baseregistry import BaseRegistry
 
 
-
 __all__ = [
-    "__version__",
     "BasePrompt",
     "BaseRegistry",
     "Config",
@@ -67,5 +65,6 @@ __all__ = [
     "RuntimeConfig",
     "StaticPrompt",
     "ToolError",
+    "__version__",
     "resource_registry",
 ]
