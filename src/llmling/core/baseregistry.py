@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from llmling.core import exceptions
 
 
-TItem = TypeVar("TItem")
 TKey = TypeVar("TKey", str, int)
 
 

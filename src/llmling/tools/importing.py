@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any
 
 from llmling.core.log import get_logger
 from llmling.tools.toolsets import ToolSet
@@ -10,7 +10,6 @@ from llmling.utils import importing
 
 
 logger = get_logger(__name__)
-T = TypeVar("T", bound=ToolSet)
 
 
 def import_toolset(import_path: str, **kwargs: Any) -> ToolSet:
