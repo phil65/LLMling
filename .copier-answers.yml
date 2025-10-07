@@ -11,7 +11,7 @@ libraries_use_pydantic: true
 libraries_use_qt: false
 project_description: LLM simplified.
 project_name: LLMling
-python_minimum_version: '3.12'
+python_minimum_version: '3.13'
 python_package_command_line_name: llmling
 python_package_distribution_name: llmling
 python_package_import_name: llmling
