@@ -23,7 +23,7 @@ def normalize_path(path: str | Path) -> str:
 
 
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
+def temp_dir() -> Generator[Path]:
     """Create a temporary directory."""
     with tempfile.TemporaryDirectory() as tmp:
         yield Path(tmp)

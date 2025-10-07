@@ -41,7 +41,7 @@ async def resource_registry() -> AsyncIterator[ResourceRegistry]:
 
 
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
+def temp_dir() -> Generator[Path]:
     """Create a temporary directory."""
     with tempfile.TemporaryDirectory() as tmp:
         yield Path(tmp)

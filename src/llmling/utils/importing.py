@@ -36,7 +36,7 @@ def _get_sources(
     module: ModuleType,
     recursive: bool,
     include_tests: bool,
-) -> Generator[str, None, None]:
+) -> Generator[str]:
     """Generate source code for a module and optionally its submodules."""
     # Get the module's source code
     if hasattr(module, "__file__") and module.__file__:
