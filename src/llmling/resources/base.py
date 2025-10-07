@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import os
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, cast, overload
 
 from llmling.completions.protocols import CompletionProvider
 from llmling.config.models import BaseResource
@@ -27,8 +27,6 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-
-TResource = TypeVar("TResource", bound=BaseResource)
 
 
 def create_loaded_resource(
@@ -79,7 +77,7 @@ def create_loaded_resource(
 
 
 @dataclass
-class LoaderContext[TResource]:
+class LoaderContext[TResource: BaseResource]:
     """Context for resource loading.
 
     Provides all information needed to load and identify a resource.
@@ -96,7 +94,7 @@ class LoaderContext[TResource]:
         return f"{cls_name}(name={self.name!r}, type={resource.type})"
 
 
-class ResourceLoader[TResource](ABC, CompletionProvider):
+class ResourceLoader[TResource: BaseResource](ABC, CompletionProvider):
     """Base class for resource loaders."""
 
     context_class: type[TResource]

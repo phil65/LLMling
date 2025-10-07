@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from llmling.tools.toolsets import ToolSet
 
 logger = get_logger(__name__)
-T = TypeVar("T", bound=BaseModel)
 
 
 def toolset_config_to_toolset(config) -> ToolSet:
@@ -85,7 +84,7 @@ def prepare_runtime(
     return runtime_cls.from_config(config)
 
 
-def merge_models(base: T, overlay: T) -> T:
+def merge_models[T: BaseModel](base: T, overlay: T) -> T:
     """Deep merge two Pydantic models."""
     if not isinstance(overlay, type(base)):
         msg = f"Cannot merge different types: {type(base)} and {type(overlay)}"
