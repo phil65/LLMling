@@ -63,7 +63,7 @@ class ConfigStore:
             return ConfigMapping(configs={}, active=None)
         try:
             text = self.config_file.read_text("utf-8")
-            data = anyenv.load_json(text)
+            data = anyenv.load_json(text, return_type=dict)
             active = data.get("active")
             configs = data.get("configs", {})
             return ConfigMapping(configs=configs, active=active)
