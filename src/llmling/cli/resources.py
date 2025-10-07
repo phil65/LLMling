@@ -10,7 +10,7 @@ from llmling.cli.constants import (
     output_format_opt,
     verbose_opt,
 )
-from llmling.cli.utils import OutputFormat, format_output, get_command_help  # noqa: TC001
+from llmling.cli.utils import OutputFormat, format_output, get_command_help
 
 
 help_cmd = get_command_help("Resource management commands.")

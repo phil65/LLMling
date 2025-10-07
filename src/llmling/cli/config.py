@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer as t
 
 from llmling.cli.constants import output_format_opt
-from llmling.cli.utils import OutputFormat, format_output, get_command_help  # noqa: TC001
+from llmling.cli.utils import OutputFormat, format_output, get_command_help
 from llmling.config.store import config_store
 
 

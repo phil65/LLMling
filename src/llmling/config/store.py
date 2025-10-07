@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 from typing import TYPE_CHECKING, TypedDict
 
 from llmling.core.log import get_logger
@@ -58,11 +57,13 @@ class ConfigStore:
 
     def load_mapping(self) -> ConfigMapping:
         """Load config mapping from disk."""
+        import anyenv
+
         if not self.config_file.exists():
             return ConfigMapping(configs={}, active=None)
         try:
             text = self.config_file.read_text("utf-8")
-            data = json.loads(text)
+            data = anyenv.load_json(text)
             active = data.get("active")
             configs = data.get("configs", {})
             return ConfigMapping(configs=configs, active=active)
@@ -72,8 +73,10 @@ class ConfigStore:
 
     def save_mapping(self, mapping: ConfigMapping) -> None:
         """Save config mapping to disk."""
+        import anyenv^
+
         try:
-            self.config_file.write_text(json.dumps(mapping, indent=2))
+            self.config_file.write_text(anyenv.dump_json(mapping, indent=True))
         except Exception:
             logger.exception("Failed to save config mapping")
 
