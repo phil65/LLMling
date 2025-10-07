@@ -73,7 +73,7 @@ class ConfigStore:
 
     def save_mapping(self, mapping: ConfigMapping) -> None:
         """Save config mapping to disk."""
-        import anyenv^
+        import anyenv
 
         try:
             self.config_file.write_text(anyenv.dump_json(mapping, indent=True))
