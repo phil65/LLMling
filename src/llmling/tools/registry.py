@@ -15,7 +15,7 @@ from llmling.utils import importing
 if TYPE_CHECKING:
     from types import ModuleType
 
-    import py2openai
+    import schemez
 
 
 logger = get_logger(__name__)
@@ -123,7 +123,7 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
             self.register(f"{prefix}{name}", func)
             logger.debug("Registered callable %s as %s", name, f"{prefix}{name}")
 
-    def get_schemas(self) -> list[py2openai.OpenAIFunctionTool]:
+    def get_schemas(self) -> list[schemez.OpenAIFunctionTool]:
         """Get schemas for all registered functions.
 
         Returns:

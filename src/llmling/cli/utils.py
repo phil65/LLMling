@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Literal
 
-from py2openai import OpenAIFunctionTool
 from pydantic import BaseModel
-from schemez import Schema
+from schemez import OpenAIFunctionTool, Schema
 
 from llmling.config.store import config_store
 

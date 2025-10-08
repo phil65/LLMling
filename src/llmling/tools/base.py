@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import inspect
 from typing import Any, ClassVar, Self
 
-import py2openai
+import schemez
 
 from llmling.config.models import ToolHints  # noqa: TC001
 from llmling.core.descriptors import classproperty
@@ -20,7 +20,7 @@ class LLMCallableTool[**P, TReturnType]:
     name: str
     description: str = ""
     import_path: str | None = None
-    schema_override: py2openai.OpenAIFunctionDefinition | None = None
+    schema_override: schemez.OpenAIFunctionDefinition | None = None
     hints: ToolHints | None = None
 
     @classmethod
@@ -30,7 +30,7 @@ class LLMCallableTool[**P, TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
-        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
+        schema_override: schemez.OpenAIFunctionDefinition | None = None,
         hints: ToolHints | None = None,
     ) -> Self:
         """Create a tool from a callable or import path."""
@@ -67,7 +67,7 @@ class LLMCallableTool[**P, TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
-        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
+        schema_override: schemez.OpenAIFunctionDefinition | None = None,
     ) -> Self:
         """Allows importing crewai / langchain tools."""
         try:
@@ -94,7 +94,7 @@ class LLMCallableTool[**P, TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
-        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
+        schema_override: schemez.OpenAIFunctionDefinition | None = None,
     ) -> Self:
         """Create a tool from a LangChain tool."""
         try:
@@ -121,7 +121,7 @@ class LLMCallableTool[**P, TReturnType]:
         *,
         name_override: str | None = None,
         description_override: str | None = None,
-        schema_override: py2openai.OpenAIFunctionDefinition | None = None,
+        schema_override: schemez.OpenAIFunctionDefinition | None = None,
     ) -> Self:
         """Create a tool from a AutoGen tool."""
         try:
@@ -164,9 +164,9 @@ class LLMCallableTool[**P, TReturnType]:
             return await self.callable(*args, **kwargs)
         return self.callable(*args, **kwargs)
 
-    def get_schema(self) -> py2openai.OpenAIFunctionTool:
+    def get_schema(self) -> schemez.OpenAIFunctionTool:
         """Get OpenAI function schema."""
-        schema = py2openai.create_schema(self.callable).model_dump_openai()
+        schema = schemez.create_schema(self.callable).model_dump_openai()
         schema["function"]["name"] = self.name
         schema["function"]["description"] = self.description
         if self.schema_override:
@@ -186,9 +186,9 @@ class BaseTool(LLMCallableTool):
         """Get the import path of the tool class."""
         return f"{cls.__module__}.{cls.__qualname__}"  # type: ignore
 
-    def get_schema(self) -> py2openai.OpenAIFunctionTool:
+    def get_schema(self) -> schemez.OpenAIFunctionTool:
         """Get OpenAI function schema."""
-        schema = py2openai.create_schema(self.execute).model_dump_openai()
+        schema = schemez.create_schema(self.execute).model_dump_openai()
         schema["function"]["name"] = self.name
         schema["function"]["description"] = self.description
         return schema
