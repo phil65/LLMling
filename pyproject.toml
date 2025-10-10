@@ -40,7 +40,6 @@ dependencies = [
   "pydantic",
   "schemez>=1.2.0",
   "typer",
-  "typing-extensions>=4.12.2",
   "universal-pathlib>=0.2.5",
   "upathtools[httpx]",
   "yamling>=1.5.0",
