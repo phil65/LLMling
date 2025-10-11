@@ -9,10 +9,7 @@ from llmling.core import exceptions
 from llmling.core.baseregistry import BaseRegistry
 from llmling.core.log import get_logger
 from llmling.prompts.models import BasePrompt, DynamicPrompt
-from llmling.prompts.utils import (
-    get_completion_for_arg,
-    to_prompt,
-)
+from llmling.prompts.utils import get_completion_for_arg, to_prompt
 
 
 logger = get_logger(__name__)
