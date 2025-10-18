@@ -11,8 +11,10 @@ import importlib
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
+from upath import UPath
+
 from llmling.config.manager import ConfigManager
-from llmling.config.models import PathResource
+from llmling.config.models import Config, PathResource
 from llmling.config.utils import prepare_runtime, toolset_config_to_toolset
 from llmling.core import exceptions
 from llmling.core.chain import ChainTool
@@ -37,7 +39,7 @@ if TYPE_CHECKING:
 
     from upath.types import JoinablePathLike
 
-    from llmling.config.models import BaseResource, Config
+    from llmling.config.models import BaseResource
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt
     from llmling.resources.models import LoadedResource
@@ -319,7 +321,7 @@ class RuntimeConfig:
         return cls.from_config(manager.config)
 
     @classmethod
-    def from_config(cls, config: Config | str | os.PathLike[str]) -> Self:
+    def from_config(cls, config: Config | JoinablePathLike) -> Self:
         """Create a fully initialized runtime config from static config.
 
         Args:
@@ -328,7 +330,7 @@ class RuntimeConfig:
         Returns:
             Initialized runtime configuration
         """
-        if isinstance(config, str | os.PathLike):
+        if isinstance(config, str | os.PathLike | UPath):
             config = ConfigManager.load(config).config
         loader_registry = ResourceLoaderRegistry()
         processor_registry = ProcessorRegistry()
@@ -338,7 +340,7 @@ class RuntimeConfig:
         )
         prompt_registry = PromptRegistry()
         tool_registry = ToolRegistry()
-
+        assert isinstance(config, Config)
         runtime = cls(
             config=config,
             loader_registry=loader_registry,
