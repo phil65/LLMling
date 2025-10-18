@@ -35,6 +35,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Iterator, Sequence
     import types
 
+    from upath.types import JoinablePathLike
+
     from llmling.config.models import BaseResource, Config
     from llmling.processors.base import ProcessorResult
     from llmling.prompts.models import BasePrompt
@@ -304,7 +306,7 @@ class RuntimeConfig:
             yield runtime
 
     @classmethod
-    def from_file(cls, path: str | os.PathLike[str]) -> Self:
+    def from_file(cls, path: JoinablePathLike) -> Self:
         """Convenience function to directly create runtime config from a file.
 
         Args:

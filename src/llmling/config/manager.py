@@ -12,7 +12,8 @@ from llmling.core.log import get_logger, setup_logging
 
 
 if TYPE_CHECKING:
-    import os
+    from upath.types import JoinablePathLike
+
 
 logger = get_logger(__name__)
 REQ_PATTERN = re.compile(
@@ -40,7 +41,7 @@ class ConfigManager:
 
     def save(
         self,
-        path: str | os.PathLike[str],
+        path: JoinablePathLike,
         *,
         validate: bool = True,
     ) -> None:
@@ -85,7 +86,7 @@ class ConfigManager:
     @classmethod
     def load(
         cls,
-        path: str | os.PathLike[str],
+        path: JoinablePathLike,
         *,
         validate: bool = True,
         strict: bool = False,
@@ -112,7 +113,7 @@ class ConfigManager:
 
     def add_config(
         self,
-        path: str | os.PathLike[str],
+        path: JoinablePathLike,
         *,
         validate: bool = True,
         strict: bool = False,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence as TypingSequence
 import inspect
 import os
-from typing import Annotated, Any, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 import warnings
 
 from pydantic import (
@@ -26,6 +26,10 @@ from llmling.processors.base import ProcessorConfig  # noqa: TC001
 from llmling.prompts.models import PromptType  # noqa: TC001
 from llmling.utils.importing import import_callable, import_class
 from llmling.utils.paths import guess_mime_type
+
+
+if TYPE_CHECKING:
+    from upath.types import JoinablePathLike
 
 
 ResourceType = Literal["path", "text", "cli", "source", "callable"]
@@ -641,7 +645,7 @@ class Config(ConfigModel):
                     raise ValueError(msg)
 
     @classmethod
-    def from_file(cls, path: str | os.PathLike[str]) -> Self:
+    def from_file(cls, path: JoinablePathLike) -> Self:
         """Load configuration from YAML file.
 
         This function only handles the basic loading and model validation.

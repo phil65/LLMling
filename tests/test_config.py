@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pydantic
 import pytest
-from upath import UPath
 import yamling
 
 from llmling import config, config_resources
@@ -111,7 +111,7 @@ def test_validate_callable_context() -> None:
 
 def test_load_config_from_file(tmp_path: os.PathLike[str]) -> None:
     """Test loading configuration from a file."""
-    config_path = UPath(tmp_path) / "test_config.yml"
+    config_path = Path(tmp_path) / "test_config.yml"
     config_path.write_text(MINIMAL_CONFIG)
 
     cfg = config.Config.from_file(config_path)
