@@ -6,6 +6,7 @@ import os
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+from upath import UPath
 
 from llmling.config.manager import ConfigManager
 from llmling.config.models import (
@@ -32,12 +33,12 @@ logger = get_logger(__name__)
 
 def toolset_config_to_toolset(config) -> ToolSet:
     match config:
-        case OpenAPIToolsetConfig():
-            return OpenAPITools(spec=config.spec, base_url=config.base_url or "")
-        case EntryPointToolsetConfig():
-            return EntryPointTools(config.module)
-        case CustomToolsetConfig():
-            toolset_class = importing.import_class(config.import_path)
+        case OpenAPIToolsetConfig(spec=spec, base_url=base_url):
+            return OpenAPITools(spec=spec, base_url=base_url or "")
+        case EntryPointToolsetConfig(module=module):
+            return EntryPointTools(module)
+        case CustomToolsetConfig(import_path=import_path):
+            toolset_class = importing.import_class(import_path)
             return toolset_class()
         case _:
             msg = f"Unknown toolset type: {type(config)}"
@@ -67,7 +68,7 @@ def prepare_runtime(
         ConfigError: If validation fails in strict mode
     """
     match source:
-        case str() | os.PathLike():
+        case str() | os.PathLike() | UPath():
             manager = ConfigManager.load(source, validate=validate, strict=strict)
             config = manager.config
         case Config():
