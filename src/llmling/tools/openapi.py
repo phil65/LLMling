@@ -416,9 +416,7 @@ if __name__ == "__main__":
         url = "https://bird.ecb.europa.eu/documentation/api/v2/bird/bird-API-V2-documentation-Swagger-OpenAPI.yml"
         oapi = OpenAPITools(url)
         tools = oapi.get_tools()
-        # print([t.__name__ for t in tools])
         t = tools[0]
-
         result = await t(codes="ANCRDT_INSTRMNT_C")
         print(result)
 
