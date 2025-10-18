@@ -221,7 +221,7 @@ class RuntimeConfig:
     @asynccontextmanager
     async def open(
         cls,
-        source: str | os.PathLike[str] | Config,
+        source: JoinablePathLike | Config,
         *,
         validate: bool = True,
         strict: bool = False,
@@ -266,7 +266,7 @@ class RuntimeConfig:
     @contextmanager
     def open_sync(
         cls,
-        source: str | os.PathLike[str] | Config,
+        source: JoinablePathLike | Config,
         *,
         validate: bool = True,
         strict: bool = False,
@@ -903,7 +903,7 @@ class RuntimeConfig:
     def register_file_prompt(
         self,
         name: str,
-        path: str | os.PathLike[str],
+        path: JoinablePathLike,
         *,
         description: str,
         output_format: Literal["text", "markdown", "jinja2"] = "text",

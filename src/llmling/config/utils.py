@@ -22,6 +22,8 @@ from llmling.utils import importing
 
 
 if TYPE_CHECKING:
+    from upath.types import JoinablePathLike
+
     from llmling.config.runtime import RuntimeConfig
     from llmling.tools.toolsets import ToolSet
 
@@ -44,7 +46,7 @@ def toolset_config_to_toolset(config) -> ToolSet:
 
 def prepare_runtime(
     runtime_cls: type[RuntimeConfig],
-    source: str | os.PathLike[str] | Config,
+    source: JoinablePathLike | Config,
     *,
     validate: bool = True,
     strict: bool = False,
