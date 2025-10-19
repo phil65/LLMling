@@ -39,16 +39,6 @@ class MessageContent(Schema):
     model_config = ConfigDict(frozen=True)
 
     @classmethod
-    def text(cls, content: str) -> MessageContent:
-        """Create text content."""
-        return cls(type="text", content=content)
-
-    @classmethod
-    def resource(cls, uri: str, description: str | None = None) -> MessageContent:
-        """Create resource reference."""
-        return cls(type="resource", content=uri, alt_text=description)
-
-    @classmethod
     def image(
         cls,
         url_or_data: str,
@@ -135,6 +125,4 @@ class Message(Schema):
     @property
     def has_images(self) -> bool:
         """Check if message contains images."""
-        return any(
-            item.type in ("image_url", "image_base64") for item in self.content_items
-        )
+        return any(i.type in ("image_url", "image_base64") for i in self.content_items)

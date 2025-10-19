@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import inspect
-import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, ImportString
+import upath
 
 from llmling.completions import CompletionFunction  # noqa: TC001
 from llmling.core.log import get_logger
@@ -333,7 +333,7 @@ class FilePrompt(BasePrompt):
     and parsed according to the specified format.
     """
 
-    path: str | os.PathLike[str]
+    path: str | upath.UPath
     """Path to the file containing the prompt content."""
 
     fmt: Literal["text", "markdown", "jinja2"] = Field("text", alias="format")
