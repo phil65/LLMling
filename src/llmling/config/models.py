@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence as TypingSequence
+from collections.abc import Sequence
 import inspect
 import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
@@ -347,7 +347,7 @@ class CLIResource(BaseResource):
     type: Literal["cli"] = Field(default="cli", init=False)
     """Discriminator field identifying this as a CLI-based resource."""
 
-    command: str | TypingSequence[str]
+    command: str | Sequence[str]
     """Command to execute (string or sequence of arguments)."""
 
     shell: bool = False

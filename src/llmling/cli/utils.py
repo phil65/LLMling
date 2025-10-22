@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 from schemez import OpenAIFunctionTool, Schema
 
 from llmling.config.store import config_store
 
-
-if TYPE_CHECKING:
-    import os
 
 OutputFormat = Literal["text", "json", "yaml"]
 
@@ -99,21 +96,6 @@ def format_output(
         case _:
             msg = f"Unknown format: {output_format}"
             raise ValueError(msg)
-
-
-def resolve_config_path(config: str | os.PathLike[str] | None) -> str:
-    """Resolve config path from name or direct path."""
-    if not config:
-        if active := config_store.get_active():
-            return active.path
-        raise ValueError(NO_CONFIG_MESSAGE)
-
-    try:
-        # First try as stored config name
-        return config_store.get_config(str(config))
-    except KeyError:
-        # If not found, treat as direct path
-        return str(config)
 
 
 def get_command_help(base_help: str) -> str:
