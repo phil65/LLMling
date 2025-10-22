@@ -11,6 +11,7 @@ import importlib
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self
 
+import upath
 from upath import UPath
 
 from llmling.config.manager import ConfigManager
@@ -937,7 +938,7 @@ class RuntimeConfig:
 
             prompt = FilePrompt(
                 name=name,
-                path=path,
+                path=upath.UPath(path),
                 description=description,
                 format=output_format,
                 watch=watch,

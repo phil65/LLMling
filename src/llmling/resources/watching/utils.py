@@ -9,7 +9,8 @@ from llmling.core.log import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    import os
+
+    from upath.types import JoinablePathLike
 
 
 logger = get_logger(__name__)
@@ -17,7 +18,7 @@ logger = get_logger(__name__)
 
 def load_patterns(
     patterns: Sequence[str] | None = None,
-    ignore_file: str | os.PathLike[str] | None = None,
+    ignore_file: JoinablePathLike | None = None,
 ) -> list[str]:
     """Load and combine watch patterns.
 

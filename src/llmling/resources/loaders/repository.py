@@ -15,10 +15,9 @@ from llmling.utils.paths import guess_mime_type
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-    import os
 
     from git.repo import Repo
-    from upath.types import JoinablePath
+    from upath.types import JoinablePathLike
 
     from llmling.processors.registry import ProcessorRegistry
     from llmling.resources.base import LoaderContext
@@ -57,7 +56,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
 
     def _create_resource(
         self,
-        path: str | os.PathLike[str] | JoinablePath,
+        path: JoinablePathLike,
         name: str,
         resource: RepositoryResource,
     ) -> LoadedResource:

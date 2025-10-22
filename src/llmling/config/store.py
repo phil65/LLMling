@@ -9,7 +9,7 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    import os
+    from upath.types import JoinablePathLike
 
 
 logger = get_logger(__name__)
@@ -80,7 +80,7 @@ class ConfigStore:
         except Exception:
             logger.exception("Failed to save config mapping")
 
-    def add_config(self, name: str, path: str | os.PathLike[str]) -> None:
+    def add_config(self, name: str, path: JoinablePathLike) -> None:
         """Add a new named config.
 
         Args:
