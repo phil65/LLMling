@@ -180,9 +180,9 @@ class ConfigManager:
         ]
 
         # Validate pip index URL if specified
-        if (
-            index_url := config.global_settings.pip_index_url
-        ) and not index_url.startswith(("http://", "https://")):
+        if (index_url := config.global_settings.pip_index_url) and not str(
+            index_url
+        ).startswith(("http://", "https://")):
             warnings.append(f"Invalid pip index URL: {index_url}")
 
         # Validate extra paths exist

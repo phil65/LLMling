@@ -96,7 +96,7 @@ class RuntimeConfig:
             prefer_uv=settings.prefer_uv,
             requirements=settings.requirements,
             extra_paths=settings.extra_paths,
-            pip_index_url=settings.pip_index_url,
+            pip_index_url=str(settings.pip_index_url) if settings.pip_index_url else None,
             scripts=settings.scripts,
         )
 
