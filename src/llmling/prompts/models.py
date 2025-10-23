@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, ImportString
@@ -333,7 +334,7 @@ class FilePrompt(BasePrompt):
     and parsed according to the specified format.
     """
 
-    path: str | upath.UPath
+    path: str | os.PathLike[str] | upath.UPath
     """Path to the file containing the prompt content."""
 
     fmt: Literal["text", "markdown", "jinja2"] = Field("text", alias="format")

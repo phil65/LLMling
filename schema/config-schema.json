@@ -372,6 +372,10 @@
               "type": "string"
             },
             {
+              "format": "path",
+              "type": "string"
+            },
+            {
               "additionalProperties": false,
               "properties": {
                 "path": {
