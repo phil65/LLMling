@@ -100,6 +100,7 @@
         "timeout": {
           "anyOf": [
             {
+              "minimum": 0,
               "type": "number"
             },
             {
@@ -371,8 +372,34 @@
               "type": "string"
             },
             {
-              "format": "path",
-              "type": "string"
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "title": "Path",
+                  "type": "string"
+                },
+                "protocol": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Protocol"
+                },
+                "storage_options": {
+                  "additionalProperties": true,
+                  "title": "Storage Options",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
             }
           ],
           "description": "Path to the file containing the prompt content.",
@@ -417,12 +444,14 @@
         "timeout": {
           "default": 30,
           "description": "Maximum time in seconds to wait for operations",
+          "minimum": 0,
           "title": "Timeout",
           "type": "integer"
         },
         "max_retries": {
           "default": 3,
           "description": "Maximum number of retries for failed operations",
+          "minimum": 0,
           "title": "Max Retries",
           "type": "integer"
         },
@@ -437,6 +466,9 @@
         "pip_index_url": {
           "anyOf": [
             {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
               "type": "string"
             },
             {
