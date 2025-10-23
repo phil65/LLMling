@@ -11,6 +11,7 @@ import warnings
 from pydantic import (
     ConfigDict,
     Field,
+    HttpUrl,  # noqa: TC002
     SecretStr,
     field_validator,
     model_validator,
@@ -158,16 +159,16 @@ class Jinja2Config(ConfigModel):
 class GlobalSettings(ConfigModel):
     """Global settings that apply to all components."""
 
-    timeout: int = 30
+    timeout: int = Field(default=30, ge=0)
     """Maximum time in seconds to wait for operations"""
 
-    max_retries: int = 3
+    max_retries: int = Field(default=3, ge=0)
     """Maximum number of retries for failed operations"""
 
     requirements: list[str] = Field(default_factory=list)
     """List of package requirments for the functions used in this file."""
 
-    pip_index_url: str | None = None
+    pip_index_url: HttpUrl | None = None
     """Alternative PyPI index URL for package installation"""
 
     extra_paths: list[str] = Field(default_factory=list)
@@ -356,7 +357,7 @@ class CLIResource(BaseResource):
     cwd: str | None = None
     """Working directory for command execution."""
 
-    timeout: float | None = None
+    timeout: float | None = Field(None, ge=0)
     """Maximum time in seconds to wait for command completion."""
 
     @model_validator(mode="after")
