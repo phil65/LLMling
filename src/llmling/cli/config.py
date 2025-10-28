@@ -22,7 +22,7 @@ def add_config(
     """
     try:
         config_store.add_config(name, path)
-        print(f"Added config '{name}' -> {path}")
+        print(f"Added config {name!r} -> {path}")
     except Exception as exc:
         print(f"Failed to add config: {exc}")
         raise t.Exit(1) from exc
@@ -35,7 +35,7 @@ def remove_config(
     """Remove a named config."""
     try:
         config_store.remove_config(name)
-        print(f"Removed config '{name}'")
+        print(f"Removed config {name!r}")
     except Exception as exc:
         print(f"Failed to remove config: {exc}")
         raise t.Exit(1) from exc
@@ -48,7 +48,7 @@ def set_active(
     """Set the active config."""
     try:
         config_store.set_active(name)
-        print(f"Set '{name}' as active config")
+        print(f"Set {name!r} as active config")
     except Exception as exc:
         print(f"Failed to set active config: {exc}")
         raise t.Exit(1) from exc
