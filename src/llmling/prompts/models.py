@@ -7,6 +7,7 @@ import inspect
 import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
+from fastmcp.prompts.prompt import Prompt as FastMCPPrompt, PromptArgument
 from pydantic import BaseModel, ConfigDict, Field, ImportString
 import upath
 
@@ -21,7 +22,8 @@ logger = get_logger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mcp.types import Prompt
+    from fastmcp.prompts.prompt import FunctionPrompt
+    from mcp.types import Prompt as MCPPrompt
 
 
 class PromptParameter(BaseModel):
@@ -139,6 +141,34 @@ class StaticPrompt(BasePrompt):
 
     model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
+    def to_mcp_prompt(self) -> MCPPrompt:
+        from mcp.types import Prompt, PromptArgument
+
+        params = [
+            PromptArgument(name=p.name, description=p.description, required=p.required)
+            for p in self.arguments
+        ]
+        return Prompt(
+            name=self.name or "",
+            title=self.title,
+            description=self.description,
+            arguments=params,
+        )
+
+    def to_fastmcp_prompt(self) -> FastMCPPrompt:
+        params = [
+            PromptArgument(name=p.name, description=p.description, required=p.required)
+            for p in self.arguments
+        ]
+        return FastMCPPrompt(
+            name=self.name or "",
+            title=self.title,
+            description=self.description,
+            arguments=params,
+            icons=None,
+            tags=set(),
+        )
+
     async def format(
         self, arguments: dict[str, Any] | None = None
     ) -> list[PromptMessage]:
@@ -214,19 +244,22 @@ class DynamicPrompt(BasePrompt):
             PromptMessage(role="user", content=user_content),
         ]
 
-    def to_mcp_prompt(self) -> Prompt:
-        from mcp.types import Prompt, PromptArgument
+    def to_fastmcp_prompt(self) -> FunctionPrompt:
+        from fastmcp.prompts.prompt import FunctionPrompt
 
-        params = [
-            PromptArgument(name=p.name, description=p.description, required=p.required)
-            for p in self.arguments
-        ]
-        return Prompt(
-            name=self.name or "",
+        return FunctionPrompt.from_function(
+            self.fn,
             title=self.title,
             description=self.description,
-            arguments=params,
+            tags=None,
+            icons=None,
         )
+
+    @property
+    def fn(self) -> Callable[..., Any]:
+        if isinstance(self.import_path, str):
+            return importing.import_callable(self.import_path)
+        return self.import_path
 
     def get_completion_functions(self) -> dict[str, CompletionFunction]:
         """Resolve completion function import paths and return a completion fn dict."""
