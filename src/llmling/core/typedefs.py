@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
 from pydantic import ConfigDict, Field, model_validator
 from schemez import Schema
 
 
-ProcessorCallable = Callable[[str, Any], str | Awaitable[str]]
-MetadataDict = dict[str, Any]
-
 MessageContentType = Literal["text", "resource", "image_url", "image_base64"]
-
 # Our internal role type (could include more roles)
 MessageRole = Literal["system", "user", "assistant", "tool"]
 
@@ -37,18 +32,6 @@ class MessageContent(Schema):
     alt_text: str | None = None  # For images or resource descriptions
 
     model_config = ConfigDict(frozen=True)
-
-    @classmethod
-    def image(
-        cls,
-        url_or_data: str,
-        *,
-        is_base64: bool = False,
-        alt_text: str | None = None,
-    ) -> MessageContent:
-        """Create image content."""
-        type_ = "image_base64" if is_base64 else "image_url"
-        return cls(type=type_, content=url_or_data, alt_text=alt_text)
 
 
 class ToolCall(Schema):
@@ -116,13 +99,3 @@ class Message(Schema):
     def to_dict(self) -> dict[str, Any]:
         """Convert to dict for serialization."""
         return self.model_dump(exclude_none=True)
-
-    @property
-    def has_tools(self) -> bool:
-        """Check if message contains tool calls."""
-        return bool(self.tool_calls)
-
-    @property
-    def has_images(self) -> bool:
-        """Check if message contains images."""
-        return any(i.type in ("image_url", "image_base64") for i in self.content_items)

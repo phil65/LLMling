@@ -143,7 +143,7 @@ async with RuntimeConfig.open("config.yml") as runtime:
     # Create agent with structured output
     agent = LLMlingAgent[Analysis](
         runtime,
-        result_type=Analysis,
+        output_type=Analysis,
         model="openai:gpt-4",
         system_prompt=[
             "You are a code analysis assistant.",
