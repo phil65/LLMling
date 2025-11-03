@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import logging
 
-import click
-import click.shell_completion  # noqa: TC002
 import typer as t
 
 from llmling.config.store import config_store
@@ -26,24 +24,14 @@ FORMAT_CMDS = "-f", "--format"
 VERBOSE_CMDS = "-v", "--verbose"
 
 
-def complete_config_names(
-    ctx: click.Context,
-    param: click.Parameter,
-    incomplete: str,
-) -> list[str] | list[click.shell_completion.CompletionItem]:
+def complete_config_names() -> list[str]:
     """Complete stored config names."""
-    names = [name for name, _ in config_store.list_configs()]
-    return [name for name in names if name.startswith(incomplete)]
+    return [name for name, _ in config_store.list_configs()]
 
 
-def complete_output_formats(
-    ctx: click.Context,
-    param: click.Parameter,
-    incomplete: str,
-) -> list[str]:
+def complete_output_formats() -> list[str]:
     """Complete output format options."""
-    formats = ["text", "json", "yaml"]
-    return [f for f in formats if f.startswith(incomplete)]
+    return ["text", "json", "yaml"]
 
 
 def verbose_callback(ctx: t.Context, _param: t.CallbackParam, value: bool) -> bool:
