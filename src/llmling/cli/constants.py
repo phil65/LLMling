@@ -58,15 +58,13 @@ def verbose_callback(ctx: t.Context, _param: t.CallbackParam, value: bool) -> bo
 
 
 config_file_opt = t.Option(
-    None, "-c", "--config", shell_complete=complete_config_names, help=CONFIG_HELP
+    None, "-c", "--config", autocompletion=complete_config_names, help=CONFIG_HELP
 )
 
 output_format_opt = t.Option(
     "text",
     *OUTPUT_FORMAT_CMDS,
     help=OUTPUT_FORMAT_HELP,
-    shell_complete=complete_output_formats,
+    autocompletion=complete_output_formats,
 )
-verbose_opt = t.Option(
-    False, *VERBOSE_CMDS, help=VERBOSE_HELP, is_flag=True, callback=verbose_callback
-)
+verbose_opt = t.Option(False, *VERBOSE_CMDS, help=VERBOSE_HELP, callback=verbose_callback)
