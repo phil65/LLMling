@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import inspect
 import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
@@ -18,7 +19,7 @@ from llmling.utils import calling, importing
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
 
 
 class PromptParameter(BaseModel):
@@ -179,7 +180,7 @@ class StaticPrompt(BasePrompt):
 class DynamicPrompt(BasePrompt):
     """Dynamic prompt loaded from callable."""
 
-    import_path: str
+    import_path: str | Callable
     """Dotted import path to the callable that generates the prompt."""
 
     template: str | None = None
@@ -230,7 +231,15 @@ class DynamicPrompt(BasePrompt):
         self.validate_arguments(args)
 
         try:
-            result = await calling.execute_callable(self.import_path, **args)
+            if isinstance(self.import_path, str):
+                result = await calling.execute_callable(self.import_path, **args)
+            elif inspect.iscoroutinefunction(self.import_path):
+                result = await self.import_path(**args)
+            elif inspect.isfunction(self.import_path):
+                result = self.import_path(**args)
+            else:
+                msg = "Invalid result type"
+                raise ValueError(msg)  # noqa: TRY301
             # Use result directly in template
             template = self.template or "{result}"
             msg = template.format(result=result)
@@ -408,3 +417,18 @@ class FilePrompt(BasePrompt):
 PromptType = Annotated[
     StaticPrompt | DynamicPrompt | FilePrompt, Field(discriminator="type")
 ]
+
+
+if __name__ == "__main__":
+
+    def prompt_fn():
+        return "hello"
+
+    async def main():
+        prompt = DynamicPrompt(import_path=prompt_fn, name="test", description="test")
+        result = await prompt.format()
+        print(result)
+
+    import asyncio
+
+    asyncio.run(main())
