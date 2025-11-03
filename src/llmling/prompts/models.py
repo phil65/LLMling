@@ -21,6 +21,8 @@ logger = get_logger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from mcp.types import Prompt
+
 
 class PromptParameter(BaseModel):
     """Prompt argument with validation information."""
@@ -81,6 +83,9 @@ class BasePrompt(BaseModel):
 
     description: str
     """Human-readable description of what this prompt does."""
+
+    title: str | None = None
+    """Title of the prompt."""
 
     arguments: list[PromptParameter] = Field(default_factory=list)
     """List of arguments that this prompt accepts."""
@@ -208,6 +213,20 @@ class DynamicPrompt(BasePrompt):
             PromptMessage(role="system", content=sys_content),
             PromptMessage(role="user", content=user_content),
         ]
+
+    def to_mcp_prompt(self) -> Prompt:
+        from mcp.types import Prompt, PromptArgument
+
+        params = [
+            PromptArgument(name=p.name, description=p.description, required=p.required)
+            for p in self.arguments
+        ]
+        return Prompt(
+            name=self.name or "",
+            title=self.title,
+            description=self.description,
+            arguments=params,
+        )
 
     def get_completion_functions(self) -> dict[str, CompletionFunction]:
         """Resolve completion function import paths and return a completion fn dict."""
