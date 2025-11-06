@@ -7,7 +7,10 @@ import inspect
 import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
-from fastmcp.prompts.prompt import Prompt as FastMCPPrompt, PromptArgument
+from fastmcp.prompts.prompt import (
+    Prompt as FastMCPPrompt,
+    PromptArgument as FastMCPArgument,
+)
 from pydantic import BaseModel, ConfigDict, Field, ImportString
 import upath
 
@@ -23,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from fastmcp.prompts.prompt import FunctionPrompt
-    from mcp.types import Prompt as MCPPrompt
+    from mcp.types import Prompt as MCPPrompt, PromptArgument
 
 
 class PromptParameter(BaseModel):
@@ -48,6 +51,14 @@ class PromptParameter(BaseModel):
     """Optional function to provide argument completions."""
 
     model_config = ConfigDict(use_attribute_docstrings=True)
+
+    def to_mcp_argument(self) -> PromptArgument:
+        """Convert to MCP PromptArgument."""
+        from mcp.types import PromptArgument
+
+        return PromptArgument(
+            name=self.name, description=self.description, required=self.required
+        )
 
 
 class PromptMessage(BaseModel):
@@ -129,6 +140,16 @@ class BasePrompt(BaseModel):
         """
         raise NotImplementedError
 
+    def to_mcp_prompt(self) -> MCPPrompt:
+        """Convert to MCP Prompt."""
+        from mcp.types import Prompt as MCPPrompt
+
+        if self.name is None:
+            msg = "Prompt name not set. This should be set during registration."
+            raise ValueError(msg)
+        args = [arg.to_mcp_argument() for arg in self.arguments]
+        return MCPPrompt(name=self.name, description=self.description, arguments=args)
+
 
 class StaticPrompt(BasePrompt):
     """Static prompt defined by message list."""
@@ -141,23 +162,9 @@ class StaticPrompt(BasePrompt):
 
     model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
-    def to_mcp_prompt(self) -> MCPPrompt:
-        from mcp.types import Prompt, PromptArgument
-
-        params = [
-            PromptArgument(name=p.name, description=p.description, required=p.required)
-            for p in self.arguments
-        ]
-        return Prompt(
-            name=self.name or "",
-            title=self.title,
-            description=self.description,
-            arguments=params,
-        )
-
     def to_fastmcp_prompt(self) -> FastMCPPrompt:
         params = [
-            PromptArgument(name=p.name, description=p.description, required=p.required)
+            FastMCPArgument(name=p.name, description=p.description, required=p.required)
             for p in self.arguments
         ]
         return FastMCPPrompt(
