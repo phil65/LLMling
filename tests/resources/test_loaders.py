@@ -199,9 +199,7 @@ async def test_repository_loader(
     if default_branch not in repo.heads:
         repo.create_head(default_branch, commit)
         repo.head.reference = repo.heads[default_branch]
-        repo.head.reset(
-            index=True, working_tree=True
-        )  # Force reset to update working tree
+        repo.head.reset(index=True, working_tree=True)  # Force reset to update working tree
     else:
         repo.heads[default_branch].checkout()
 
@@ -209,14 +207,10 @@ async def test_repository_loader(
     try:
         repo.git.rev_parse("--verify", default_branch)
     except git.exc.GitCommandError:
-        pytest.skip(
-            f"Cannot verify branch {default_branch} - possibly in detached HEAD state"
-        )
+        pytest.skip(f"Cannot verify branch {default_branch} - possibly in detached HEAD state")
 
     # Load the file
-    resource = RepositoryResource(
-        repo_url=str(tmp_path), ref=default_branch, path="test.txt"
-    )
+    resource = RepositoryResource(repo_url=str(tmp_path), ref=default_branch, path="test.txt")
     loader = RepositoryResourceLoader(LoaderContext(resource=resource, name="test"))
 
     async for result in loader.load(processor_registry=processor_registry):
@@ -303,9 +297,7 @@ def test_uri_scheme_support(loader_cls: type[ResourceLoader], scheme: str) -> No
 def test_registry_supported_schemes(loader_registry: ResourceLoaderRegistry) -> None:
     """Test getting supported schemes from registry."""
     schemes = loader_registry.get_supported_schemes()
-    assert all(
-        scheme in schemes for scheme in ["text", "file", "cli", "python", "callable"]
-    )
+    assert all(scheme in schemes for scheme in ["text", "file", "cli", "python", "callable"])
 
 
 def test_registry_uri_templates(loader_registry: ResourceLoaderRegistry) -> None:
@@ -330,9 +322,7 @@ async def test_path_loader_directory(
     loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
 
     # Collect all loaded resources using async list comp
-    files = [
-        result async for result in loader.load(processor_registry=processor_registry)
-    ]
+    files = [result async for result in loader.load(processor_registry=processor_registry)]
 
     # Test results
     assert len(files) == 3  # noqa: PLR2004
@@ -353,9 +343,7 @@ async def test_path_loader_empty_directory(
     resource = PathResource(path=str(tmp_path))
     loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
 
-    files = [
-        result async for result in loader.load(processor_registry=processor_registry)
-    ]
+    files = [result async for result in loader.load(processor_registry=processor_registry)]
 
     assert len(files) == 0
 
@@ -375,9 +363,7 @@ async def test_path_loader_directory_with_processors(
     procs = [ProcessingStep(name="reverse")]
     resource = PathResource(path=str(tmp_path), processors=procs)
     loader = PathResourceLoader(LoaderContext(resource=resource, name="test"))
-    files = [
-        result async for result in loader.load(processor_registry=processor_registry)
-    ]
+    files = [result async for result in loader.load(processor_registry=processor_registry)]
 
     assert len(files) == 2  # noqa: PLR2004
     assert {f.content for f in files} == {"1tset", "2tset"}  # Reversed content

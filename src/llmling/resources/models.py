@@ -59,9 +59,7 @@ class LoadedResource(Schema):
             # If we have items but no content, use first text item's content
             elif content_items and not content:
                 text_items = [
-                    i
-                    for i in content_items
-                    if isinstance(i, dict) and i.get("type") == "text"
+                    i for i in content_items if isinstance(i, dict) and i.get("type") == "text"
                 ]
                 if text_items:
                     data["content"] = text_items[0]["content"]

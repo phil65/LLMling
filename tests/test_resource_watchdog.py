@@ -47,9 +47,7 @@ def temp_dir() -> Generator[Path]:
         yield Path(tmp)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="File watching unreliable on macOS"
-)
+@pytest.mark.skipif(platform.system() == "Darwin", reason="File watching unreliable on macOS")
 async def test_watch_enabled(resource_registry: ResourceRegistry, temp_dir: Path) -> None:
     """Test that watching can be enabled for a resource."""
     # Create test file
@@ -88,9 +86,7 @@ async def test_watch_enabled(resource_registry: ResourceRegistry, temp_dir: Path
         pytest.fail("Timeout waiting for file change signal")
 
 
-async def test_watch_disabled(
-    resource_registry: ResourceRegistry, temp_dir: Path
-) -> None:
+async def test_watch_disabled(resource_registry: ResourceRegistry, temp_dir: Path) -> None:
     """Test that watching can be disabled."""
     test_file = temp_dir / "test.txt"
     test_file.write_text("initial")
@@ -118,12 +114,8 @@ async def test_watch_disabled(
         pass  # Expected - no signal should be emitted
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="File watching unreliable on macOS"
-)
-async def test_watch_patterns(
-    resource_registry: ResourceRegistry, temp_dir: Path
-) -> None:
+@pytest.mark.skipif(platform.system() == "Darwin", reason="File watching unreliable on macOS")
+async def test_watch_patterns(resource_registry: ResourceRegistry, temp_dir: Path) -> None:
     """Test watch patterns are respected."""
     py_file = temp_dir / "test.py"
     txt_file = temp_dir / "test.txt"

@@ -65,9 +65,7 @@ class Message(Schema):
             content_items = data.get("content_items", [])
             # Only create content_items from content if we have content and no items
             if content and not content_items:
-                data["content_items"] = [
-                    MessageContent(type="text", content=content).model_dump()
-                ]
+                data["content_items"] = [MessageContent(type="text", content=content).model_dump()]
             # Always keep content in sync with first text content item
             elif content_items:
                 text_items = [
@@ -91,8 +89,7 @@ class Message(Schema):
         # Handle tool_calls if present
         if "tool_calls" in data and isinstance(data["tool_calls"], list):
             data["tool_calls"] = [
-                ToolCall(**call) if isinstance(call, dict) else call
-                for call in data["tool_calls"]
+                ToolCall(**call) if isinstance(call, dict) else call for call in data["tool_calls"]
             ]
         return cls(**data)
 

@@ -450,9 +450,7 @@ class RuntimeConfig:
                 logger.debug("Failed to create file URI: %s", exc)
             else:
                 return uri, resource
-        msg = (
-            f"Could not resolve resource {uri_or_name!r}. Expected resource name or path."
-        )
+        msg = f"Could not resolve resource {uri_or_name!r}. Expected resource name or path."
         raise exceptions.ResourceError(msg)
 
     async def load_resource_by_uri(self, uri: str) -> LoadedResource:

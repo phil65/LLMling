@@ -222,6 +222,4 @@ async def test_completion_order_priority(registry: PromptRegistry) -> None:
 
     assert completions_list[0] == "custom"  # Custom completion first
     assert all(x in completions_list for x in ["a", "b"])  # Literal values included
-    assert all(
-        x in completions_list for x in ["x", "y", "z"]
-    )  # Description values included
+    assert all(x in completions_list for x in ["x", "y", "z"])  # Description values included

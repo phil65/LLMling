@@ -288,9 +288,7 @@ class OpenAPITools(ToolSet):
 
             # Get type
             param_type = self._get_type_for_schema(schema)
-            annotations[name] = (
-                param_type | None if not param.get("required") else param_type
-            )
+            annotations[name] = param_type | None if not param.get("required") else param_type
 
             # Track required params
             if param.get("required"):
@@ -392,8 +390,7 @@ class OpenAPITools(ToolSet):
             case "object":
                 if properties := schema.get("properties"):
                     prop_types = [
-                        f"{k}: {self._get_type_description(v)}"
-                        for k, v in properties.items()
+                        f"{k}: {self._get_type_description(v)}" for k, v in properties.items()
                     ]
                     return f"object with {', '.join(prop_types)}"
                 return "object"

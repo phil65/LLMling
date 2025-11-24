@@ -50,11 +50,7 @@ def extract_function_info(
 
     try:
         # Import if needed
-        fn = (
-            importing.import_callable(fn_or_path)
-            if isinstance(fn_or_path, str)
-            else fn_or_path
-        )
+        fn = importing.import_callable(fn_or_path) if isinstance(fn_or_path, str) else fn_or_path
 
         # Get function metadata
         sig = inspect.signature(fn)
@@ -141,9 +137,7 @@ def get_type_completions(arg: PromptParameter, current_value: str) -> list[str]:
             other_type = next(arg for arg in args if arg is not type(None))
             # Process the non-None type directly
             return get_type_completions(
-                PromptParameter(
-                    name=arg.name, type_hint=other_type, description=arg.description
-                ),
+                PromptParameter(name=arg.name, type_hint=other_type, description=arg.description),
                 current_value,
             )
 

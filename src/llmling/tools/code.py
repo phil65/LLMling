@@ -23,9 +23,7 @@ async def analyze_code(code: str) -> dict[str, Any]:
         tree = ast.parse(code)
         return {
             "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]),
-            "functions": len([
-                n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
-            ]),
+            "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
             "imports": len([n for n in ast.walk(tree) if isinstance(n, ast.Import)]),
             "lines": len(code.splitlines()),
         }

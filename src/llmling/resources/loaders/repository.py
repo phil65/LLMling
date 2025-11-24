@@ -116,9 +116,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
             if base_path.is_file():
                 loaded = self._create_resource(base_path, name, resource)
                 if processor_registry and resource.processors:
-                    result = await processor_registry.process(
-                        loaded.content, resource.processors
-                    )
+                    result = await processor_registry.process(loaded.content, resource.processors)
                     loaded.content = result.content
                 yield loaded
             else:

@@ -5,12 +5,8 @@ from __future__ import annotations
 import importlib.resources
 from typing import Final
 
-TEST_CONFIG: Final[str] = str(
-    importlib.resources.files("llmling.config_resources") / "test.yml"
-)
-BASIC_CONFIG: Final[str] = str(
-    importlib.resources.files("llmling.config_resources") / "basic.yml"
-)
+TEST_CONFIG: Final[str] = str(importlib.resources.files("llmling.config_resources") / "test.yml")
+BASIC_CONFIG: Final[str] = str(importlib.resources.files("llmling.config_resources") / "basic.yml")
 WEB_RESEARCH_CONFIG: Final[str] = str(
     importlib.resources.files("llmling.config_resources") / "web_research.yml"
 )
