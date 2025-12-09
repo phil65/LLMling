@@ -82,12 +82,11 @@ async def test_openapi_toolset_local(mock_openapi_spec):
     local_path = mock_openapi_spec["local_path"]
     toolset = OpenAPITools(spec=local_path, base_url=BASE_URL)
 
-    # Load and validate spec
-    spec = toolset._load_spec()
-    validate(spec)
-    # Store spec explicitly
-    toolset._spec = spec
-    toolset._operations = toolset._parse_operations()
+    # Load spec (now sets internal state)
+    toolset._load_spec()
+
+    # Validate the loaded spec
+    validate(toolset._spec)
 
     # Get tools
     tools = toolset.get_llm_callable_tools()
@@ -101,21 +100,24 @@ async def test_openapi_toolset_remote(mock_openapi_spec, caplog, monkeypatch):
 
     url = mock_openapi_spec["remote_url"]
 
-    # Mock httpx.get
-    def mock_get(*args, **kwargs):
-        return json.dumps(PETSTORE_SPEC)
+    # Mock load_openapi_spec to return local spec
+    def mock_load_spec(spec_url):
+        return PETSTORE_SPEC
 
-    # Patch httpx.get
-    monkeypatch.setattr("llmling.tools.openapi.dereference_openapi", mock_get)
+    monkeypatch.setattr("schemez.openapi.load_openapi_spec", mock_load_spec)
 
     toolset = OpenAPITools(spec=url, base_url=BASE_URL)
 
-    # Load spec
-    spec = toolset._load_spec()
-    validate(spec)
-    # Store spec explicitly
-    toolset._spec = spec
-    toolset._operations = toolset._parse_operations()
+    # Load spec (now sets internal state)
+    toolset._load_spec()
+
+    # Validate the loaded spec
+    validate(toolset._spec)
+
     # Get tools
     tools = toolset.get_llm_callable_tools()
     assert len(tools) == 1, f"Expected 1 tool, got {len(tools)}: {tools}"
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

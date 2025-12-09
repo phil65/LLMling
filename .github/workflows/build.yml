@@ -30,9 +30,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install Redocly CLI
-        run: npm install -g @redocly/cli
-
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
