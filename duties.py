@@ -2,28 +2,45 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+import re
 from typing import Literal
 
 from duty import duty  # pyright: ignore[reportMissingImports]
+
+
+# Read configuration from copier-answers.yml
+_answers_file = Path(".copier-answers.yml")
+if _answers_file.exists():
+    content = _answers_file.read_text()
+    match = re.search(r"^python_package_import_name:\s*(.+)$", content, re.MULTILINE)
+    if match:
+        PACKAGE_NAME = match.group(1).strip()
+    else:
+        msg = "python_package_import_name not found in copier-answers.yml"
+        raise ValueError(msg)
+else:
+    msg = "copier-answers.yml not found in project root"
+    raise FileNotFoundError(msg)
 
 
 @duty(capture=False)
 def build(ctx, *args: str):
     """Build a MkNodes page."""
     args_str = " " + " ".join(args) if args else ""
-    ctx.run(f"uv run mknodes build{args_str}")
+    ctx.run(f"uv run mkdocs-mknodes build{args_str}")
 
 
 @duty(capture=False)
 def serve(ctx, *args: str):
     """Serve a MkNodes page."""
     args_str = " " + " ".join(args) if args else ""
-    ctx.run(f"uv run mknodes serve{args_str}")
+    ctx.run(f"uv run mkdocs-mknodes serve{args_str}")
 
 
 @duty(capture=False)
 def test(ctx, *args: str):
-    """Serve a MkNodes page."""
+    """Run tests."""
     args_str = " " + " ".join(args) if args else ""
     ctx.run(f"uv run pytest{args_str}")
 
@@ -46,7 +63,7 @@ def lint(ctx):
     """Lint the code and fix issues if possible."""
     ctx.run("uv run ruff check --fix --unsafe-fixes .")
     ctx.run("uv run ruff format .")
-    ctx.run("uv run mypy src/llmling/")
+    ctx.run(f"uv run mypy src/{PACKAGE_NAME}/ --fixed-format-cache")
 
 
 @duty(capture=False)
@@ -54,17 +71,15 @@ def lint_check(ctx):
     """Lint the code."""
     ctx.run("uv run ruff check .")
     ctx.run("uv run ruff format --check .")
-    ctx.run("uv run mypy src/llmling/")
+    ctx.run(f"uv run mypy src/{PACKAGE_NAME}/ --fixed-format-cache")
 
 
 @duty(capture=False)
 def version(
     ctx,
-    bump_type: Literal[
-        "major", "minor", "patch", "stable", "alpha", "beta", "rc", "post", "dev"
-    ] = "patch",
+    *bump_type: Literal["major", "minor", "patch", "stable", "alpha", "beta", "rc"],
 ):
-    """Release a new version with git operations. (major|minor|patch|stable|alpha|beta|rc|post|dev)."""  # noqa: E501
+    """Release a new version with git operations. (major|minor|patch|stable|alpha|beta|rc)."""
     # Check for uncommitted changes
     result = ctx.run("git status --porcelain", capture=True)
     if result.strip():
@@ -74,7 +89,8 @@ def version(
     # Read current version
     old_version = ctx.run("uv version --short", capture=True).strip()
     print(f"Current version: {old_version}")
-    ctx.run(f"uv version --bump {bump_type}")
+    bump_str = " ".join(f"--bump {i}" for i in bump_type)
+    ctx.run(f"uv version {bump_str}")
     new_version = ctx.run("uv version --short", capture=True).strip()
     print(f"New version: {new_version}")
     ctx.run("git add pyproject.toml")
