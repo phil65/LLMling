@@ -4,14 +4,13 @@ LLMling provides several ways to extend its functionality. This section covers t
 
 ## Entry Points
 
-LLMling uses Python's entry point system for extensions. The main entry points are:
+LLMling uses Python's entry point system for extensions. Tools are exposed via the
+`tools` entry point of the `llmling` group and loaded with an `entry_points` toolset:
 
 ```toml
 # pyproject.toml
 [project.entry-points.llmling]
 tools = "myapp.tools:get_mcp_tools"
-processors = "myapp.processors:get_processors"
-prompts = "myapp.prompts:get_prompts"
 ```
 
 ## Custom Tools
@@ -58,14 +57,10 @@ class CustomProcessor(BaseProcessor):
             original_content=context.original_content,
             metadata={"processed_by": "custom"}
         )
-
-def get_processors() -> dict[str, Any]:
-    """Processor entry point."""
-    return {
-        "custom": CustomProcessor(),
-        "simple": my_processor_function,
-    }
 ```
+
+Register processors in the config under `context_processors` (by `import_path`) or at
+runtime via the processor registry.
 
 ## Custom Resource Types
 
@@ -134,20 +129,8 @@ class CustomPrompt(BasePrompt):
 
 ## Event Handling
 
-Subscribe to runtime events:
-
-```python
-from llmling.core.events import Event, EventHandler
-
-class CustomEventHandler(EventHandler):
-    async def handle_event(self, event: Event) -> None:
-        """Handle runtime events."""
-        match event.type:
-            case "RESOURCE_MODIFIED":
-                print(f"Resource modified: {event.name}")
-            case "TOOL_ADDED":
-                print(f"Tool added: {event.name}")
-```
+Registries emit psygnal events (`added`, `removed`, `changed`, ...) via their
+`.events` signal group, see [Programmatic Usage](usage.md#registry-events).
 
 ## Registry Extensions
 
@@ -197,4 +180,4 @@ class CustomRegistry(BaseRegistry[str, Any]):
 
 ## Next Steps
 
-The next section covers [Programmatic Usage](#programmatic-usage), which explains how to use LLMling in your Python code.
+The next section covers [Programmatic Usage](usage.md), which explains how to use LLMling in your Python code.

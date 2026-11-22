@@ -12,6 +12,8 @@ Static prompts are defined directly in the YAML configuration:
 ```yaml
 prompts:
   code_review:
+    type: text
+    description: "Review Python code"
     messages:
       # System message setting the role
       - role: system
@@ -52,6 +54,8 @@ Messages can contain different types of content:
 ```yaml
 prompts:
   mixed_content:
+    type: text
+    description: "Analyze text and images"
     messages:
       # Simple text content
       - role: system
@@ -88,6 +92,7 @@ Function-based prompts are created from Python functions:
 ```yaml
 prompts:
   analyze_code:
+    type: function
     import_path: myapp.prompts.code_analysis
     description: "Analyze Python code structure"
     # Optional message template override
@@ -135,6 +140,7 @@ File-based prompts load content from external files:
 prompts:
   documentation:
     type: file
+    description: "Generate documentation"
     path: "./prompts/docs.md"
     format: markdown      # text, markdown, or jinja2
     watch: true          # Optional file watching

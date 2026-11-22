@@ -25,7 +25,7 @@ llmling config list
 
 Once a config is set as active, you can run commands without specifying the config file. You can always override the active config using the `-c/--config` option:
 ```bash
-llmling -c prod.yml resource list  # Use specific config
+llmling resource list -c prod.yml  # Use specific config
 llmling resource list             # Use active config
 ```
 

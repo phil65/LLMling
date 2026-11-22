@@ -86,79 +86,23 @@ async with RuntimeConfig.open("config.yml") as runtime:
 
 ```
 
-## Event Handling
+## Registry Events
+
+All registries are `BaseRegistry` subclasses backed by a psygnal `EventedDict`.
+Their `.events` signal group emits `adding`, `added`, `removing`, `removed`,
+`changing` and `changed`:
 
 ```python
-from llmling.core.events import Event, EventHandler
+from llmling.tools.registry import ToolRegistry
 
-class MyEventHandler(EventHandler):
-    async def handle_event(self, event: Event) -> None:
-        match event.type:
-            case "RESOURCE_MODIFIED":
-                print(f"Resource changed: {event.name}")
-            case "TOOL_ADDED":
-                print(f"New tool: {event.name}")
-
-async with RuntimeConfig.open("config.yml") as runtime:
-    # Add event handler
-    runtime.add_event_handler(MyEventHandler())
+registry = ToolRegistry()
+registry.events.added.connect(lambda key, tool: print(f"Tool added: {key}"))
+registry.register("len", len)  # prints "Tool added: len"
 ```
 
-## Registry Observation
+## Agent Integration
 
-```python
-from llmling.core.events import RegistryEvents
-
-class ResourceObserver(RegistryEvents):
-    def on_item_added(self, key: str, item: Any) -> None:
-        print(f"Resource added: {key}")
-
-    def on_item_modified(self, key: str, item: Any) -> None:
-        print(f"Resource modified: {key}")
-
-async with RuntimeConfig.open("config.yml") as runtime:
-    # Add observers
-    runtime.add_observer(ResourceObserver(), registry_type="resource")
-    runtime.add_observer(PromptObserver(), registry_type="prompt")
-    runtime.add_observer(ToolObserver(), registry_type="tool")
-```
-
-## Example: Agent Integration
-
-Here's an example of using LLMling with an agent:
-
-```python
-from llmling import RuntimeConfig
-from llmling_agent import LLMlingAgent
-from pydantic import BaseModel
-
-# Define structured output
-class Analysis(BaseModel):
-    summary: str
-    complexity: int
-    suggestions: list[str]
-
-# Create agent with runtime
-async with RuntimeConfig.open("config.yml") as runtime:
-    # Create agent with structured output
-    agent = LLMlingAgent[Analysis](
-        runtime,
-        output_type=Analysis,
-        model="openai:gpt-4",
-        system_prompt=[
-            "You are a code analysis assistant.",
-            "Provide structured analysis results.",
-        ],
-    )
-
-    # Use the agent
-    result = await agent.run(
-        "Analyze the Python code in resources/main.py"
-    )
-
-    # Access structured results
-    print(f"Summary: {result.data.summary}")
-    print(f"Complexity: {result.data.complexity}")
-    for suggestion in result.data.suggestions:
-        print(f"- {suggestion}")
-```
+LLMling was the backend of [llmling-agent](https://github.com/phil65/llmling-agent),
+which has since been succeeded by [agentpool](https://github.com/phil65/agentpool).
+Neither currently consumes a `RuntimeConfig` directly; use the runtime API above
+to feed resources, prompts and tools into your agent framework of choice.

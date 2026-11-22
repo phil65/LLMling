@@ -67,7 +67,7 @@ Class-based tools provide more control and can maintain state:
 ```yaml
 tools:
   browser:
-    import_path: llmling.tools.browser.BrowserTool
+    import_path: myapp.tools.browser.BrowserTool
     description: "Browser automation tool"
 ```
 
@@ -121,46 +121,6 @@ Class-based tools provide:
 - State maintenance
 - Complex functionality encapsulation
 - Type hints and validation
-- Progress reporting
-
-## Progress Reporting
-
-Tools can report progress to clients:
-
-```python
-from llmling.tools.base import BaseTool
-
-class AnalysisTool(BaseTool):
-    name = "analyze"
-    description = "Analyze code repository"
-
-    async def execute(
-        self,
-        path: str,
-        recursive: bool = True,
-        _meta: dict[str, Any] | None = None,  # Progress tracking
-    ) -> dict[str, Any]:
-        """Analyze Python files in a directory.
-
-        Args:
-            path: Directory to analyze
-            recursive: Whether to analyze subdirectories
-            _meta: Progress tracking metadata
-        """
-        files = list(Path(path).glob("**/*.py" if recursive else "*.py"))
-
-        for i, file in enumerate(files, 1):
-            # Report progress if meta information provided
-            if _meta and "progressToken" in _meta:
-                self.notify_progress(
-                    token=_meta["progressToken"],
-                    progress=i,
-                    total=len(files),
-                    description=f"Analyzing {file.name}"
-                )
-
-            # Process file...
-```
 
 ## Tool Collections (Toolsets)
 
@@ -169,9 +129,9 @@ Related tools can be grouped into toolsets:
 ```yaml
 # In configuration:
 toolsets:
-    - llmling.code     # Code analysis tools
-    - llmling.browser  # Browser automation
-    - myapp.tools     # Custom tools
+  myapp:
+    type: entry_points  # loads tools from the `llmling` entry point group
+    module: myapp
 ```
 
 Creating a toolset:
@@ -204,9 +164,8 @@ tools = "myapp.tools:get_mcp_tools"
 - Use async for I/O operations
 
 ### Class Tools
-- Inherit from `LLMCallableTool`
+- Inherit from `BaseTool`
 - Manage resources properly
-- Report progress for long operations
 - Validate input parameters
 - Document behavior clearly
 - Handle shutdown properly
@@ -221,4 +180,4 @@ tools = "myapp.tools:get_mcp_tools"
 
 ## Next Steps
 
-The next section covers [Extension Points](#extension-points), which explain how to extend LLMling's functionality.
+The next section covers [Extension Points](extending.md), which explain how to extend LLMling's functionality.

@@ -53,6 +53,8 @@ resources:
 prompts:
   # Static prompt with arguments
   code_review:
+    type: text
+    description: "Review Python code"
     messages:
       - role: system
         content: "{system_prompt}"
@@ -74,6 +76,7 @@ prompts:
 
   # Function-based prompt
   analyze_dependencies:
+    type: function
     import_path: myapp.prompts.analyze_imports
     description: "Analyze Python module dependencies"
 
@@ -81,17 +84,19 @@ prompts:
 tools:
   # Function-based tool
   analyze_code:
-    import_path: llmling.tools.code.analyze
+    import_path: llmling.tools.code.analyze_code
     description: "Analyze Python code structure"
 
-  # Class-based tool
+  # Class-based tool (a BaseTool subclass in your own package)
   formatter:
-    import_path: llmling.tools.code.CodeFormatter
+    import_path: myapp.tools.CodeFormatter
     description: "Format Python code using black"
 
-# Include pre-built tools
+# Include tool collections
 toolsets:
-  - llmling.code  # Code analysis tools
+  myapp_tools:
+    type: entry_points  # tools exposed via the `llmling` entry point group
+    module: myapp
 ```
 
 ## Using the Configuration
@@ -101,16 +106,15 @@ Here's how to use this configuration programmatically:
 ```python
 from llmling import RuntimeConfig
 
-async with RuntimeConfig.from_file("config.yml") as runtime:
+async with RuntimeConfig.open("config.yml") as runtime:
     # Load resource content
     python_files = await runtime.load_resource("python_files")
     git_diff = await runtime.load_resource("git_changes")
 
     # Format prompt with arguments
-    messages = await runtime.format_prompt(
+    messages = await runtime.render_prompt(
         "code_review",
-        code=python_files.content,
-        focus_areas="typing,security"
+        {"code": python_files.content, "focus_areas": "typing,security"},
     )
 
     # Execute tools

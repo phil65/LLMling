@@ -19,6 +19,8 @@ resources:        # Content sources
 
 prompts:         # Message templates
   prompt_name:
+    type: text
+    description: "What this prompt does"
     messages: []
     # prompt-specific config...
 
@@ -94,6 +96,8 @@ The `prompts` section defines message templates that can be formatted with argum
 ```yaml
 prompts:
   example_prompt:
+    type: text
+    description: "Example prompt"
     messages:
       - role: "system"
         content: "System message"
