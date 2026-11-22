@@ -9,7 +9,6 @@
 [![Implementation](https://img.shields.io/pypi/implementation/LLMling.svg)](https://pypi.org/project/LLMling/)
 [![Releases](https://img.shields.io/github/downloads/phil65/LLMling/total.svg)](https://github.com/phil65/LLMling/releases)
 [![Github Contributors](https://img.shields.io/github/contributors/phil65/LLMling)](https://github.com/phil65/LLMling/graphs/contributors)
-[![Github Discussions](https://img.shields.io/github/discussions/phil65/LLMling)](https://github.com/phil65/LLMling/discussions)
 [![Github Forks](https://img.shields.io/github/forks/phil65/LLMling)](https://github.com/phil65/LLMling/forks)
 [![Github Issues](https://img.shields.io/github/issues/phil65/LLMling)](https://github.com/phil65/LLMling/issues)
 [![Github Issues](https://img.shields.io/github/issues-pr/phil65/LLMling)](https://github.com/phil65/LLMling/pulls)
