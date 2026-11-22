@@ -185,8 +185,13 @@ async def test_cli_loader(processor_registry: ProcessorRegistry) -> None:
 async def test_repository_loader(
     tmp_path: Path,
     processor_registry: ProcessorRegistry,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test basic repository loading functionality."""
+    # Git hooks (e.g. pre-commit) export these; they would redirect GitPython
+    # to the outer repository instead of the temporary one.
+    for var in ("GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"):
+        monkeypatch.delenv(var, raising=False)
     # Set up a test repo
     repo = git.Repo.init(tmp_path)
     test_file = tmp_path / "test.txt"

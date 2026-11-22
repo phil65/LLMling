@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from llmling.core import exceptions
@@ -44,7 +44,7 @@ class ProcessorRegistry(BaseRegistry[str, BaseProcessor]):
                 return Processor(item)  # Creates function-based processor
             case _ if callable(item):
                 path = f"{item.__module__}.{item.__qualname__}"
-                is_coro = asyncio.iscoroutinefunction(item)
+                is_coro = inspect.iscoroutinefunction(item)
                 config = ProcessorConfig(import_path=path, async_execution=is_coro)
                 return Processor(config)
             case _:

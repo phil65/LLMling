@@ -48,7 +48,7 @@ class ToolRegistry(BaseRegistry[str, LLMCallableTool]):
                             return LLMCallableTool.from_crewai_tool(
                                 obj_class(
                                     name=obj_class.__name__,
-                                    description=obj_class.description,  # type: ignore
+                                    description=obj_class.description,
                                 ),
                                 name_override=item.name,
                                 description_override=item.description,

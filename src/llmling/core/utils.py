@@ -57,7 +57,7 @@ def error_handler[R, **P](
                 return func(*args, **kwargs)
 
             except catch_exception as exc:
-                error_msg = f"Error in {func.__name__}: {exc}"
+                error_msg = f"Error in {getattr(func, '__name__', func)}: {exc}"
 
                 if chain_with is not None:
                     new_exc = chain_with(error_msg)

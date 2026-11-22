@@ -75,7 +75,7 @@ class ResourceLoaderRegistry(BaseRegistry[str, ResourceLoader[Any]]):
         """Find appropriate loader for a URI."""
         # Parse scheme from URI string
         try:
-            scheme = uri.split("://")[0]
+            scheme = uri.split("://", maxsplit=1)[0]
         except IndexError:
             msg = f"Invalid URI format: {uri}"
             raise exceptions.LoaderError(msg) from None

@@ -176,7 +176,7 @@ class ResourceRegistry(BaseRegistry[str, BaseResource]):
                 if loaded.metadata.uri != uri:
                     msg = "Loader returned different URI than expected: %s != %s"
                     logger.warning(msg, loaded.metadata.uri, uri)
-                    loaded.metadata.uri = uri
+                    loaded.metadata = loaded.metadata.model_copy(update={"uri": uri})
 
                 # Update cache using URI
                 self._cache[uri] = loaded
@@ -204,7 +204,7 @@ class ResourceRegistry(BaseRegistry[str, BaseResource]):
             # For simple resource names in file:/// format
             if uri.startswith("file:///"):
                 # Extract resource name
-                name = uri.split("/")[-1]
+                name = uri.rsplit("/", maxsplit=1)[-1]
                 # Load using the name which will use the configured path/URL
                 return await self.load(name)
 

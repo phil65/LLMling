@@ -2,26 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import re
 from typing import Literal
 
 from duty import duty  # pyright: ignore[reportMissingImports]
-
-
-# Read configuration from copier-answers.yml
-_answers_file = Path(".copier-answers.yml")
-if _answers_file.exists():
-    content = _answers_file.read_text()
-    match = re.search(r"^python_package_import_name:\s*(.+)$", content, re.MULTILINE)
-    if match:
-        PACKAGE_NAME = match.group(1).strip()
-    else:
-        msg = "python_package_import_name not found in copier-answers.yml"
-        raise ValueError(msg)
-else:
-    msg = "copier-answers.yml not found in project root"
-    raise FileNotFoundError(msg)
 
 
 @duty(capture=False)
@@ -63,7 +46,7 @@ def lint(ctx):
     """Lint the code and fix issues if possible."""
     ctx.run("uv run ruff check --fix --unsafe-fixes .")
     ctx.run("uv run ruff format .")
-    ctx.run(f"uv run mypy src/{PACKAGE_NAME}/ --fixed-format-cache")
+    ctx.run("uv run ty check")
 
 
 @duty(capture=False)
@@ -71,7 +54,7 @@ def lint_check(ctx):
     """Lint the code."""
     ctx.run("uv run ruff check .")
     ctx.run("uv run ruff format --check .")
-    ctx.run(f"uv run mypy src/{PACKAGE_NAME}/ --fixed-format-cache")
+    ctx.run("uv run ty check")
 
 
 @duty(capture=False)

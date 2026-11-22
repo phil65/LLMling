@@ -1,7 +1,7 @@
 site_name: "LLMling"
 site_description: "LLM simplified."
-repo_url: "https://github.com/phil65/llmling/"
-site_url: https://phil65.github.io/llmling/
+repo_url: "https://github.com/phil65/LLMling/"
+site_url: https://phil65.github.io/LLMling/
 site_author: "Philipp Temminghoff"
 copyright: Copyright &copy; 2024 Philipp Temminghoff
 

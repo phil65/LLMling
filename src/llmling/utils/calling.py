@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+import inspect
 from typing import TYPE_CHECKING, Any, TypeGuard
 
 from llmling.core.log import get_logger
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 def is_async_callable(obj: Any) -> TypeGuard[Callable[..., Awaitable[Any]]]:
     """Check if an object is an async callable."""
-    return asyncio.iscoroutinefunction(obj)
+    return inspect.iscoroutinefunction(obj)
 
 
 async def execute_callable(import_path: str, **kwargs: Any) -> Any:

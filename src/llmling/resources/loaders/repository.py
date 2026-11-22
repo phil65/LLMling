@@ -97,17 +97,14 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
         try:
             repo = self._get_cached_repo(resource.repo_url)
             if not repo:
-                with tempfile.TemporaryDirectory() as tmp_dir:
-                    logger.debug("Cloning %s to %s", resource.repo_url, tmp_dir)
-                    repo = git.Repo.clone_from(
-                        resource.repo_url,
-                        tmp_dir,
-                        branch=resource.ref,
-                    )
-                    if resource.sparse_checkout:
-                        path_str = " ".join(resource.sparse_checkout)
-                        repo.git.sparse_checkout("set", path_str)
-                    self._cache_repo(resource.repo_url, repo)
+                # The clone must outlive this call since the repo object gets cached.
+                tmp_dir = tempfile.mkdtemp(prefix="llmling_repo_")
+                logger.debug("Cloning %s to %s", resource.repo_url, tmp_dir)
+                repo = git.Repo.clone_from(resource.repo_url, tmp_dir, branch=resource.ref)
+                if resource.sparse_checkout:
+                    path_str = " ".join(resource.sparse_checkout)
+                    repo.git.sparse_checkout("set", path_str)
+                self._cache_repo(resource.repo_url, repo)
 
             # Switch to requested ref
             repo.git.checkout(resource.ref)
@@ -132,7 +129,7 @@ class RepositoryResourceLoader(ResourceLoader[RepositoryResource]):
                         loaded.content = result.content
                     yield loaded
 
-        except git.exc.GitCommandError as exc:  # type: ignore
+        except git.exc.GitCommandError as exc:
             msg = f"Git operation failed: {exc}"
             raise exceptions.LoaderError(msg) from exc
         except Exception as exc:

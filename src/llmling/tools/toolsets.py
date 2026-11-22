@@ -44,6 +44,6 @@ class ToolSet(ABC):
                 tools.append(tool)
             except Exception as exc:
                 logger.exception("Failed to convert %s to LLMCallableTool", method)
-                msg = f"Failed to convert {method.__name__} to LLMCallableTool"
+                msg = f"Failed to convert {getattr(method, '__name__', method)} to LLMCallableTool"
                 raise ValueError(msg) from exc
         return tools

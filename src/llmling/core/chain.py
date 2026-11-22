@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import ConfigDict, Field
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from llmling import RuntimeConfig
 
 
-class ErrorStrategy(str, Enum):
+class ErrorStrategy(StrEnum):
     STOP = "stop"  # Stop pipeline on error
     SKIP = "skip"  # Skip failed step, continue with previous result
     DEFAULT = "default"  # Use provided default value
@@ -49,7 +49,7 @@ class StepCondition(Schema):
                 return field_value < self.value
             case "contains":
                 try:
-                    return self.value in field_value  # type: ignore
+                    return self.value in field_value
                 except TypeError:
                     return False
             case "exists":
@@ -114,7 +114,7 @@ class ChainTool(BaseTool):
         }
     """
 
-    name = "chain"
+    name = "chain"  # ty: ignore[incompatible-attribute-override]
     description = """Execute multiple tool operations in sequence.
 
     WHEN TO USE THIS TOOL:
@@ -155,7 +155,7 @@ class ChainTool(BaseTool):
 
     Note: If you're uncertain about the sequence or need to make decisions
     based on intermediate results, use individual tool calls instead.
-    """
+    """  # ty: ignore[incompatible-attribute-override]
 
     # This is the full documentation for developers
     __doc__ = """Advanced tool pipeline execution system for LLMling.

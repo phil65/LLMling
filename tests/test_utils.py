@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import json
 import os
 from typing import TYPE_CHECKING, Any
@@ -40,7 +40,7 @@ class ExampleClass:
         ("json.dumps", json.dumps),
         ("getpass.getpass", __import__("getpass").getpass),
         # Class methods
-        ("datetime.datetime.now", datetime.datetime.now),
+        ("datetime.datetime.now", dt.datetime.now),
         # Static methods
         ("pathlib.Path.home", __import__("pathlib").Path.home),
         # Local class methods

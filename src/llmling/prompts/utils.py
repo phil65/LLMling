@@ -97,7 +97,8 @@ def extract_function_info(
                 if isinstance(comp, str):
                     completion_path = comp
                 else:
-                    completion_path = f"{comp.__module__}.{comp.__qualname__}"
+                    qualname = getattr(comp, "__qualname__", comp.__class__.__qualname__)
+                    completion_path = f"{comp.__module__}.{qualname}"
 
             args.append(
                 PromptParameter(

@@ -37,20 +37,21 @@ jobs:
           enable-cache: true
           cache-dependency-glob: pyproject.toml
           cache-suffix: py${{ matrix.python_version }}
+          python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies (uv sync)
         run: uv sync --all-extras --no-group docs --no-group lint
 
       - name: Check for code issues (ruff check)
-        uses: astral-sh/ruff-action@v3
+        uses: astral-sh/ruff-action@v4.1.0
 
       - name: Check code format (ruff format)
-        uses: astral-sh/ruff-action@v3
+        uses: astral-sh/ruff-action@v4.1.0
         with:
           args: "format --check"
 
-      - name: Static type checking (MyPy)
-        run: uv run --no-group docs mypy src/llmling/
+      - name: Static type checking (ty)
+        run: uv run --no-group docs ty check
 
       - name: Run tests
         run: uv run --no-group docs pytest --cov-report=xml --cov=src/llmling/ --cov-report=term-missing

@@ -1,27 +1,27 @@
 # LLMling
 
-[![PyPI License](https://img.shields.io/pypi/l/llmling.svg)](https://pypi.org/project/llmling/)
-[![Package status](https://img.shields.io/pypi/status/llmling.svg)](https://pypi.org/project/llmling/)
-[![Monthly downloads](https://img.shields.io/pypi/dm/llmling.svg)](https://pypi.org/project/llmling/)
-[![Distribution format](https://img.shields.io/pypi/format/llmling.svg)](https://pypi.org/project/llmling/)
-[![Wheel availability](https://img.shields.io/pypi/wheel/llmling.svg)](https://pypi.org/project/llmling/)
-[![Python version](https://img.shields.io/pypi/pyversions/llmling.svg)](https://pypi.org/project/llmling/)
-[![Implementation](https://img.shields.io/pypi/implementation/llmling.svg)](https://pypi.org/project/llmling/)
-[![Releases](https://img.shields.io/github/downloads/phil65/llmling/total.svg)](https://github.com/phil65/llmling/releases)
-[![Github Contributors](https://img.shields.io/github/contributors/phil65/llmling)](https://github.com/phil65/llmling/graphs/contributors)
-[![Github Discussions](https://img.shields.io/github/discussions/phil65/llmling)](https://github.com/phil65/llmling/discussions)
-[![Github Forks](https://img.shields.io/github/forks/phil65/llmling)](https://github.com/phil65/llmling/forks)
-[![Github Issues](https://img.shields.io/github/issues/phil65/llmling)](https://github.com/phil65/llmling/issues)
-[![Github Issues](https://img.shields.io/github/issues-pr/phil65/llmling)](https://github.com/phil65/llmling/pulls)
-[![Github Watchers](https://img.shields.io/github/watchers/phil65/llmling)](https://github.com/phil65/llmling/watchers)
-[![Github Stars](https://img.shields.io/github/stars/phil65/llmling)](https://github.com/phil65/llmling/stars)
-[![Github Repository size](https://img.shields.io/github/repo-size/phil65/llmling)](https://github.com/phil65/llmling)
-[![Github last commit](https://img.shields.io/github/last-commit/phil65/llmling)](https://github.com/phil65/llmling/commits)
-[![Github release date](https://img.shields.io/github/release-date/phil65/llmling)](https://github.com/phil65/llmling/releases)
-[![Github language count](https://img.shields.io/github/languages/count/phil65/llmling)](https://github.com/phil65/llmling)
-[![Github commits this month](https://img.shields.io/github/commit-activity/m/phil65/llmling)](https://github.com/phil65/llmling)
-[![Package status](https://codecov.io/gh/phil65/llmling/branch/main/graph/badge.svg)](https://codecov.io/gh/phil65/llmling/)
-[![PyUp](https://pyup.io/repos/github/phil65/llmling/shield.svg)](https://pyup.io/repos/github/phil65/llmling/)
+[![PyPI License](https://img.shields.io/pypi/l/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Package status](https://img.shields.io/pypi/status/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Monthly downloads](https://img.shields.io/pypi/dm/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Distribution format](https://img.shields.io/pypi/format/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Wheel availability](https://img.shields.io/pypi/wheel/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Python version](https://img.shields.io/pypi/pyversions/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Implementation](https://img.shields.io/pypi/implementation/LLMling.svg)](https://pypi.org/project/LLMling/)
+[![Releases](https://img.shields.io/github/downloads/phil65/LLMling/total.svg)](https://github.com/phil65/LLMling/releases)
+[![Github Contributors](https://img.shields.io/github/contributors/phil65/LLMling)](https://github.com/phil65/LLMling/graphs/contributors)
+[![Github Discussions](https://img.shields.io/github/discussions/phil65/LLMling)](https://github.com/phil65/LLMling/discussions)
+[![Github Forks](https://img.shields.io/github/forks/phil65/LLMling)](https://github.com/phil65/LLMling/forks)
+[![Github Issues](https://img.shields.io/github/issues/phil65/LLMling)](https://github.com/phil65/LLMling/issues)
+[![Github Issues](https://img.shields.io/github/issues-pr/phil65/LLMling)](https://github.com/phil65/LLMling/pulls)
+[![Github Watchers](https://img.shields.io/github/watchers/phil65/LLMling)](https://github.com/phil65/LLMling/watchers)
+[![Github Stars](https://img.shields.io/github/stars/phil65/LLMling)](https://github.com/phil65/LLMling/stars)
+[![Github Repository size](https://img.shields.io/github/repo-size/phil65/LLMling)](https://github.com/phil65/LLMling)
+[![Github last commit](https://img.shields.io/github/last-commit/phil65/LLMling)](https://github.com/phil65/LLMling/commits)
+[![Github release date](https://img.shields.io/github/release-date/phil65/LLMling)](https://github.com/phil65/LLMling/releases)
+[![Github language count](https://img.shields.io/github/languages/count/phil65/LLMling)](https://github.com/phil65/LLMling)
+[![Github commits this month](https://img.shields.io/github/commit-activity/m/phil65/LLMling)](https://github.com/phil65/LLMling)
+[![Package status](https://codecov.io/gh/phil65/LLMling/branch/main/graph/badge.svg)](https://codecov.io/gh/phil65/LLMling/)
+[![PyUp](https://pyup.io/repos/github/phil65/LLMling/shield.svg)](https://pyup.io/repos/github/phil65/LLMling/)
 
 A framework for declarative LLM application development focused on resource management, prompt templates, and tool execution.
 
@@ -160,15 +160,15 @@ from llmling import RuntimeConfig
 from llmling_agent import LLMlingAgent
 from pydantic import BaseModel
 
+
 class WebResult(BaseModel):
     opened_url: str
     success: bool
 
+
 async with RuntimeConfig.open("config.yml") as runtime:
     agent = LLMlingAgent[WebResult](runtime)
-    result = await agent.run(
-        "Load the bookmarks resource and open the Python website URL"
-    )
+    result = await agent.run("Load the bookmarks resource and open the Python website URL")
     print(f"Opened: {result.data.opened_url}")
 ```
 
@@ -422,10 +422,9 @@ from typing import Literal
 
 FocusArea = Literal["complexity", "dependencies", "typing"]
 
+
 def code_analysis(
-    code: str,
-    focus: FocusArea = "complexity",
-    include_metrics: bool = True
+    code: str, focus: FocusArea = "complexity", include_metrics: bool = True
 ) -> list[dict[str, str]]:
     """Analyze Python code structure and complexity.
 
@@ -436,6 +435,7 @@ def code_analysis(
     """
     # Function will be converted to a prompt automatically
     ...
+
 
 def get_analysis_focus_options(current: str) -> list[str]:
     """Provide auto-completion for focus argument."""
@@ -536,10 +536,8 @@ Tools can be created from any Python function:
 from typing import Any
 import ast
 
-async def analyze(
-    code: str,
-    include_metrics: bool = True
-) -> dict[str, Any]:
+
+async def analyze(code: str, include_metrics: bool = True) -> dict[str, Any]:
     """Analyze Python code structure and complexity.
 
     Args:
@@ -553,7 +551,7 @@ async def analyze(
     return {
         "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]),
         "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
-        "complexity": _calculate_complexity(tree) if include_metrics else None
+        "complexity": _calculate_complexity(tree) if include_metrics else None,
     }
 ```
 
@@ -566,6 +564,7 @@ Complex tools can be implemented as classes:
 from typing import Literal
 from playwright.async_api import Page
 from llmling.tools.base import BaseTool
+
 
 class BrowserTool(BaseTool):
     """Tool for web browser automation."""
@@ -587,18 +586,12 @@ Group related tools into reusable collections:
 # myapp/toolsets.py
 from typing import Callable, Any
 
+
 def get_mcp_tools() -> list[Callable[..., Any]]:
     """Entry point exposing tools to LLMling."""
-    from myapp.tools import (
-        analyze_code,
-        check_style,
-        count_tokens
-    )
-    return [
-        analyze_code,
-        check_style,
-        count_tokens
-    ]
+    from myapp.tools import analyze_code, check_style, count_tokens
+
+    return [analyze_code, check_style, count_tokens]
 ```
 
 In pyproject.toml:
@@ -614,6 +607,7 @@ Tools can report progress to the client:
 
 ```python
 from llmling.tools.base import BaseTool
+
 
 class AnalysisTool(BaseTool):
     name = "analyze"
@@ -634,7 +628,7 @@ class AnalysisTool(BaseTool):
                     token=_meta["progressToken"],
                     progress=i,
                     total=len(files),
-                    description=f"Analyzing {file.name}"
+                    description=f"Analyzing {file.name}",
                 )
 
             results.append(await self._analyze_file(file))
@@ -672,6 +666,7 @@ from typing import Any
 from pathlib import Path
 from llmling.tools.base import BaseTool
 
+
 class AnalysisTool(BaseTool):
     """Tool for batch code analysis with progress reporting."""
 
@@ -683,10 +678,7 @@ class AnalysisTool(BaseTool):
         self.analyzer = await self._create_analyzer()
 
     async def execute(
-        self,
-        path: str,
-        recursive: bool = True,
-        _meta: dict[str, Any] | None = None
+        self, path: str, recursive: bool = True, _meta: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Execute batch analysis.
 
@@ -705,27 +697,21 @@ class AnalysisTool(BaseTool):
                     token=_meta["progressToken"],
                     progress=i,
                     total=len(files),
-                    description=f"Analyzing {file.name}"
+                    description=f"Analyzing {file.name}",
                 )
 
             # Analyze file
             try:
                 result = await self.analyzer.analyze_file(file)
-                results.append({
-                    "file": str(file),
-                    "metrics": result
-                })
+                results.append({"file": str(file), "metrics": result})
             except Exception as e:
-                results.append({
-                    "file": str(file),
-                    "error": str(e)
-                })
+                results.append({"file": str(file), "error": str(e)})
 
         return {
             "total_files": len(files),
             "successful": len([r for r in results if "metrics" in r]),
             "failed": len([r for r in results if "error" in r]),
-            "results": results
+            "results": results,
         }
 
     async def shutdown(self) -> None:

@@ -13,7 +13,7 @@ from llmling.core.log import get_logger
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
     import os
 
 
@@ -105,7 +105,7 @@ class FileWatcher:
         logger.debug("Removed watch for: %s", path_str)
 
     @asynccontextmanager
-    async def _watch_with_retries(self, path: str) -> AsyncIterator[None]:
+    async def _watch_with_retries(self, path: str) -> AsyncGenerator[None]:
         """Context manager for watching with retries."""
         retries = self._max_retries
         while retries and self._running:

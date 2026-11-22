@@ -11,7 +11,7 @@ import warnings
 from pydantic import (
     ConfigDict,
     Field,
-    HttpUrl,  # noqa: TC002
+    HttpUrl,
     SecretStr,
     field_validator,
     model_validator,

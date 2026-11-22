@@ -178,7 +178,7 @@ class LLMTools:
 
     def get_llm_resource_tools(self) -> list[LLMCallableTool]:
         fns = [self.load_resource, self.get_resources]
-        return [LLMCallableTool.from_callable(fn) for fn in fns]  # type: ignore
+        return [LLMCallableTool.from_callable(fn) for fn in fns]
 
     def get_llm_tool_management_tools(self) -> list[LLMCallableTool]:
         fns = [
@@ -186,4 +186,4 @@ class LLMTools:
             self.register_code_tool,
             self.install_package,
         ]
-        return [LLMCallableTool.from_callable(fn) for fn in fns]  # type: ignore
+        return [LLMCallableTool.from_callable(fn) for fn in fns]

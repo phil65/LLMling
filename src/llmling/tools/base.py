@@ -45,7 +45,7 @@ class LLMCallableTool[**P, TReturnType]:
             callable_obj = fn
             module = fn.__module__
             if hasattr(fn, "__qualname__"):  # Regular function
-                name = fn.__name__
+                name = getattr(fn, "__name__", fn.__class__.__name__)
                 import_path = f"{module}.{fn.__qualname__}"
             else:  # Instance with __call__ method
                 name = fn.__class__.__name__
@@ -136,7 +136,7 @@ class LLMCallableTool[**P, TReturnType]:
             raise TypeError(msg)
         token = CancellationToken()
 
-        input_model = tool.__class__.__orig_bases__[0].__args__[0]  # type: ignore
+        input_model = tool.__class__.__orig_bases__[0].__args__[0]
 
         name = name_override or tool.name or tool.__class__.__name__.removesuffix("Tool")
         description = (
@@ -174,12 +174,12 @@ class LLMCallableTool[**P, TReturnType]:
 class BaseTool(LLMCallableTool):
     """Base class for complex tools requiring inheritance."""
 
-    name: ClassVar[str]
-    description: ClassVar[str]
+    name: ClassVar[str]  # ty: ignore[incompatible-attribute-override]
+    description: ClassVar[str]  # ty: ignore[incompatible-attribute-override]
     supported_mime_types: ClassVar[list[str]] = ["text/plain"]
 
     @classproperty  # type: ignore
-    def import_path(cls) -> str:  # type: ignore  # noqa: N805
+    def import_path(cls) -> str:  # noqa: N805
         """Get the import path of the tool class."""
         return f"{cls.__module__}.{cls.__qualname__}"  # type: ignore
 

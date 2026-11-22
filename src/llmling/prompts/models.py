@@ -7,7 +7,7 @@ import inspect
 import os
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
 
-from fastmcp.prompts.prompt import (
+from fastmcp.prompts import (
     Prompt as FastMCPPrompt,
     PromptArgument as FastMCPArgument,
 )
@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from fastmcp.prompts.prompt import FunctionPrompt
+    from fastmcp.prompts import FunctionPrompt
     from mcp.types import Prompt as MCPPrompt, PromptArgument
 
 
@@ -112,7 +112,7 @@ class BasePrompt(BaseModel):
         if not hasattr(self, "messages"):
             msg = f"{self.__class__.__name__} must implement 'messages' attribute"
             raise NotImplementedError(msg)
-        return self.messages  # pyright: ignore
+        return self.messages  # pyright: ignore  # ty: ignore[invalid-explicit-return]
 
     def validate_arguments(self, provided: dict[str, Any]) -> None:
         """Validate that required arguments are provided."""
@@ -246,7 +246,7 @@ class DynamicPrompt(BasePrompt):
         ]
 
     def to_fastmcp_prompt(self) -> FunctionPrompt:
-        from fastmcp.prompts.prompt import FunctionPrompt
+        from fastmcp.prompts import FunctionPrompt
 
         return FunctionPrompt.from_function(
             self.fn,
@@ -375,7 +375,8 @@ class DynamicPrompt(BasePrompt):
             )
             arguments.append(arg)
 
-        path = f"{fn.__module__}.{fn.__qualname__}"
+        qualname = getattr(fn, "__qualname__", fn.__class__.__qualname__)
+        path = f"{fn.__module__}.{qualname}"
         return cls(
             name=name,
             description=description or "",

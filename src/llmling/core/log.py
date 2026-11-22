@@ -94,7 +94,9 @@ def setup_logging(
     logger.info("Logging initialized")
     if log_to_file:
         msg = "Console logging level: %s, File logging level: DEBUG (%s)"
-        logger.debug(msg, logging.getLevelName(level), LOG_FILE)
+        logger.debug(
+            msg, logging.getLevelName(level) if isinstance(level, int) else level, LOG_FILE
+        )
 
 
 def get_logger(name: str) -> logging.Logger:

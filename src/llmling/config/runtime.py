@@ -35,7 +35,7 @@ from llmling.tools.registry import ToolRegistry
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+    from collections.abc import AsyncGenerator, Callable, Generator, Sequence
     import types
 
     from upath.types import JoinablePathLike
@@ -226,7 +226,7 @@ class RuntimeConfig:
         *,
         validate: bool = True,
         strict: bool = False,
-    ) -> AsyncIterator[RuntimeConfig]:
+    ) -> AsyncGenerator[RuntimeConfig]:
         """Create and manage a runtime configuration asynchronously.
 
         This is the primary way to create and use a RuntimeConfig. It ensures proper
@@ -271,7 +271,7 @@ class RuntimeConfig:
         *,
         validate: bool = True,
         strict: bool = False,
-    ) -> Iterator[RuntimeConfig]:
+    ) -> Generator[RuntimeConfig]:
         """Create and manage a runtime configuration synchronously.
 
         This is the synchronous version of open(). It provides the same functionality
@@ -738,7 +738,11 @@ class RuntimeConfig:
                 function, name_override=name, description_override=description
             )
             self._tool_registry.register(name or tool.name, tool)
-            source = function if isinstance(function, str) else function.__name__
+            source = (
+                function
+                if isinstance(function, str)
+                else getattr(function, "__name__", str(function))
+            )
         except Exception as exc:
             msg = f"Failed to register tool: {exc}"
             raise ToolError(msg) from exc
@@ -986,6 +990,8 @@ class RuntimeConfig:
                 case _:
                     msg = f"Unknown prompt type: {prompt['type']}"
                     raise exceptions.ConfigError(msg)
+        else:
+            prompt_obj = prompt
 
         self._prompt_registry.register(name, prompt_obj, replace=replace)
 
