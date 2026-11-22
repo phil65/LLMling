@@ -696,7 +696,5 @@ class Config(ConfigModel):
 
 
 if __name__ == "__main__":
-    from llmling import Config
-
-    config = Config.from_file(config_resources.TEST_CONFIG)  # type: ignore[has-type]
+    config = Config.from_file(config_resources.TEST_CONFIG)
     print(config)
