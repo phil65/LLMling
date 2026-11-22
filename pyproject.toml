@@ -28,16 +28,20 @@ classifiers = [
 ]
 dependencies = [
   # Only add below (Copier)
+  "anyenv>=2.0.0",
   "depkit>=0.3.5",
+  "docstring-parser>=0.16",
   "epregistry>=1.2.0",
+  "fastmcp>=2.13.0",
   "fsspec",
   "httpx",
   "jinja2>=3.1.4",
-  "pathspec",
+  "mcp>=1.0.0",
   "platformdirs>=4.3.6",
   "promptantic>=0.4.3",
   "psygnal>=0.11.1",
   "pydantic",
+  "rich>=13.0.0",
   "schemez>=1.2.0",
   "typer",
   "universal-pathlib>=0.2.5",
@@ -109,6 +113,12 @@ exclude_lines = [
   "except ImportError",
   'if __name__ == "__main__":',
 ]
+
+[tool.deptry.per_rule_ignores]
+# Optional integrations, imported lazily inside the functions that need them.
+DEP001 = ["autogen_core", "crewai", "crewai_tools", "langchain_core"]
+DEP002 = ["fsspec", "pygit2"]
+DEP003 = ["tiktoken"]
 
 [tool.logfire]
 ignore_no_config = true
