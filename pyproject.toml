@@ -3,7 +3,7 @@
 [project]
 name = "llmling"
 version = "2.0.10"
-description = "A backend for pydantic-AI agents and MCP servers."
+description = "Declarative YAML-defined resources, prompts and tools for LLM applications and MCP servers."
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
@@ -11,7 +11,17 @@ license-files = ["LICENSE"]
 authors = [
   { name = "Philipp Temminghoff", email = "philipptemminghoff@googlemail.com" },
 ]
-keywords = []
+keywords = [
+  "ai",
+  "configuration",
+  "llm",
+  "mcp",
+  "prompts",
+  "pydantic",
+  "resources",
+  "tools",
+  "yaml",
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Framework :: Pydantic",
@@ -22,7 +32,9 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development",
+  "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Utilities",
   "Typing :: Typed",
 ]
@@ -53,6 +65,7 @@ dependencies = [
 "Code coverage" = "https://app.codecov.io/gh/phil65/LLMling"
 Discussions = "https://github.com/phil65/LLMling/discussions"
 Documentation = "https://phil65.github.io/LLMling/"
+Homepage = "https://github.com/phil65/LLMling"
 Issues = "https://github.com/phil65/LLMling/issues"
 Source = "https://github.com/phil65/LLMling"
 
