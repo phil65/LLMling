@@ -94,13 +94,14 @@ def init_config(
     Creates a new configuration file at the specified path. Use --interactive
     for a guided setup process.
     """
-    from promptantic import ModelGenerator
-
     from llmling import Config
 
     if interactive:
-        generator = ModelGenerator()
-        config = generator.populate(Config)
+        import asyncio
+
+        from promptantic import fill
+
+        config = asyncio.run(fill(Config, title="New llmling configuration"))
         config.save(output)
         print(f"Created configuration file: {output}")
     else:
