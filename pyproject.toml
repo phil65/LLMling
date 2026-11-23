@@ -75,9 +75,9 @@ llmling = "llmling.__main__:cli"
 tools = "llmling.testing:get_mcp_tools"
 
 [project.optional-dependencies]
-agent = ["llmling-agent"]
+agent = ["agentpool"]
 all = [
-  "llmling-agent",
+  "agentpool",
   "mcp-server-llmling",
   "watchfiles",
   "pygit2",

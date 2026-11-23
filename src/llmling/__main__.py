@@ -36,8 +36,8 @@ Install with: pip install mcp-server-llmling
 """
 
 MISSING_AGENT = """
-Agent commands require the llmling-agent package.
-Install with: pip install llmling-agent
+Agent commands require the agentpool package.
+Install with: pip install agentpool
 """
 
 cli = t.Typer(name="LLMling", help=get_help_text(), no_args_is_help=True)
@@ -61,7 +61,7 @@ except ImportError:
     cli.add_typer(server_cli, name="server")
 
 try:
-    from llmling_agent.__main__ import cli as agent_cli
+    from agentpool_cli.__main__ import cli as agent_cli
 
     cli.add_typer(agent_cli, name="agent", help="Agent commands")
 except ImportError:
