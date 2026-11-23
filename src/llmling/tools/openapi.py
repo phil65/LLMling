@@ -25,12 +25,12 @@ class OpenAPITools(ToolSet):
         base_url: str = "",
         headers: dict[str, str] | None = None,
     ):
-        import httpx
+        import httpx2
 
         self.spec_url = spec
         self.base_url = base_url
         self.headers = headers or {}
-        self._client = httpx.AsyncClient(base_url=self.base_url, headers=self.headers)
+        self._client = httpx2.AsyncClient(base_url=self.base_url, headers=self.headers)
         self._spec: dict[str, Any] = {}
         self._operations: dict[str, dict[str, Any]] = {}
         self._factory: Any = None

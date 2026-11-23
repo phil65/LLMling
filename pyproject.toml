@@ -46,7 +46,7 @@ dependencies = [
   "epregistry>=1.2.0",
   "fastmcp>=2.13.0",
   "fsspec",
-  "httpx",
+  "httpx2>=2.16",
   "jinja2>=3.1.4",
   "mcp>=1.0.0",
   "platformdirs>=4.3.6",
@@ -57,7 +57,7 @@ dependencies = [
   "schemez>=1.2.0",
   "typer",
   "universal-pathlib>=0.2.5",
-  "upathtools[httpx]",
+  "upathtools[httpx2]>=1.25.0",
   "yamling>=1.5.0",
 ]
 
