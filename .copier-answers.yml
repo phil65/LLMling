@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier
-_commit: v2.11.0
+_commit: v2.12.1
 _src_path: https://github.com/phil65/copier-phil65.git
 author_email: philipptemminghoff@googlemail.com
 author_fullname: Philipp Temminghoff
@@ -18,4 +18,5 @@ python_package_import_name: llmling
 repository_name: LLMling
 repository_namespace: phil65
 repository_provider: github.com
+specs: []
 
