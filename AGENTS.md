@@ -60,7 +60,7 @@ uv run pytest                        # tests (addopts: -m "not slow")
 uv run ruff check . && uv run ruff format --check .
 uv run ty check                      # type check (src only); warnings fail
 uv run deptry src                    # dependency check
-uv run mkdocs-mknodes build          # docs (duty: build / serve)
+uv run mknodes build          # docs (duty: build / serve)
 uv run duty lint | lint_check | test | update | generate_schema | check_schema
 ```
 
