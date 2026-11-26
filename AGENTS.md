@@ -6,7 +6,7 @@ LLMling is a YAML-driven backend for LLM applications: a config file declares
 resources (content providers), prompts (message templates), tools (Python callables,
 OpenAPI specs, entry-point toolsets) and processors. `RuntimeConfig` turns that config
 into live registries that consumers query. It was the backend for `mcp-server-llmling`
-and `llmling-agent` (the latter is now succeeded by agentpool). Python >= 3.13, pydantic/schemez based.
+and `llmling-agent` (the latter is now succeeded by agentpool). Python >= 3.14, pydantic/schemez based.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ Pre-commit runs ruff, tombi, ty and the full pytest suite on every commit.
 
 ## Conventions
 
-- `from __future__ import annotations` everywhere; Google docstrings; line length 100;
+- No `from __future__ import annotations` (PEP 649; banned via ruff TID251); Google docstrings; line length 100;
   ruff with preview rules (also formats Python blocks in Markdown).
 - Models subclass `schemez.Schema` / `ConfigModel` with attribute docstrings.
 - Use `# ty: ignore[rule]` for checker limitations, never blanket ignores.
