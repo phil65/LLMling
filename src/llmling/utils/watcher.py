@@ -1,7 +1,5 @@
 """File monitoring using signals."""
 
-from __future__ import annotations
-
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path

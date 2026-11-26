@@ -1,7 +1,5 @@
 """OpenAPI toolset implementation."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 

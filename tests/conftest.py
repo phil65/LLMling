@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from llmling import config_resources

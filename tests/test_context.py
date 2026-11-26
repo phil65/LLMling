@@ -1,7 +1,5 @@
 """Tests for context loaders."""
 
-from __future__ import annotations
-
 import sys
 from typing import TYPE_CHECKING, Any
 

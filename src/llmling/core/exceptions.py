@@ -1,7 +1,5 @@
 """Core exceptions for the llmling package."""
 
-from __future__ import annotations
-
 
 class LLMLingError(Exception):
     """Base exception for all llmling errors."""

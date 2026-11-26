@@ -4,8 +4,6 @@ This module provides the RuntimeConfig class which represents the fully initiali
 "live" state of a configuration, managing all runtime components and registries.
 """
 
-from __future__ import annotations
-
 from contextlib import asynccontextmanager, contextmanager
 import importlib
 import os

@@ -1,23 +1,21 @@
 """Utilities for working with prompt functions."""
 
-from __future__ import annotations  # noqa: I001
-
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 import inspect
 import sys
-from typing import TYPE_CHECKING, Any, get_type_hints, ForwardRef  # noqa: F401
 from types import UnionType
+from typing import TYPE_CHECKING, Any, ForwardRef, get_type_hints  # noqa: F401
+
 from llmling.core import exceptions
+from llmling.core.log import get_logger
 from llmling.prompts.models import (
     BasePrompt,
     DynamicPrompt,
     FilePrompt,
+    PromptParameter,
     StaticPrompt,
 )
-from llmling.core.log import get_logger
-from llmling.prompts.models import PromptParameter
 from llmling.utils import importing
-from collections.abc import Mapping
 
 
 if TYPE_CHECKING:

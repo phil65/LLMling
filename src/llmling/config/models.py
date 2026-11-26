@@ -1,7 +1,5 @@
 """Configuration models for LLMling."""
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 import inspect
 import os

@@ -1,7 +1,5 @@
 """Exceptions for the tool system."""
 
-from __future__ import annotations
-
 from llmling.core.exceptions import LLMLingError
 
 

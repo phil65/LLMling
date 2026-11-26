@@ -1,7 +1,5 @@
 """Wrapper for tools supplied to the LLM."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 from llmling.tools.base import LLMCallableTool

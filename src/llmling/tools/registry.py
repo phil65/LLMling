@@ -1,7 +1,5 @@
 """Registry for LLM-callable tools."""
 
-from __future__ import annotations
-
 import importlib.util
 from typing import TYPE_CHECKING, Any
 

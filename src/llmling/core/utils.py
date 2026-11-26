@@ -1,7 +1,5 @@
 """Provides a decorator for exception handling with template support."""
 
-from __future__ import annotations
-
 import functools
 import inspect
 import string

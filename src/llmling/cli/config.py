@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import typer as t
 
 from llmling.cli.constants import output_format_opt

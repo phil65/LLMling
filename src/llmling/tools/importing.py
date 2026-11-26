@@ -1,7 +1,5 @@
 """Toolset importing utilities."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from llmling.core.log import get_logger

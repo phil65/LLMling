@@ -1,7 +1,5 @@
 """PEP 723 dependency parsing utilities."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 import logging
 import re

@@ -1,7 +1,5 @@
 """Logging configuration for llmling."""
 
-from __future__ import annotations
-
 from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler

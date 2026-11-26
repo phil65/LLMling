@@ -1,7 +1,5 @@
 """Tests for configuration handling in LLMling."""
 
-from __future__ import annotations
-
 import pytest
 
 from llmling import config

@@ -1,7 +1,5 @@
 """Collection of content processors for text transformation pipelines."""
 
-from __future__ import annotations
-
 from llmling.processors.base import (
     Processor,
     ProcessorConfig,

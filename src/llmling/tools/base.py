@@ -1,7 +1,5 @@
 """Base class for implementing tools callable by an LLM via tool calling."""
 
-from __future__ import annotations
-
 from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass
 import inspect

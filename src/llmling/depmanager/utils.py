@@ -1,7 +1,5 @@
 """Utility functions for dependency management."""
 
-from __future__ import annotations
-
 import ast
 import importlib.metadata
 import logging

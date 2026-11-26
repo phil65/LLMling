@@ -1,7 +1,5 @@
 """Core dependency management functionality."""
 
-from __future__ import annotations
-
 import logging
 import shutil
 import sys

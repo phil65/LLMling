@@ -1,7 +1,5 @@
 """Tests for the processor system."""
 
-from __future__ import annotations
-
 import pytest
 
 from llmling.core import exceptions

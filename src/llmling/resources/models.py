@@ -1,7 +1,5 @@
 """Resource models."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator

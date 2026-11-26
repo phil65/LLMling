@@ -1,7 +1,5 @@
 """Configuration models for LLMling."""
 
-from __future__ import annotations
-
 from pydantic import ConfigDict
 from schemez import Schema
 

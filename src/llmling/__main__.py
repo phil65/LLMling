@@ -1,7 +1,5 @@
 """LLMling CLI interface."""
 
-from __future__ import annotations
-
 import typer as t
 
 from llmling.cli.config import config_cli

@@ -1,7 +1,5 @@
 """Path handling utilities for URI and filesystem operations."""
 
-from __future__ import annotations
-
 import mimetypes
 import re
 from typing import TYPE_CHECKING

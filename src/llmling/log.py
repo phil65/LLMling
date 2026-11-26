@@ -1,7 +1,5 @@
 """Logging configuration for llmling."""
 
-from __future__ import annotations
-
 import logging
 
 

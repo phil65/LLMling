@@ -1,7 +1,5 @@
 """Package resources for LLMling configuration."""
 
-from __future__ import annotations
-
 import importlib.resources
 from typing import Final
 

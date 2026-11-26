@@ -1,7 +1,5 @@
 """Prompt models for LLMling."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 import inspect
 import os

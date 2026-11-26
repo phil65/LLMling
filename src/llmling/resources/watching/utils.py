@@ -1,7 +1,5 @@
 """Utilities for file watching."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from llmling.core.log import get_logger

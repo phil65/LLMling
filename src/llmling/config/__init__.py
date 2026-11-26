@@ -1,7 +1,5 @@
 """Configuration management for LLMling."""
 
-from __future__ import annotations
-
 from llmling.config.manager import ConfigManager
 from llmling.config.models import (
     Config,
