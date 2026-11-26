@@ -1,5 +1,6 @@
 """Configuration models for LLMling."""
 
+import annotationlib
 from collections.abc import Sequence
 import inspect
 import os
@@ -451,7 +452,7 @@ class CallableResource(BaseResource):
     def is_templated(self) -> bool:
         """Callable resources are templated if they take parameters."""
         fn = import_callable(self.import_path)
-        sig = inspect.signature(fn)
+        sig = inspect.signature(fn, annotation_format=annotationlib.Format.FORWARDREF)
         return bool(sig.parameters)
 
 

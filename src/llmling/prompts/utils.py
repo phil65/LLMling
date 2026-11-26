@@ -1,10 +1,11 @@
 """Utilities for working with prompt functions."""
 
+import annotationlib
 from collections.abc import Iterator, Mapping, Sequence
 import inspect
 import sys
 from types import UnionType
-from typing import TYPE_CHECKING, Any, ForwardRef, get_type_hints  # noqa: F401
+from typing import TYPE_CHECKING, Any, ForwardRef, get_type_hints
 
 from llmling.core import exceptions
 from llmling.core.log import get_logger
@@ -51,7 +52,8 @@ def extract_function_info(
         fn = importing.import_callable(fn_or_path) if isinstance(fn_or_path, str) else fn_or_path
 
         # Get function metadata
-        sig = inspect.signature(fn)
+        # FORWARDREF: names imported only under TYPE_CHECKING stay ForwardRefs (-> Any)
+        sig = inspect.signature(fn, annotation_format=annotationlib.Format.FORWARDREF)
         module = sys.modules[fn.__module__]
 
         # Create a globals dict with common types
@@ -67,7 +69,10 @@ def extract_function_info(
             "Any": Any,
         }
 
-        hints = get_type_hints(fn, include_extras=True, globalns=globalns)
+        hints = get_type_hints(
+            fn, include_extras=True, globalns=globalns, format=annotationlib.Format.FORWARDREF
+        )
+        hints = {k: Any if isinstance(v, ForwardRef) else v for k, v in hints.items()}
         # Parse docstring
         desc = f"Prompt from {getattr(fn, '__name__', 'unknown')}"
         arg_docs = {}

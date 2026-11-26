@@ -1,5 +1,6 @@
 """Provides a decorator for exception handling with template support."""
 
+import annotationlib
 import functools
 import inspect
 import string
@@ -38,7 +39,7 @@ def error_handler[R, **P](
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         # Create a template with safe_substitute support
         template = string.Template(log_template)
-        sig = inspect.signature(func)
+        sig = inspect.signature(func, annotation_format=annotationlib.Format.FORWARDREF)
         param_names = list(sig.parameters.keys())
 
         @functools.wraps(func)

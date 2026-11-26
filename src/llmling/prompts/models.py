@@ -1,9 +1,10 @@
 """Prompt models for LLMling."""
 
+import annotationlib
 from collections.abc import Callable
 import inspect
 import os
-from typing import TYPE_CHECKING, Annotated, Any, Literal, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Literal, get_type_hints
 
 from fastmcp.prompts import (
     Prompt as FastMCPPrompt,
@@ -337,8 +338,11 @@ class DynamicPrompt(BasePrompt):
 
         # Get function metadata
         name = name_override or getattr(fn, "__name__", "unknown")
-        sig = inspect.signature(fn)
-        hints = get_type_hints(fn, include_extras=True, localns=locals())
+        # FORWARDREF: names imported only under TYPE_CHECKING stay ForwardRefs (-> Any)
+        sig = inspect.signature(fn, annotation_format=annotationlib.Format.FORWARDREF)
+        hints = get_type_hints(
+            fn, include_extras=True, localns=locals(), format=annotationlib.Format.FORWARDREF
+        )
 
         # Parse docstring
         docstring = inspect.getdoc(fn)
@@ -362,6 +366,8 @@ class DynamicPrompt(BasePrompt):
                 continue
 
             type_hint = hints.get(param_name, Any)
+            if isinstance(type_hint, ForwardRef):
+                type_hint = Any
             required = param.default == param.empty
             arg = PromptParameter(
                 name=param_name,
